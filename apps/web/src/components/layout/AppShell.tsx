@@ -30,6 +30,11 @@ export function AppShell({ children }: { children: ReactNode }) {
               {item.label}
             </Link>
           ))}
+          {user && (
+            <Link to="/dashboard" className="text-muted-foreground hover:text-foreground">
+              Account
+            </Link>
+          )}
           {user ? (
             <button
               type="button"
