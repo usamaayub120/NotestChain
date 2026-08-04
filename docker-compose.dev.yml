@@ -1,0 +1,30 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: noteschain
+      POSTGRES_PASSWORD: noteschain
+      POSTGRES_DB: noteschain
+    ports:
+      - "5432:5432"
+    volumes:
+      - noteschain_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U noteschain"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # Optional — only needed for local Anchor program tests without hitting
+  # devnet. Start with: docker compose -f docker-compose.dev.yml --profile validator up
+  solana-validator:
+    image: solanalabs/solana:v1.18.22
+    profiles: ["validator"]
+    command: ["solana-test-validator", "--reset", "--quiet"]
+    ports:
+      - "8899:8899"
+      - "8900:8900"
+
+volumes:
+  noteschain_postgres_data:

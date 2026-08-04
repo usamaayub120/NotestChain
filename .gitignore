@@ -1,0 +1,45 @@
+node_modules/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+
+.env
+.env.*
+!.env.example
+
+# Prisma
+prisma/dev.db
+
+# Solana / Anchor
+programs/**/target/
+programs/**/.anchor/
+programs/**/test-ledger/
+*.keypair.json
+run/secrets/
+.cargo-build-tmp/
+
+# Wrong package manager — this repo is pnpm-only (pnpm-lock.yaml is the
+# committed lockfile); a stray npm/yarn invocation shouldn't leave one behind.
+package-lock.json
+yarn.lock
+
+# Local tool config — not part of the app, no reason for every collaborator
+# to have the same MCP servers configured.
+.mcp.json
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+
+# Coverage
+coverage/

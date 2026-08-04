@@ -1,0 +1,30 @@
+{
+  "name": "@noteschain/worker",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/worker.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/worker.js",
+    "lint": "eslint src",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@noteschain/shared": "workspace:*",
+    "@noteschain/blockchain-client": "workspace:*",
+    "@prisma/client": "^5.22.0",
+    "@coral-xyz/anchor": "^0.31.1",
+    "@solana/web3.js": "^1.95.3",
+    "pino": "^9.5.0",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.11",
+    "prisma": "^5.22.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3",
+    "vitest": "^3.2.7"
+  }
+}

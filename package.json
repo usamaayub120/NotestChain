@@ -1,0 +1,55 @@
+{
+  "name": "noteschain",
+  "private": true,
+  "packageManager": "pnpm@9.15.0",
+  "description": "NotesChain — a public writing platform for publishing permanent, verifiable thoughts.",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=9"
+  },
+  "scripts": {
+    "build:packages": "pnpm --filter @noteschain/shared build && pnpm --filter @noteschain/validation build && pnpm --filter @noteschain/blockchain-client build",
+    "dev": "pnpm build:packages && concurrently -n web,api,worker -c blue,green,yellow \"pnpm --filter @noteschain/web dev\" \"pnpm --filter @noteschain/api dev\" \"pnpm --filter @noteschain/worker dev\"",
+    "dev:up": "docker compose -f docker-compose.dev.yml up -d postgres",
+    "dev:down": "docker compose -f docker-compose.dev.yml down",
+    "build": "pnpm build:packages && pnpm --filter @noteschain/web build && pnpm --filter @noteschain/api build && pnpm --filter @noteschain/worker build",
+    "db:generate": "prisma generate --schema prisma/schema.prisma",
+    "db:migrate": "prisma migrate dev --schema prisma/schema.prisma",
+    "db:deploy": "prisma migrate deploy --schema prisma/schema.prisma",
+    "db:seed": "tsx scripts/seed.ts",
+    "create:admin": "tsx scripts/create-admin.ts",
+    "init:platform": "tsx scripts/init-platform.ts",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "anchor:build": "cd programs/decentralized_notes && anchor build",
+    "anchor:test": "cd programs/decentralized_notes && anchor test"
+  },
+  "dependencies": {
+    "@coral-xyz/anchor": "^0.31.1",
+    "@noteschain/blockchain-client": "workspace:*",
+    "@prisma/client": "^5.22.0",
+    "@solana/web3.js": "^1.95.3",
+    "argon2": "^0.41.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^9.1.0",
+    "eslint": "^10.8.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.9.0",
+    "prisma": "^5.22.0",
+    "shadcn": "^4.16.1",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3",
+    "typescript-eslint": "^8.66.0"
+  },
+  "pnpm": {
+    "overrides": {
+      "serialize-javascript": ">=7.0.5",
+      "uuid": ">=11.1.1",
+      "hono": ">=4.12.34"
+    }
+  }
+}

@@ -1,0 +1,452 @@
+// NotesChain — Prisma schema
+// See ARCHITECTURE.md for the rationale behind nullable onChainPublicationId,
+// the OutboxEvent/WorkerJob split, and why Publication.content is a
+// rebuildable cache rather than a source of truth.
+
+generator client {
+  provider      = "prisma-client-js"
+  // "native" covers local dev (Windows/macOS/glibc Linux); the musl+OpenSSL
+  // 3.0 target matches the Alpine 3.19+ runtime image the Dockerfile builds.
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ────────────────────────────────────────────────────────────────
+
+enum Role {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+enum IdentityType {
+  REAL_NAME
+  PSEUDONYM
+}
+
+enum IdentityMode {
+  NAMED
+  PSEUDONYMOUS
+  ANONYMOUS
+}
+
+enum Discoverability {
+  PUBLIC
+  UNLISTED
+}
+
+enum DraftStatus {
+  DRAFT
+  PENDING_REVIEW
+  CHANGES_REQUESTED
+  REJECTED
+  APPROVED
+  CHAIN_PENDING
+  CHAIN_SUBMITTED
+  PUBLISHED
+  CHAIN_FAILED
+  ARCHIVED
+}
+
+enum ModerationAction {
+  APPROVE
+  REJECT
+  REQUEST_CHANGES
+}
+
+enum ChainStatus {
+  NOT_SUBMITTED
+  QUEUED
+  SUBMITTING
+  SUBMITTED
+  CONFIRMED
+  FINALIZED
+  FAILED_RETRYABLE
+  FAILED_PERMANENT
+}
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+enum ReportStatus {
+  OPEN
+  RESOLVED
+}
+
+enum ReportResolution {
+  DISMISSED
+  DELISTED
+  USER_SUSPENDED
+}
+
+// ── Auth ─────────────────────────────────────────────────────────────────
+
+model User {
+  id              String        @id @default(uuid())
+  email           String        @unique
+  passwordHash    String
+  role            Role          @default(USER)
+  status          AccountStatus @default(ACTIVE)
+  emailVerifiedAt DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  lastLoginAt     DateTime?
+
+  sessions             Session[]
+  identities           PublicIdentity[]
+  drafts               Draft[]
+  submissions          Submission[]        @relation("SubmittedBy")
+  moderationDecisions  ModerationDecision[] @relation("ModeratedBy")
+  publications         Publication[]       @relation("PrivateAuthor")
+  bookmarks            Bookmark[]
+  bookmarkCollections  BookmarkCollection[]
+  reportsFiled         Report[]            @relation("ReportedBy")
+  reportsResolved      Report[]            @relation("ResolvedBy")
+  auditLogs            AuditLog[]
+
+  @@index([status])
+}
+
+model Session {
+  id         String    @id @default(uuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String    @unique
+  csrfSecret String
+  createdAt  DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+  lastUsedAt DateTime?
+  userAgent  String?
+  ipAddress  String?
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ── Identities ───────────────────────────────────────────────────────────
+
+model PublicIdentity {
+  id          String       @id @default(uuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type        IdentityType
+  username    String       @unique
+  displayName String
+  bio         String       @default("")
+  avatarUrl   String?
+  links       String[]     @default([])
+  isVisible   Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  drafts       Draft[]
+  publications Publication[]
+
+  @@index([userId])
+}
+
+// ── Drafts ───────────────────────────────────────────────────────────────
+
+model Draft {
+  id               String          @id @default(uuid())
+  userId           String
+  user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title            String          @default("")
+  content          String          @default("")
+  tags             String[]        @default([])
+  identityMode     IdentityMode    @default(NAMED)
+  publicIdentityId String?
+  publicIdentity   PublicIdentity? @relation(fields: [publicIdentityId], references: [id])
+  discoverability  Discoverability @default(PUBLIC)
+  status           DraftStatus     @default(DRAFT)
+  lastSavedAt      DateTime        @default(now())
+  submittedAt      DateTime?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  versions    DraftVersion[]
+  submissions Submission[]
+  publication Publication?
+
+  @@index([userId, status])
+}
+
+model DraftVersion {
+  id            String   @id @default(uuid())
+  draftId       String
+  draft         Draft    @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  title         String
+  content       String
+  createdAt     DateTime @default(now())
+
+  @@unique([draftId, versionNumber])
+}
+
+// ── Moderation ───────────────────────────────────────────────────────────
+
+model Submission {
+  id                       String          @id @default(uuid())
+  draftId                  String
+  draft                    Draft           @relation(fields: [draftId], references: [id], onDelete: Cascade)
+  submittedByUserId        String
+  submittedBy               User            @relation("SubmittedBy", fields: [submittedByUserId], references: [id])
+  titleSnapshot            String
+  contentSnapshot          String
+  tagsSnapshot             String[]        @default([])
+  identityModeSnapshot     IdentityMode
+  publicIdentityIdSnapshot String?
+  discoverabilitySnapshot  Discoverability
+  status                   DraftStatus
+  createdAt                DateTime        @default(now())
+  decidedAt                DateTime?
+
+  decisions ModerationDecision[]
+
+  @@index([status, createdAt])
+  @@index([draftId])
+}
+
+model ModerationDecision {
+  id             String            @id @default(uuid())
+  submissionId   String
+  submission     Submission        @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  moderatorUserId String
+  moderator      User              @relation("ModeratedBy", fields: [moderatorUserId], references: [id])
+  action         ModerationAction
+  reason         String
+  note           String?
+  flaggedPii     Boolean           @default(false)
+  flaggedAbuse   Boolean           @default(false)
+  createdAt      DateTime          @default(now())
+
+  @@index([submissionId])
+}
+
+// ── Publications (off-chain read model) ─────────────────────────────────
+
+model Publication {
+  id                    String          @id @default(uuid())
+  sourceDraftId         String?         @unique
+  sourceDraft           Draft?          @relation(fields: [sourceDraftId], references: [id])
+  privateAuthorUserId   String
+  privateAuthor         User            @relation("PrivateAuthor", fields: [privateAuthorUserId], references: [id])
+  publicIdentityId      String?
+  publicIdentity        PublicIdentity? @relation(fields: [publicIdentityId], references: [id])
+  identityMode          IdentityMode
+  discoverability       Discoverability
+  title                 String
+  content               String
+  excerpt               String
+  tags                  String[]        @default([])
+  contentHash           String
+  status                DraftStatus
+  isPlatformVisible     Boolean         @default(true)
+  delistingReason       String?
+  // Nullable until the worker confirms which id the chain actually assigned
+  // — see ARCHITECTURE.md §3.1 for why the id cannot be chosen client-side.
+  onChainPublicationId  BigInt?         @unique
+  previousPublicationId String?
+  previousPublication   Publication?    @relation("PublicationRevisions", fields: [previousPublicationId], references: [id])
+  revisions             Publication[]   @relation("PublicationRevisions")
+  publishedAt           DateTime?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+
+  // Kept in sync by a BEFORE INSERT/UPDATE trigger added by hand in
+  // prisma/migrations/*_add_search_vector/migration.sql (Postgres rejects
+  // to_tsvector() inside a GENERATED ALWAYS AS ... STORED expression as
+  // "not immutable"). `Unsupported` so Prisma Client ignores it in normal
+  // queries; the search module reads it via `$queryRaw` instead.
+  searchVector Unsupported("tsvector")?
+
+  chainRecord      PublicationChainRecord?
+  publicationTags  PublicationTag[]
+  bookmarks        Bookmark[]
+  reports          Report[]
+
+  @@index([discoverability, isPlatformVisible, status])
+  @@index([publicIdentityId])
+  @@index([privateAuthorUserId])
+  @@index([createdAt])
+  @@index([searchVector], type: Gin)
+}
+
+model PublicationChainRecord {
+  id                   String      @id @default(uuid())
+  publicationId        String      @unique
+  publication          Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  network              String
+  programId            String
+  publicationPda       String?
+  transactionSignature String?
+  slot                 BigInt?
+  blockTime            DateTime?
+  chainStatus          ChainStatus @default(NOT_SUBMITTED)
+  submissionAttempts   Int         @default(0)
+  lastError            String?
+  submittedAt          DateTime?
+  confirmedAt          DateTime?
+  finalizedAt          DateTime?
+  lastVerifiedAt       DateTime?
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+
+  @@index([chainStatus])
+  @@index([transactionSignature])
+}
+
+// ── Tags ─────────────────────────────────────────────────────────────────
+
+model Tag {
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  label     String
+  createdAt DateTime @default(now())
+
+  publicationTags PublicationTag[]
+}
+
+model PublicationTag {
+  publicationId String
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  tagId         String
+  tag           Tag         @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([publicationId, tagId])
+  @@index([tagId])
+}
+
+// ── Bookmarks ────────────────────────────────────────────────────────────
+
+model BookmarkCollection {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  bookmarks Bookmark[]
+
+  @@unique([userId, name])
+}
+
+model Bookmark {
+  id           String              @id @default(uuid())
+  userId       String
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  publicationId String
+  publication  Publication         @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  collectionId String?
+  collection   BookmarkCollection? @relation(fields: [collectionId], references: [id])
+  createdAt    DateTime            @default(now())
+
+  @@unique([userId, publicationId])
+  @@index([collectionId])
+}
+
+// ── Reports ──────────────────────────────────────────────────────────────
+
+model Report {
+  id               String            @id @default(uuid())
+  publicationId    String
+  publication      Publication       @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  reporterUserId   String?
+  reporter         User?             @relation("ReportedBy", fields: [reporterUserId], references: [id])
+  reason           String
+  status           ReportStatus      @default(OPEN)
+  resolution       ReportResolution?
+  resolutionNote   String?
+  resolvedByUserId String?
+  resolvedBy       User?             @relation("ResolvedBy", fields: [resolvedByUserId], references: [id])
+  resolvedAt       DateTime?
+  createdAt        DateTime          @default(now())
+
+  @@index([status])
+  @@index([publicationId])
+}
+
+// ── Blockchain outbox / worker ──────────────────────────────────────────
+
+model OutboxEvent {
+  id            String       @id @default(uuid())
+  eventType     String
+  aggregateType String
+  aggregateId   String
+  payload       Json
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  availableAt   DateTime     @default(now())
+  lockedAt      DateTime?
+  lockedBy      String?
+  processedAt   DateTime?
+  lastError     String?
+  createdAt     DateTime     @default(now())
+
+  job WorkerJob?
+
+  @@unique([aggregateType, aggregateId, eventType])
+  @@index([status, availableAt])
+}
+
+model WorkerJob {
+  id            String       @id @default(uuid())
+  outboxEventId String       @unique
+  outboxEvent   OutboxEvent  @relation(fields: [outboxEventId], references: [id], onDelete: Cascade)
+  kind          String
+  publicationId String
+  status        OutboxStatus @default(PENDING)
+  attempts      Int          @default(0)
+  maxAttempts   Int          @default(8)
+  nextAttemptAt DateTime     @default(now())
+  lastError     String?
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([publicationId])
+}
+
+// ── Operational ──────────────────────────────────────────────────────────
+
+// One row per long-running process (currently just "worker"), updated on a
+// timer so /api/v1/health/ready can report whether the worker is alive
+// without needing a separate process-to-process channel.
+model ProcessHeartbeat {
+  process    String   @id
+  lastBeatAt DateTime
+  meta       Json?
+}
+
+// ── Audit ────────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  actorUserId  String?
+  actor        User?    @relation(fields: [actorUserId], references: [id])
+  action       String
+  targetType   String?
+  targetId     String?
+  metadata     Json?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+
+  @@index([action, createdAt])
+  @@index([targetType, targetId])
+}

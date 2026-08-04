@@ -1,0 +1,453 @@
+{
+  "address": "exQDCAihgmrV4FNPpuQXrFXp2pvKUumntCfantzc5GX",
+  "metadata": {
+    "name": "decentralized_notes",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "NotesChain — permanent, verifiable publication records on Solana"
+  },
+  "instructions": [
+    {
+      "name": "initialize_platform",
+      "discriminator": [
+        119,
+        201,
+        101,
+        45,
+        75,
+        122,
+        89,
+        3
+      ],
+      "accounts": [
+        {
+          "name": "platform_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  116,
+                  102,
+                  111,
+                  114,
+                  109
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "treasury",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "publish_publication",
+      "docs": [
+        "Creates a new, immutable Publication account. The program — not the",
+        "client — is the authority on `publication_id`: it must equal the",
+        "live `platform_config.publication_counter` at execution time (not",
+        "submission time), which is what makes this safe under retries or",
+        "concurrent submitters (see ARCHITECTURE.md §3.1). A stale counter",
+        "fails the whole instruction harmlessly; the caller re-reads the",
+        "counter and retries."
+      ],
+      "discriminator": [
+        250,
+        156,
+        220,
+        196,
+        84,
+        17,
+        76,
+        235
+      ],
+      "accounts": [
+        {
+          "name": "platform_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  116,
+                  102,
+                  111,
+                  114,
+                  109
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "publication",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  117,
+                  98,
+                  108,
+                  105,
+                  99,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "publication_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "previous_publication_account",
+          "docs": [
+            "Present only when this publication is a revision of an earlier one.",
+            "Anchor's `Account<'info, Publication>` deserialization already",
+            "proves it's a real, program-owned Publication; the handler only",
+            "needs to check it's the *specific* one the caller claimed."
+          ],
+          "optional": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "publication_id",
+          "type": "u64"
+        },
+        {
+          "name": "identity_mode",
+          "type": "u8"
+        },
+        {
+          "name": "discoverability",
+          "type": "u8"
+        },
+        {
+          "name": "identity_reference_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "content_hash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "author_display_snapshot",
+          "type": "string"
+        },
+        {
+          "name": "content",
+          "type": "string"
+        },
+        {
+          "name": "previous_publication",
+          "type": {
+            "option": "pubkey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "rotate_authority",
+      "docs": [
+        "Current authority only. Does not revoke or transfer program",
+        "upgrade authority — that is a separate, deliberately manual",
+        "operation (see ARCHITECTURE.md / README production notes)."
+      ],
+      "discriminator": [
+        248,
+        225,
+        151,
+        35,
+        28,
+        15,
+        85,
+        12
+      ],
+      "accounts": [
+        {
+          "name": "platform_config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  116,
+                  102,
+                  111,
+                  114,
+                  109
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "authority",
+          "signer": true
+        }
+      ],
+      "args": [
+        {
+          "name": "new_authority",
+          "type": "pubkey"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "PlatformConfig",
+      "discriminator": [
+        160,
+        78,
+        128,
+        0,
+        248,
+        83,
+        230,
+        160
+      ]
+    },
+    {
+      "name": "Publication",
+      "discriminator": [
+        213,
+        137,
+        189,
+        150,
+        94,
+        132,
+        251,
+        247
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "Unauthorized",
+      "msg": "Only the platform authority may perform this action."
+    },
+    {
+      "code": 6001,
+      "name": "InvalidAuthority",
+      "msg": "New authority must not be the default/zero pubkey."
+    },
+    {
+      "code": 6002,
+      "name": "StalePublicationCounter",
+      "msg": "The provided publication id no longer matches the platform counter; refetch and retry."
+    },
+    {
+      "code": 6003,
+      "name": "TitleTooLong",
+      "msg": "Title exceeds the maximum allowed size."
+    },
+    {
+      "code": 6004,
+      "name": "AuthorDisplayTooLong",
+      "msg": "Author display name exceeds the maximum allowed size."
+    },
+    {
+      "code": 6005,
+      "name": "ContentTooLong",
+      "msg": "Body content exceeds the maximum allowed size."
+    },
+    {
+      "code": 6006,
+      "name": "InvalidIdentityMode",
+      "msg": "Invalid identity mode."
+    },
+    {
+      "code": 6007,
+      "name": "InvalidDiscoverability",
+      "msg": "Invalid discoverability mode."
+    },
+    {
+      "code": 6008,
+      "name": "AnonymousHashMustBeZero",
+      "msg": "Anonymous publications must have a zero-filled identity reference hash."
+    },
+    {
+      "code": 6009,
+      "name": "AnonymousDisplayMustBeEmpty",
+      "msg": "Anonymous publications must have an empty author display snapshot."
+    },
+    {
+      "code": 6010,
+      "name": "MissingIdentityReference",
+      "msg": "Named or pseudonymous publications must include an identity reference hash."
+    },
+    {
+      "code": 6011,
+      "name": "ContentHashMismatch",
+      "msg": "The supplied content hash does not match the recomputed hash of title and content."
+    },
+    {
+      "code": 6012,
+      "name": "InvalidPreviousPublication",
+      "msg": "previous_publication does not match the account supplied to this instruction."
+    },
+    {
+      "code": 6013,
+      "name": "CounterOverflow",
+      "msg": "Publication counter overflow."
+    }
+  ],
+  "types": [
+    {
+      "name": "PlatformConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "treasury",
+            "type": "pubkey"
+          },
+          {
+            "name": "publication_counter",
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Publication",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "publication_id",
+            "type": "u64"
+          },
+          {
+            "name": "identity_mode",
+            "type": "u8"
+          },
+          {
+            "name": "discoverability",
+            "type": "u8"
+          },
+          {
+            "name": "published_at",
+            "type": "i64"
+          },
+          {
+            "name": "previous_publication",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "identity_reference_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "content_hash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "name": "author_display_snapshot",
+            "type": "string"
+          },
+          {
+            "name": "content",
+            "type": "string"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

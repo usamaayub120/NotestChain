@@ -1,0 +1,64 @@
+@import "./tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * NOTE: Bricolage Grotesque / Figtree / IBM Plex Mono are the intended
+ * typefaces (see DESIGN_SYSTEM.md §4) but the actual font files are not yet
+ * vendored into public/fonts — self-hosting them (rather than a Google
+ * Fonts CDN import) keeps the CSP's style-src/font-src at 'self' and avoids
+ * a network dependency inside a WebView. Until then this falls back to the
+ * system font stack below. Tracked for Phase 6 (visual polish).
+ */
+
+* {
+  border-color: var(--border);
+}
+
+html,
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+body {
+  font-family: "Figtree", system-ui, -apple-system, "Segoe UI", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  min-height: 100dvh;
+  /* User-authored titles/content can contain long unbroken runs (URLs, no-space
+     strings, some CJK) with no natural wrap point — without this they overflow
+     the viewport instead of wrapping (found during the Phase 6 mobile QA pass). */
+  overflow-wrap: break-word;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Bricolage Grotesque", "Figtree", system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.font-proof {
+  font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", monospace;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
