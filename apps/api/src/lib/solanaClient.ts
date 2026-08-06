@@ -1,11 +1,12 @@
 import { Connection, Keypair, PublicKey } from "@solana/web3.js";
-// Default-import + destructure — see the comment in
-// apps/worker/src/publishing/publishToChain.ts for why.
-import anchorPkg from "@coral-xyz/anchor";
+import { createRequire } from "node:module";
 import { createProgram } from "@noteschain/blockchain-client";
 import { env } from "../config/env.js";
 
-const { Wallet } = anchorPkg;
+// @coral-xyz/anchor is CJS — see packages/blockchain-client/src/program.ts
+// for why this uses createRequire rather than a default import.
+const require = createRequire(import.meta.url);
+const { Wallet } = require("@coral-xyz/anchor") as typeof import("@coral-xyz/anchor");
 
 let cached: {
   connection: Connection;

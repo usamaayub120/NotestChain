@@ -11,12 +11,15 @@
  *   pnpm exec tsx scripts/init-platform.ts
  */
 import { Connection, PublicKey } from "@solana/web3.js";
-// Default-import + destructure — see the comment in
-// apps/worker/src/publishing/publishToChain.ts for why.
-import anchorPkg from "@coral-xyz/anchor";
+import { createRequire } from "node:module";
 import { createProgram, derivePlatformConfigPda, loadPublisherKeypair } from "@noteschain/blockchain-client";
 
-const { Wallet } = anchorPkg;
+// @coral-xyz/anchor is CJS — see packages/blockchain-client/src/program.ts
+// for why this uses createRequire rather than a default import (this script
+// specifically only ever runs under tsx, which is exactly the runtime where
+// the default-import approach broke).
+const require = createRequire(import.meta.url);
+const { Wallet } = require("@coral-xyz/anchor") as typeof import("@coral-xyz/anchor");
 
 async function main() {
   const rpcUrl = process.env.SOLANA_RPC_HTTP_URL ?? "https://api.devnet.solana.com";

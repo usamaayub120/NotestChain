@@ -1,11 +1,5 @@
 import { PublicKey } from "@solana/web3.js";
-// Default-import + destructure — @coral-xyz/anchor is CJS, and Node's static
-// named-export detection for ESM-importing-CJS (cjs-module-lexer) fails to
-// see `BN` specifically (it's fine on AnchorProvider/Program/Wallet — see
-// solanaClient.ts) even though it's a real export at runtime. Confirmed by
-// the worker crash-looping under `node dist/worker.js` (this file's compiled
-// output) despite typechecking clean and running fine under `tsx watch`.
-import anchorPkg from "@coral-xyz/anchor";
+import { createRequire } from "node:module";
 import type { Logger } from "pino";
 import {
   contentHashHex,
@@ -19,7 +13,11 @@ import { prisma } from "../lib/prisma.js";
 import { logger as rootLogger } from "../lib/logger.js";
 import { getSolanaClient, programId } from "./solanaClient.js";
 
-const { BN } = anchorPkg;
+// @coral-xyz/anchor is CJS — createRequire sidesteps ESM default-import
+// interop entirely (which differs between `node` and `tsx`'s loader; see
+// packages/blockchain-client/src/program.ts for the full explanation).
+const require = createRequire(import.meta.url);
+const { BN } = require("@coral-xyz/anchor") as typeof import("@coral-xyz/anchor");
 
 export class PermanentPublishError extends Error {}
 

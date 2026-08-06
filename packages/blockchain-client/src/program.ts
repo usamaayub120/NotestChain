@@ -1,16 +1,21 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
 import path from "node:path";
-// Default-import + destructure — @coral-xyz/anchor is CJS; Node's static
-// named-export detection for ESM-importing-CJS can silently fail to see
-// some of its exports (empirically true for BN, see publishToChain.ts) even
-// though they're real at runtime, so every real (non-type-only) import from
-// this package uses this pattern rather than relying on that detection.
-import anchorPkg, { type Program, type Wallet } from "@coral-xyz/anchor";
+import type { Program, Wallet } from "@coral-xyz/anchor";
 import type { Connection } from "@solana/web3.js";
 import type { DecentralizedNotes } from "./idl/decentralized_notes.js";
 
-const { AnchorProvider, Program: ProgramCtor } = anchorPkg;
+// @coral-xyz/anchor is CJS. A default *import* of a CJS package is handled
+// by whichever ESM loader hook is active in the process — plain `node` and
+// `tsx` disagree on the interop convention (confirmed empirically: this
+// exact compiled file works under `node dist/worker.js` but the default
+// import resolves to `undefined` under `tsx scripts/*.ts`, since tsx's
+// esbuild-based loader doesn't synthesize the same default). `createRequire`
+// sidesteps ESM interop entirely — it's Node's real CJS require function,
+// loader-agnostic, so it behaves identically everywhere.
+const require = createRequire(import.meta.url);
+const { AnchorProvider, Program: ProgramCtor } = require("@coral-xyz/anchor") as typeof import("@coral-xyz/anchor");
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
