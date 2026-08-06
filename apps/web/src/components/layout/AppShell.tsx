@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { brand } from "@noteschain/shared";
 import { useCurrentUser } from "@/hooks/useAuth";
 import { useStartNewDraft } from "@/hooks/useStartNewDraft";
 import { MobileTopBar } from "./MobileTopBar";
 import { MobileBottomNav } from "./MobileBottomNav";
+import { Footer } from "./Footer";
 
 const DESKTOP_NAV_ITEMS = [
   { to: "/", label: "Home" },
@@ -12,9 +13,28 @@ const DESKTOP_NAV_ITEMS = [
   { to: "/search", label: "Search" },
 ];
 
+// The footer is a reader-facing touch, not a utility-screen one — it stays
+// off pages where someone's actually doing work (writing, moderating,
+// managing an account) so it never competes with a working screen.
+// /login and /register get their own canopy-dark side panel (see
+// AuthSidePanel) — showing the footer right underneath would stack two
+// dark-green moments on one screen, which reads as repetition, not theme.
+const FOOTER_EXCLUDED_PREFIXES = [
+  "/dashboard",
+  "/drafts",
+  "/identities",
+  "/bookmarks",
+  "/admin",
+  "/settings",
+  "/login",
+  "/register",
+];
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { data: user } = useCurrentUser();
   const { start: startNewDraft } = useStartNewDraft();
+  const location = useLocation();
+  const showFooter = !FOOTER_EXCLUDED_PREFIXES.some((prefix) => location.pathname.startsWith(prefix));
 
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
@@ -51,7 +71,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         </nav>
       </header>
 
-      <main className="flex-1 pb-20 md:pb-0">{children}</main>
+      <div className="flex flex-1 flex-col pb-20 md:pb-0">
+        <main className="flex-1">{children}</main>
+        {showFooter && <Footer />}
+      </div>
 
       <MobileBottomNav user={user} />
     </div>

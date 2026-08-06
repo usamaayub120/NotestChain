@@ -24,6 +24,15 @@
   --verified: #3f6b4c;
   --verified-foreground: #f3f7f1;
 
+  /* Canopy/glow — the "forest" half of the palette, used only for the
+     handful of atmospheric moments (footer, hero ambient light, quote
+     accents) described in DESIGN_SYSTEM.md's library-in-a-forest brief.
+     Never used for interactive elements — ember stays the only accent
+     a person can click. */
+  --canopy: #1f3327;
+  --canopy-foreground: #f3efe3;
+  --glow: #f0c48b;
+
   --input: var(--border);
   --ring: var(--primary);
   --accent: var(--muted);
@@ -61,6 +70,9 @@
     --destructive-foreground: #16151a;
     --verified: #6fa37e;
     --verified-foreground: #12241a;
+    --canopy: #14231b;
+    --canopy-foreground: #e7e2d3;
+    --glow: #c99a5e;
     --shadow-sm: none;
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
     --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
@@ -83,6 +95,9 @@
   --destructive-foreground: #ffffff;
   --verified: #3f6b4c;
   --verified-foreground: #f3f7f1;
+  --canopy: #1f3327;
+  --canopy-foreground: #f3efe3;
+  --glow: #f0c48b;
 }
 
 :root[data-theme="dark"] {
@@ -101,4 +116,7 @@
   --destructive-foreground: #16151a;
   --verified: #6fa37e;
   --verified-foreground: #12241a;
+  --canopy: #14231b;
+  --canopy-foreground: #e7e2d3;
+  --glow: #c99a5e;
 }

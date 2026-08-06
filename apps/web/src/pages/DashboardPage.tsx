@@ -15,6 +15,7 @@ export function DashboardPage() {
     <div className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="text-2xl">Dashboard</h1>
       <p className="mt-1 text-muted-foreground">Signed in as {user?.email}</p>
+      <p className="mt-4 text-sm italic text-muted-foreground">Some days it's one sentence. That's still a keep.</p>
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         <button

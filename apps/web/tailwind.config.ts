@@ -23,6 +23,8 @@ export default {
         secondary: { DEFAULT: "var(--secondary)", foreground: "var(--secondary-foreground)" },
         card: { DEFAULT: "var(--card)", foreground: "var(--card-foreground)" },
         popover: { DEFAULT: "var(--popover)", foreground: "var(--popover-foreground)" },
+        canopy: { DEFAULT: "var(--canopy)", foreground: "var(--canopy-foreground)" },
+        glow: "var(--glow)",
       },
       fontFamily: {
         display: ["Bricolage Grotesque", "system-ui", "sans-serif"],
@@ -51,6 +53,28 @@ export default {
         xl: ["1.375rem", { lineHeight: "1.3" }],
         "2xl": ["1.75rem", { lineHeight: "1.2" }],
         "3xl": ["2.25rem", { lineHeight: "1.1" }],
+      },
+      keyframes: {
+        // Ambient hero light — a very slow, small drift, never a full loop
+        // you'd consciously notice, just enough to feel like light moving
+        // through leaves rather than a static gradient.
+        drift: {
+          "0%, 100%": { transform: "translate(0, 0) scale(1)" },
+          "50%": { transform: "translate(4%, -3%) scale(1.06)" },
+        },
+        "drift-reverse": {
+          "0%, 100%": { transform: "translate(0, 0) scale(1)" },
+          "50%": { transform: "translate(-3%, 4%) scale(1.08)" },
+        },
+        draw: {
+          from: { strokeDashoffset: "var(--dash-length)" },
+          to: { strokeDashoffset: "0" },
+        },
+      },
+      animation: {
+        drift: "drift 50s ease-in-out infinite",
+        "drift-reverse": "drift-reverse 65s ease-in-out infinite",
+        draw: "draw 1.4s ease-out forwards",
       },
     },
   },
