@@ -34,11 +34,25 @@ export function PublicationWarningDialog({
         <DialogHeader>
           <DialogTitle>This will be permanent</DialogTitle>
           <DialogDescription asChild>
-            <p>
-              Once published, this content will be stored on a public blockchain. It may remain publicly
-              accessible even if it is later hidden or delisted from this website. The publication cannot be
-              edited or deleted after finalization.
-            </p>
+            <div className="space-y-2">
+              <p>
+                Once published, this content will be stored on a public blockchain. It may remain publicly
+                accessible even if it is later hidden or delisted from this website. The publication cannot be
+                edited or deleted after finalization.
+              </p>
+              <p>
+                It's the one promise nobody, including us, can go back on.{" "}
+                <a
+                  href="/how-it-works"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline"
+                >
+                  See how keeping works
+                </a>
+                .
+              </p>
+            </div>
           </DialogDescription>
         </DialogHeader>
 

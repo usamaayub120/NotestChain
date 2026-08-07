@@ -29,6 +29,8 @@ export interface Publication {
   previousPublicationId: string | null;
   publishedAt: string | null;
   createdAt: string;
+  commentsEnabled: boolean;
+  viewerIsOwner: boolean;
   chain: PublicationChain | null;
   highlight?: string | null;
 }

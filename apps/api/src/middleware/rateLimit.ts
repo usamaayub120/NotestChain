@@ -19,6 +19,22 @@ export const searchRateLimit = rateLimit({
   message: { error: { code: "RATE_LIMITED", message: "Too many search requests. Please slow down." } },
 });
 
+export const viewRateLimit = rateLimit({
+  windowMs: 60_000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: "RATE_LIMITED", message: "Too many requests. Please slow down." } },
+});
+
+export const commentRateLimit = rateLimit({
+  windowMs: 60_000,
+  max: 12,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: "RATE_LIMITED", message: "Too many comments. Please slow down." } },
+});
+
 export const generalRateLimit = rateLimit({
   windowMs: 60_000,
   max: 300,

@@ -12,6 +12,7 @@ export const LIMITS = {
   MAX_TAGS_PER_PUBLICATION: 5,
   MODERATION_NOTE_MAX_LENGTH: 2000,
   REPORT_REASON_MAX_LENGTH: 500,
+  UTM_PARAM_MAX_LENGTH: 60,
 } as const;
 
 export function utf8ByteLength(value: string): number {

@@ -99,6 +99,9 @@ export function HomePage() {
               <p className="mt-1 text-muted-foreground">{feature.body}</p>
             </div>
           ))}
+          <Link to="/how-it-works" className="inline-block text-sm text-primary underline">
+            See exactly how a thought gets kept
+          </Link>
         </div>
       </RevealSection>
 

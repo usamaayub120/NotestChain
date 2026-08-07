@@ -18,6 +18,10 @@ export function AdminHomePage() {
           <h2 className="text-lg">Blockchain jobs</h2>
           <p className="mt-1 text-sm text-muted-foreground">Publish job queue, retries, reconciliation.</p>
         </Link>
+        <Link to="/admin/views" className="rounded-md border border-border bg-surface p-4 hover:bg-muted">
+          <h2 className="text-lg">Views</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Pageviews by source, most-viewed publications.</p>
+        </Link>
         <Link to="/admin/audit-log" className="rounded-md border border-border bg-surface p-4 hover:bg-muted">
           <h2 className="text-lg">Audit log</h2>
           <p className="mt-1 text-sm text-muted-foreground">Every moderation/admin action taken.</p>

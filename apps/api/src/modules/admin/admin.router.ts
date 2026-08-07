@@ -1,14 +1,18 @@
 import { Router } from "express";
 import { z } from "zod";
 import { Role } from "@noteschain/shared";
-import { delistPublicationSchema, resolveReportSchema } from "@noteschain/validation";
+import { delistPublicationSchema, resolveCommentReportSchema, resolveReportSchema } from "@noteschain/validation";
 import { asyncHandler, ok, paginated, requireParam } from "../../lib/http.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import {
   delistPublication,
+  getViewBreakdown,
   listAuditLog,
   listBlockchainJobs,
+  listCommentReports,
+  listMostViewedPublications,
   listReports,
+  resolveCommentReport,
   resolveReport,
   restorePublicationListing,
   retryBlockchainJob,
@@ -57,6 +61,40 @@ adminRouter.post(
   asyncHandler(async (req, res) => {
     const input = resolveReportSchema.parse(req.body);
     const report = await resolveReport(req.auth!.userId, requireParam(req, "id"), input, req.ip);
+    return ok(res, report);
+  }),
+);
+
+const viewsQuerySchema = z.object({
+  days: z.coerce.number().int().min(1).max(365).optional().default(30),
+});
+
+adminRouter.get(
+  "/views",
+  asyncHandler(async (req, res) => {
+    const query = viewsQuerySchema.parse(req.query);
+    const [breakdown, mostViewed] = await Promise.all([
+      getViewBreakdown(query.days),
+      listMostViewedPublications(query.days),
+    ]);
+    return ok(res, { ...breakdown, mostViewed });
+  }),
+);
+
+adminRouter.get(
+  "/comment-reports",
+  asyncHandler(async (req, res) => {
+    const query = reportsQuerySchema.parse(req.query);
+    const reports = await listCommentReports(query.status);
+    return ok(res, reports);
+  }),
+);
+
+adminRouter.post(
+  "/comment-reports/:id/resolve",
+  asyncHandler(async (req, res) => {
+    const input = resolveCommentReportSchema.parse(req.body);
+    const report = await resolveCommentReport(req.auth!.userId, requireParam(req, "id"), input, req.ip);
     return ok(res, report);
   }),
 );

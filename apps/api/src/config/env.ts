@@ -28,6 +28,11 @@ const envSchema = z.object({
   PUBLIC_EXPLORER_BASE_URL: z.string().url().default("https://explorer.solana.com"),
 
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
+
+  // Optional in dev — verifyCaptcha() bypasses the check when unset, so
+  // local/CI runs don't need a live Cloudflare secret. Required below in
+  // production, same pattern as SESSION_SECRET.
+  TURNSTILE_SECRET_KEY: z.string().optional(),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -40,6 +45,10 @@ function loadEnv(): Env {
   }
   if (parsed.data.NODE_ENV === "production" && !process.env.SESSION_SECRET) {
     console.error("SESSION_SECRET must be set explicitly in production.");
+    process.exit(1);
+  }
+  if (parsed.data.NODE_ENV === "production" && !process.env.TURNSTILE_SECRET_KEY) {
+    console.error("TURNSTILE_SECRET_KEY must be set explicitly in production.");
     process.exit(1);
   }
   return parsed.data;

@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
@@ -7,15 +8,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { AuthSidePanel } from "@/components/auth/AuthSidePanel";
+import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { useRegister } from "@/hooks/useAuth";
 import { ApiClientError } from "@/lib/api";
 
 export function RegisterPage() {
   const navigate = useNavigate();
   const register = useRegister();
+  const [hasCaptchaToken, setHasCaptchaToken] = useState(false);
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
-    defaultValues: { email: "", password: "" },
+    defaultValues: { email: "", password: "", captchaToken: "" },
   });
 
   async function onSubmit(values: RegisterInput) {
@@ -65,13 +68,20 @@ export function RegisterPage() {
               )}
             />
 
+            <TurnstileWidget
+              onVerify={(token) => {
+                form.setValue("captchaToken", token);
+                setHasCaptchaToken(true);
+              }}
+            />
+
             {form.formState.errors.root && (
               <p role="alert" className="text-sm font-medium text-destructive">
                 {form.formState.errors.root.message}
               </p>
             )}
 
-            <Button type="submit" className="w-full" disabled={register.isPending}>
+            <Button type="submit" className="w-full" disabled={register.isPending || !hasCaptchaToken}>
               {register.isPending ? "Creating account…" : "Create account"}
             </Button>
           </form>

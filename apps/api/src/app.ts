@@ -21,6 +21,7 @@ import { profilesRouter } from "./modules/profiles/profiles.router.js";
 import { tagsRouter } from "./modules/tags/tags.router.js";
 import { searchRouter } from "./modules/search/search.router.js";
 import { bookmarkCollectionsRouter, bookmarksRouter } from "./modules/bookmarks/bookmarks.router.js";
+import { commentsRouter } from "./modules/comments/comments.router.js";
 import { adminRouter } from "./modules/admin/admin.router.js";
 
 export function createApp() {
@@ -74,6 +75,7 @@ export function createApp() {
   app.use("/api/v1/search", searchRouter);
   app.use("/api/v1/bookmarks", bookmarksRouter);
   app.use("/api/v1/bookmark-collections", bookmarkCollectionsRouter);
+  app.use("/api/v1/comments", commentsRouter);
   app.use("/api/v1/admin", adminRouter);
 
   app.use(notFoundHandler);

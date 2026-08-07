@@ -59,12 +59,20 @@ export async function authenticateUser(email: string, password: string) {
   return user;
 }
 
-export function toPublicUser(user: { id: string; email: string; role: string; status: string; createdAt: Date }) {
+export function toPublicUser(user: {
+  id: string;
+  email: string;
+  role: string;
+  status: string;
+  createdAt: Date;
+  commentDisplayName?: string | null;
+}) {
   return {
     id: user.id,
     email: user.email,
     role: user.role,
     status: user.status,
     createdAt: user.createdAt,
+    commentDisplayName: user.commentDisplayName ?? null,
   };
 }

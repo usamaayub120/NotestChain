@@ -93,30 +93,40 @@ enum ReportResolution {
   USER_SUSPENDED
 }
 
+enum CommentReportResolution {
+  DISMISSED
+  COMMENT_REMOVED
+  USER_SUSPENDED
+}
+
 // ── Auth ─────────────────────────────────────────────────────────────────
 
 model User {
-  id              String        @id @default(uuid())
-  email           String        @unique
-  passwordHash    String
-  role            Role          @default(USER)
-  status          AccountStatus @default(ACTIVE)
-  emailVerifiedAt DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
-  lastLoginAt     DateTime?
+  id                 String        @id @default(uuid())
+  email              String        @unique
+  passwordHash       String
+  role               Role          @default(USER)
+  status             AccountStatus @default(ACTIVE)
+  emailVerifiedAt    DateTime?
+  commentDisplayName String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  lastLoginAt        DateTime?
 
-  sessions             Session[]
-  identities           PublicIdentity[]
-  drafts               Draft[]
-  submissions          Submission[]        @relation("SubmittedBy")
-  moderationDecisions  ModerationDecision[] @relation("ModeratedBy")
-  publications         Publication[]       @relation("PrivateAuthor")
-  bookmarks            Bookmark[]
-  bookmarkCollections  BookmarkCollection[]
-  reportsFiled         Report[]            @relation("ReportedBy")
-  reportsResolved      Report[]            @relation("ResolvedBy")
-  auditLogs            AuditLog[]
+  sessions               Session[]
+  identities             PublicIdentity[]
+  drafts                 Draft[]
+  submissions            Submission[]        @relation("SubmittedBy")
+  moderationDecisions    ModerationDecision[] @relation("ModeratedBy")
+  publications           Publication[]       @relation("PrivateAuthor")
+  bookmarks              Bookmark[]
+  bookmarkCollections    BookmarkCollection[]
+  reportsFiled           Report[]            @relation("ReportedBy")
+  reportsResolved        Report[]            @relation("ResolvedBy")
+  auditLogs              AuditLog[]
+  comments               Comment[]           @relation("CommentAuthor")
+  commentReportsFiled    CommentReport[]     @relation("CommentReportedBy")
+  commentReportsResolved CommentReport[]     @relation("CommentReportResolvedBy")
 
   @@index([status])
 }
@@ -264,6 +274,7 @@ model Publication {
   previousPublicationId String?
   previousPublication   Publication?    @relation("PublicationRevisions", fields: [previousPublicationId], references: [id])
   revisions             Publication[]   @relation("PublicationRevisions")
+  commentsEnabled       Boolean         @default(true)
   publishedAt           DateTime?
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
@@ -279,6 +290,8 @@ model Publication {
   publicationTags  PublicationTag[]
   bookmarks        Bookmark[]
   reports          Report[]
+  views            PublicationView[]
+  comments         Comment[]
 
   @@index([discoverability, isPlatformVisible, status])
   @@index([publicIdentityId])
@@ -380,6 +393,90 @@ model Report {
 
   @@index([status])
   @@index([publicationId])
+}
+
+// ── Comments ─────────────────────────────────────────────────────────────
+
+model Comment {
+  id            String      @id @default(uuid())
+  publicationId String
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+
+  parentCommentId String?
+  parentComment    Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
+  replies          Comment[] @relation("CommentReplies")
+
+  // Denormalized pointer straight to the top-level ancestor (null if this
+  // row IS top-level). Set once at creation to parentComment.rootCommentId
+  // ?? parentComment.id — makes "fetch everything under top-level comment
+  // X" an indexed equality filter instead of a recursive walk. The UI
+  // renders only 2 visual levels (every reply-to-a-reply flattens under the
+  // original top-level comment) even though parentCommentId supports
+  // arbitrary depth.
+  rootCommentId String?
+  rootComment   Comment?  @relation("CommentRoot", fields: [rootCommentId], references: [id])
+  descendants   Comment[] @relation("CommentRoot")
+
+  authorUserId String
+  author       User    @relation("CommentAuthor", fields: [authorUserId], references: [id])
+  isAnonymous  Boolean @default(false)
+  // Point-in-time snapshot, not a live join — a later commentDisplayName
+  // change doesn't retroactively relabel past comments.
+  authorDisplayNameSnapshot String?
+
+  body String
+
+  isVisible     Boolean  @default(true)
+  removalReason String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  reports CommentReport[]
+
+  @@index([publicationId, parentCommentId, createdAt])
+  @@index([rootCommentId])
+  @@index([authorUserId])
+}
+
+model CommentReport {
+  id               String                   @id @default(uuid())
+  commentId        String
+  comment          Comment                  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  reporterUserId   String?
+  reporter         User?                    @relation("CommentReportedBy", fields: [reporterUserId], references: [id])
+  reason           String
+  status           ReportStatus             @default(OPEN)
+  resolution       CommentReportResolution?
+  resolutionNote   String?
+  resolvedByUserId String?
+  resolvedBy       User?                    @relation("CommentReportResolvedBy", fields: [resolvedByUserId], references: [id])
+  resolvedAt       DateTime?
+  createdAt        DateTime                 @default(now())
+
+  @@index([status])
+  @@index([commentId])
+}
+
+// ── Analytics ────────────────────────────────────────────────────────────
+
+// Deliberately no userId/ipAddress/full referrer URL — just enough to
+// answer "which platform did this come from," matching the privacy
+// posture of the rest of the app (IP is logged on Session/AuditLog for
+// security-relevant events only, not page views). This is a raw pageview
+// count with no dedup, not a unique-visitor count.
+model PublicationView {
+  id            String      @id @default(uuid())
+  publicationId String
+  publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  utmSource     String?
+  utmMedium     String?
+  utmCampaign   String?
+  referrerHost  String?
+  createdAt     DateTime    @default(now())
+
+  @@index([publicationId, createdAt])
+  @@index([utmSource])
+  @@index([createdAt])
 }
 
 // ── Blockchain outbox / worker ──────────────────────────────────────────

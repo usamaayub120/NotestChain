@@ -6,3 +6,5 @@ export * from "./search.js";
 export * from "./bookmarks.js";
 export * from "./reports.js";
 export * from "./admin.js";
+export * from "./views.js";
+export * from "./comments.js";

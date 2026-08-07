@@ -1,6 +1,6 @@
 import { ChainStatus, OutboxStatus } from "@noteschain/shared";
-import { ReportResolution, ReportStatus } from "@prisma/client";
-import type { DelistPublicationInput, ResolveReportInput } from "@noteschain/validation";
+import { CommentReportResolution, ReportResolution, ReportStatus } from "@prisma/client";
+import type { DelistPublicationInput, ResolveCommentReportInput, ResolveReportInput } from "@noteschain/validation";
 import { prisma } from "../../lib/prisma.js";
 import { Errors } from "../../lib/apiError.js";
 import { recordAudit } from "../../lib/audit.js";
@@ -133,6 +133,126 @@ export async function resolveReport(
   });
 
   return updated;
+}
+
+export async function listCommentReports(status?: ReportStatus) {
+  return prisma.commentReport.findMany({
+    where: status ? { status } : undefined,
+    orderBy: { createdAt: "desc" },
+    include: {
+      comment: { select: { id: true, body: true, isVisible: true, publicationId: true } },
+      reporter: { select: { id: true, email: true } },
+    },
+  });
+}
+
+/**
+ * Resolving with action=COMMENT_REMOVED soft-deletes the comment in the
+ * same transaction, mirroring resolveReport's DELISTED handling — a
+ * resolution that claims to have removed something must not be able to
+ * silently fail to actually do so.
+ */
+export async function resolveCommentReport(
+  adminUserId: string,
+  reportId: string,
+  input: ResolveCommentReportInput,
+  ipAddress?: string,
+) {
+  const report = await prisma.commentReport.findUnique({
+    where: { id: reportId },
+    include: { comment: { select: { id: true, authorUserId: true } } },
+  });
+  if (!report) throw Errors.notFound("Report not found.");
+  if (report.status !== ReportStatus.OPEN) throw Errors.conflict("This report has already been resolved.");
+
+  const resolvedAt = new Date();
+  const updated = await prisma.$transaction(async (tx) => {
+    const resolvedReport = await tx.commentReport.update({
+      where: { id: reportId },
+      data: {
+        status: ReportStatus.RESOLVED,
+        resolution: input.action as CommentReportResolution,
+        resolutionNote: input.resolutionNote,
+        resolvedByUserId: adminUserId,
+        resolvedAt,
+      },
+    });
+
+    if (input.action === CommentReportResolution.COMMENT_REMOVED) {
+      await tx.comment.updateMany({
+        where: { id: report.commentId, isVisible: true },
+        data: {
+          isVisible: false,
+          removalReason: input.resolutionNote ?? `Removed following report ${reportId}.`,
+        },
+      });
+    }
+
+    if (input.action === CommentReportResolution.USER_SUSPENDED) {
+      await tx.user.update({
+        where: { id: report.comment.authorUserId },
+        data: { status: "SUSPENDED" },
+      });
+    }
+
+    return resolvedReport;
+  });
+
+  if (input.action === CommentReportResolution.USER_SUSPENDED) {
+    await revokeAllSessionsForUser(report.comment.authorUserId);
+  }
+
+  await recordAudit({
+    actorUserId: adminUserId,
+    action: `COMMENT_REPORT_RESOLVED_${input.action}`,
+    targetType: "CommentReport",
+    targetId: reportId,
+    metadata: { commentId: report.commentId, resolutionNote: input.resolutionNote },
+    ipAddress,
+  });
+
+  return updated;
+}
+
+export async function getViewBreakdown(days = 30) {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const bySource = await prisma.publicationView.groupBy({
+    by: ["utmSource"],
+    where: { createdAt: { gte: since } },
+    _count: { _all: true },
+    orderBy: { _count: { utmSource: "desc" } },
+  });
+
+  const total = await prisma.publicationView.count({ where: { createdAt: { gte: since } } });
+
+  return {
+    total,
+    bySource: bySource.map((row) => ({ utmSource: row.utmSource ?? "(direct)", count: row._count._all })),
+  };
+}
+
+export async function listMostViewedPublications(days = 30, limit = 20) {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+  const grouped = await prisma.publicationView.groupBy({
+    by: ["publicationId"],
+    where: { createdAt: { gte: since } },
+    _count: { _all: true },
+    orderBy: { _count: { publicationId: "desc" } },
+    take: limit,
+  });
+
+  const publications = await prisma.publication.findMany({
+    where: { id: { in: grouped.map((row) => row.publicationId) } },
+    select: { id: true, title: true, isPlatformVisible: true },
+  });
+  const byId = new Map(publications.map((pub) => [pub.id, pub]));
+
+  return grouped.map((row) => ({
+    publication: byId.get(row.publicationId) ?? null,
+    views: row._count._all,
+  }));
 }
 
 export interface AuditLogQuery {

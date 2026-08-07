@@ -50,7 +50,7 @@ export function AuthorBadge({
   );
 }
 
-function formatRelative(iso: string): string {
+export function formatRelative(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime();
   const minutes = Math.floor(diffMs / 60_000);
   if (minutes < 1) return "just now";

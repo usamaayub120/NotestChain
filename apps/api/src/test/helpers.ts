@@ -25,7 +25,7 @@ export async function registerAndLogin(app: Express, password = "a-strong-test-p
   const email = `test-user-${Date.now()}-${counter}@noteschain.test`;
   const agent = request.agent(app);
 
-  const res = await agent.post("/api/v1/auth/register").send({ email, password });
+  const res = await agent.post("/api/v1/auth/register").send({ email, password, captchaToken: "test-bypass-token" });
   if (res.status !== 201) {
     throw new Error(`Register failed: ${res.status} ${JSON.stringify(res.body)}`);
   }

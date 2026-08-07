@@ -36,6 +36,42 @@ export function useResolveReport() {
   });
 }
 
+export interface AdminCommentReport {
+  id: string;
+  commentId: string;
+  reporterUserId: string | null;
+  reason: string;
+  status: "OPEN" | "RESOLVED";
+  resolution: "DISMISSED" | "COMMENT_REMOVED" | "USER_SUSPENDED" | null;
+  resolutionNote: string | null;
+  resolvedAt: string | null;
+  createdAt: string;
+  comment: { id: string; body: string; isVisible: boolean; publicationId: string } | null;
+  reporter: { id: string; email: string } | null;
+}
+
+export function useCommentReports(status?: "OPEN" | "RESOLVED") {
+  return useQuery({
+    queryKey: ["admin", "comment-reports", status ?? "OPEN"],
+    queryFn: () =>
+      apiFetch<AdminCommentReport[]>(`/admin/comment-reports${status ? `?status=${status}` : "?status=OPEN"}`),
+  });
+}
+
+interface ResolveCommentReportInput {
+  action: "DISMISSED" | "COMMENT_REMOVED" | "USER_SUSPENDED";
+  resolutionNote?: string;
+}
+
+export function useResolveCommentReport() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, input }: { id: string; input: ResolveCommentReportInput }) =>
+      apiFetch(`/admin/comment-reports/${id}/resolve`, { method: "POST", body: input }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "comment-reports"] }),
+  });
+}
+
 export function useRestorePublicationListing() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -90,6 +126,19 @@ export function useBlockchainJobs(page: number, status?: BlockchainJob["status"]
     queryKey: ["admin", "blockchain-jobs", page, status],
     queryFn: () =>
       apiFetchPaginated<BlockchainJob>(`/admin/blockchain/jobs?page=${page}${status ? `&status=${status}` : ""}`),
+  });
+}
+
+export interface ViewsBreakdown {
+  total: number;
+  bySource: { utmSource: string; count: number }[];
+  mostViewed: { publication: { id: string; title: string; isPlatformVisible: boolean } | null; views: number }[];
+}
+
+export function useViewsBreakdown(days = 30) {
+  return useQuery({
+    queryKey: ["admin", "views", days],
+    queryFn: () => apiFetch<ViewsBreakdown>(`/admin/views?days=${days}`),
   });
 }
 

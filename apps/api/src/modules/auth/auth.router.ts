@@ -3,6 +3,7 @@ import { loginSchema, registerSchema } from "@noteschain/validation";
 import { asyncHandler, ok } from "../../lib/http.js";
 import { Errors } from "../../lib/apiError.js";
 import { prisma } from "../../lib/prisma.js";
+import { verifyCaptcha } from "../../lib/captcha.js";
 import { authRateLimit } from "../../middleware/rateLimit.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { recordAudit } from "../../lib/audit.js";
@@ -17,6 +18,8 @@ authRouter.post(
   authRateLimit,
   asyncHandler(async (req, res) => {
     const input = registerSchema.parse(req.body);
+    const captchaOk = await verifyCaptcha(input.captchaToken, req.ip);
+    if (!captchaOk) throw Errors.badRequest("Captcha verification failed. Please try again.");
     const user = await registerUser(input.email, input.password);
     const session = await createSession(user.id, req);
     setSessionCookies(res, session);

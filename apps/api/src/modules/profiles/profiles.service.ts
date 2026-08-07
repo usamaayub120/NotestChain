@@ -70,5 +70,5 @@ export async function listProfilePublications(username: string, page: number, pa
     prisma.publication.count({ where }),
   ]);
 
-  return { items: items.map(toPublicationDTO), total };
+  return { items: items.map((pub) => toPublicationDTO(pub)), total };
 }

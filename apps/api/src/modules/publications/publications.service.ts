@@ -20,8 +20,10 @@ export const PUBLICLY_VISIBLE_STATUSES = ["CHAIN_PENDING", "CHAIN_SUBMITTED", "P
 /**
  * Never includes privateAuthorUserId, sourceDraftId, or any moderation
  * metadata — this is the shape returned to unauthenticated visitors.
+ * viewerIsOwner is computed per-request from the caller's own session and
+ * is false for everyone else; it never exposes privateAuthorUserId itself.
  */
-export function toPublicationDTO(pub: PublicationWithRelations) {
+export function toPublicationDTO(pub: PublicationWithRelations, viewerUserId?: string) {
   const author =
     pub.identityMode === IdentityMode.ANONYMOUS || !pub.publicIdentity
       ? null
@@ -46,6 +48,8 @@ export function toPublicationDTO(pub: PublicationWithRelations) {
     previousPublicationId: pub.previousPublicationId,
     publishedAt: pub.publishedAt,
     createdAt: pub.createdAt,
+    commentsEnabled: pub.commentsEnabled,
+    viewerIsOwner: viewerUserId !== undefined && viewerUserId === pub.privateAuthorUserId,
     chain: chain
       ? {
           status: chain.chainStatus,
@@ -87,7 +91,7 @@ export async function listPublicPublications(options: ListPublicationsOptions) {
     prisma.publication.count({ where }),
   ]);
 
-  return { items: items.map(toPublicationDTO), total };
+  return { items: items.map((pub) => toPublicationDTO(pub)), total };
 }
 
 /**
@@ -95,12 +99,12 @@ export async function listPublicPublications(options: ListPublicationsOptions) {
  * even though it's excluded from listPublicPublications — "unlisted" means
  * "not discoverable," never "not accessible by URL" (product spec §8).
  */
-export async function getPublicationById(id: string) {
+export async function getPublicationById(id: string, viewerUserId?: string) {
   const pub = await prisma.publication.findUnique({ where: { id }, include: publicationInclude });
   if (!pub || !pub.isPlatformVisible) {
     throw Errors.notFound("Publication not found.");
   }
-  return toPublicationDTO(pub);
+  return toPublicationDTO(pub, viewerUserId);
 }
 
 export async function getPublicationRevisions(id: string) {
@@ -125,6 +129,6 @@ export async function getPublicationRevisions(id: string) {
 
   return {
     previous: previous ? toPublicationDTO(previous) : null,
-    revisions: revisions.map(toPublicationDTO),
+    revisions: revisions.map((pub) => toPublicationDTO(pub)),
   };
 }

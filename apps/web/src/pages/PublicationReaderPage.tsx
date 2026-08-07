@@ -1,15 +1,41 @@
+import { useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
+import { brand } from "@noteschain/shared";
 import { usePublication, usePublicationRevisions } from "@/hooks/usePublications";
 import { AuthorBadge } from "@/components/publication/AuthorBadge";
 import { BookmarkButton } from "@/components/publication/BookmarkButton";
 import { BlockchainProofSheet } from "@/components/publication/BlockchainProofSheet";
 import { ReportPublicationSheet } from "@/components/publication/ReportPublicationSheet";
+import { ShareSheet } from "@/components/publication/ShareSheet";
+import { CommentSection } from "@/components/publication/CommentSection";
 import { ErrorState } from "@/components/ErrorState";
+import { apiFetch } from "@/lib/api";
 
 export function PublicationReaderPage() {
   const { id } = useParams<{ id: string }>();
   const { data: publication, isLoading, isError, refetch } = usePublication(id);
   const { data: revisionData } = usePublicationRevisions(id);
+
+  useEffect(() => {
+    if (!id) return;
+    const params = new URLSearchParams(window.location.search);
+    apiFetch(`/publications/${id}/view`, {
+      method: "POST",
+      body: {
+        utmSource: params.get("utm_source") ?? undefined,
+        utmMedium: params.get("utm_medium") ?? undefined,
+        utmCampaign: params.get("utm_campaign") ?? undefined,
+      },
+    }).catch(() => {});
+  }, [id]);
+
+  useEffect(() => {
+    if (!publication) return;
+    document.title = `${publication.title} — ${brand.name}`;
+    return () => {
+      document.title = `${brand.name} — ${brand.tagline}`;
+    };
+  }, [publication]);
 
   if (isLoading) return <div className="px-4 py-8 text-muted-foreground">Loading…</div>;
   if (isError || !publication) return <ErrorState message="This publication couldn't be found." onRetry={() => refetch()} />;
@@ -66,8 +92,11 @@ export function PublicationReaderPage() {
       <div className="mt-8 flex items-center gap-4 border-t border-border pt-4">
         <BookmarkButton publicationId={publication.id} />
         <BlockchainProofSheet publication={publication} />
+        <ShareSheet publicationId={publication.id} title={publication.title} />
         <ReportPublicationSheet publicationId={publication.id} />
       </div>
+
+      <CommentSection publication={publication} />
     </article>
   );
 }

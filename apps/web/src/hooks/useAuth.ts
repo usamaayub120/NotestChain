@@ -7,6 +7,7 @@ export interface PublicUser {
   role: "USER" | "MODERATOR" | "ADMIN";
   status: string;
   createdAt: string;
+  commentDisplayName: string | null;
 }
 
 export function useCurrentUser() {

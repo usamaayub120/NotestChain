@@ -39,6 +39,10 @@ export function DashboardPage() {
           <h2 className="text-lg">Saved</h2>
           <p className="mt-1 text-sm text-muted-foreground">Publications you've bookmarked.</p>
         </Link>
+        <Link to="/how-it-works" className="rounded-md border border-border bg-surface p-4 hover:bg-muted">
+          <h2 className="text-lg">How it works</h2>
+          <p className="mt-1 text-sm text-muted-foreground">What happens between writing and keeping.</p>
+        </Link>
         {primaryIdentity ? (
           <Link to={`/@${primaryIdentity.username}`} className="rounded-md border border-border bg-surface p-4 hover:bg-muted">
             <h2 className="text-lg">Your public profile</h2>

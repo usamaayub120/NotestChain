@@ -22,7 +22,9 @@ import { AdminHomePage } from "@/pages/admin/AdminHomePage";
 import { ReportsQueuePage } from "@/pages/admin/ReportsQueuePage";
 import { AuditLogPage } from "@/pages/admin/AuditLogPage";
 import { BlockchainJobsPage } from "@/pages/admin/BlockchainJobsPage";
+import { ViewsPage } from "@/pages/admin/ViewsPage";
 import { ComingSoonPage } from "@/pages/ComingSoonPage";
+import { HowItWorksPage } from "@/pages/HowItWorksPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 
 export function App() {
@@ -34,6 +36,7 @@ export function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/search" element={<SearchPage />} />
+        <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="/tags/:tag" element={<TagPage />} />
         <Route path="/p/:id" element={<PublicationReaderPage />} />
         <Route path="/:handle" element={<ProfileHandleRoute />} />
@@ -140,6 +143,14 @@ export function App() {
           element={
             <RequireRole role="ADMIN">
               <BlockchainJobsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/views"
+          element={
+            <RequireRole role="ADMIN">
+              <ViewsPage />
             </RequireRole>
           }
         />
