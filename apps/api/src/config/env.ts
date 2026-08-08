@@ -29,9 +29,12 @@ const envSchema = z.object({
 
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 
-  // Optional in dev — verifyCaptcha() bypasses the check when unset, so
-  // local/CI runs don't need a live Cloudflare secret. Required below in
-  // production, same pattern as SESSION_SECRET.
+  // Optional everywhere, including production — verifyCaptcha() bypasses
+  // the check when unset and logs a warning each time. Deliberately not a
+  // hard production requirement like SESSION_SECRET: unlike that secret,
+  // this one depends on a Cloudflare Turnstile site being set up first,
+  // which is a separate, later step — crashing startup without it would
+  // block deploying the feature before that's done.
   TURNSTILE_SECRET_KEY: z.string().optional(),
 });
 
@@ -48,8 +51,7 @@ function loadEnv(): Env {
     process.exit(1);
   }
   if (parsed.data.NODE_ENV === "production" && !process.env.TURNSTILE_SECRET_KEY) {
-    console.error("TURNSTILE_SECRET_KEY must be set explicitly in production.");
-    process.exit(1);
+    console.warn("TURNSTILE_SECRET_KEY not set — captcha verification is bypassed until a Cloudflare Turnstile secret is configured.");
   }
   return parsed.data;
 }

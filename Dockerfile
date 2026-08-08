@@ -37,6 +37,13 @@ COPY . .
 # generate time — it only reads the schema, never connects.
 ENV DATABASE_URL="postgresql://user:pass@localhost:5432/db"
 
+# Turnstile's site key is meant to be public (it's served in the page's own
+# JS, same as any client-side widget config) — safe as a plain build arg,
+# unlike the secret key, which only ever lives in the API container's
+# runtime env (see docker run in the deploy notes, never this build).
+ARG VITE_TURNSTILE_SITE_KEY=""
+ENV VITE_TURNSTILE_SITE_KEY=$VITE_TURNSTILE_SITE_KEY
+
 RUN pnpm run db:generate
 RUN pnpm run build:packages
 RUN pnpm --filter @noteschain/web build

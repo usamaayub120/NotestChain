@@ -114,5 +114,10 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          # Turnstile site keys are meant to be public (Cloudflare's own
+          # design — the widget ships it in page JS), so a plain literal
+          # here is fine; the secret key never appears in this file.
+          build-args: |
+            VITE_TURNSTILE_SITE_KEY=0x4AAAAAAEJ8hbcgoRTSf_Ux
           cache-from: type=gha
           cache-to: type=gha,mode=max
