@@ -1,18 +1,20 @@
 import { Link } from "react-router-dom";
 import { useViewsBreakdown } from "@/hooks/useAdmin";
 import { EmptyState } from "@/components/EmptyState";
+import { CardSkeletonList } from "@/components/CardSkeleton";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export function ViewsPage() {
   const { data, isLoading } = useViewsBreakdown(30);
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      <h1 className="text-2xl">Views</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Last 30 days, {data?.total ?? "…"} total. A raw pageview count, not unique visitors.
-      </p>
+      <AdminPageHeader
+        title="Views"
+        description={`Last 30 days, ${data?.total ?? "…"} total. A raw pageview count, not unique visitors.`}
+      />
 
-      {isLoading && <p className="mt-6 text-muted-foreground">Loading…</p>}
+      {isLoading && <div className="mt-6"><CardSkeletonList /></div>}
       {!isLoading && data?.total === 0 && (
         <EmptyState title="No views yet" description="Pageviews will show up here once readers start visiting." />
       )}

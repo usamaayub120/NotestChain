@@ -64,7 +64,7 @@ export function MobileBottomNav({ user }: { user: PublicUser | null | undefined 
     return (
       <nav
         aria-label="Primary"
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface md:hidden"
+        className="chrome-surface fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur md:hidden"
         style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
       >
         <ul className="flex items-stretch justify-between px-1">
@@ -79,7 +79,7 @@ export function MobileBottomNav({ user }: { user: PublicUser | null | undefined 
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-surface md:hidden"
+      className="chrome-surface fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/95 backdrop-blur md:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
       <ul className="flex items-stretch justify-between px-1">

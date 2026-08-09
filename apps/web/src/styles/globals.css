@@ -62,13 +62,13 @@
 }
 
 * {
-  border-color: var(--border);
+  border-color: rgb(var(--border));
 }
 
 html,
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
 }
 
 body {
@@ -82,6 +82,10 @@ body {
   overflow-wrap: break-word;
 }
 
+/* Base-layer fallback tracking for a heading with no explicit text-* size
+   utility. Any text-xs..text-3xl utility on the same element overrides this
+   with the size-specific value from tailwind.config.ts's fontSize scale —
+   this is deliberately not the single flat value every heading gets. */
 h1,
 h2,
 h3,
@@ -106,7 +110,25 @@ h4 {
   }
 }
 
+/* Translucent floating chrome (MobileTopBar, MobileBottomNav) — a person who
+   asks the OS for less transparency gets a frostier, near-solid version
+   instead of losing the surface's function. */
+@media (prefers-reduced-transparency: reduce) {
+  .chrome-surface {
+    background-color: rgb(var(--background));
+    backdrop-filter: none;
+  }
+}
+
+@media (prefers-contrast: more) {
+  .chrome-surface {
+    background-color: rgb(var(--background));
+    backdrop-filter: none;
+    border-color: rgb(var(--foreground));
+  }
+}
+
 :focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid rgb(var(--primary));
   outline-offset: 2px;
 }

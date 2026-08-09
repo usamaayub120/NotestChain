@@ -35,13 +35,23 @@ export function AppShell({ children }: { children: ReactNode }) {
   const { start: startNewDraft } = useStartNewDraft();
   const location = useLocation();
   const showFooter = !FOOTER_EXCLUDED_PREFIXES.some((prefix) => location.pathname.startsWith(prefix));
+  const inAdmin = location.pathname.startsWith("/admin");
 
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
+      {inAdmin && (
+        <div className="flex h-9 shrink-0 items-center justify-between bg-foreground px-4 text-xs font-medium text-background md:px-8">
+          <span>Admin</span>
+          <Link to="/" className="text-background/70 hover:text-background">
+            Back to NotesChain
+          </Link>
+        </div>
+      )}
+
       <MobileTopBar />
 
       <header className="hidden border-b border-border md:flex md:h-16 md:items-center md:justify-between md:px-8">
-        <Link to="/" className="font-display text-xl font-semibold tracking-tight">
+        <Link to="/" className="font-display text-xl font-semibold">
           {brand.name}
         </Link>
         <nav aria-label="Primary" className="flex items-center gap-6 text-sm font-medium">

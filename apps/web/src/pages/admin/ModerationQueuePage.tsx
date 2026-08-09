@@ -1,16 +1,17 @@
 import { Link } from "react-router-dom";
 import { usePendingSubmissions } from "@/hooks/useModeration";
 import { EmptyState } from "@/components/EmptyState";
+import { CardSkeletonList } from "@/components/CardSkeleton";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 
 export function ModerationQueuePage() {
   const { data: submissions, isLoading } = usePendingSubmissions();
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      <h1 className="text-2xl">Submissions</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Oldest first.</p>
+      <AdminPageHeader title="Submissions" description="Oldest first." />
 
-      {isLoading && <p className="mt-6 text-muted-foreground">Loading…</p>}
+      {isLoading && <div className="mt-6"><CardSkeletonList /></div>}
       {!isLoading && submissions?.length === 0 && (
         <EmptyState title="Nothing pending" description="The queue is empty right now." />
       )}

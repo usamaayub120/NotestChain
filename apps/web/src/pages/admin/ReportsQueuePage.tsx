@@ -13,13 +13,36 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/EmptyState";
+import { CardSkeletonList } from "@/components/CardSkeleton";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { ConfirmActionDialog } from "@/components/admin/ConfirmActionDialog";
+import { MutationError } from "@/components/admin/MutationError";
+
+const DESTRUCTIVE_REPORT_ACTION_COPY = {
+  DELISTED: {
+    title: "Delist this publication?",
+    description: "It will no longer be publicly visible on NotesChain. This does not remove it from the blockchain record.",
+    confirmLabel: "Delist publication",
+    pendingLabel: "Delisting…",
+  },
+  USER_SUSPENDED: {
+    title: "Suspend this author?",
+    description: "They will lose access to their account until reinstated. Do this only for a clear, reviewed violation.",
+    confirmLabel: "Suspend author",
+    pendingLabel: "Suspending…",
+  },
+} as const;
 
 function OpenReportRow({ report }: { report: AdminReport }) {
   const [note, setNote] = useState("");
+  const [confirmAction, setConfirmAction] = useState<"DELISTED" | "USER_SUSPENDED" | null>(null);
   const resolve = useResolveReport();
 
-  async function resolveAs(action: "DISMISSED" | "DELISTED" | "USER_SUSPENDED") {
-    await resolve.mutateAsync({ id: report.id, input: { action, resolutionNote: note || undefined } });
+  function resolveAs(action: "DISMISSED" | "DELISTED" | "USER_SUSPENDED") {
+    resolve.mutate(
+      { id: report.id, input: { action, resolutionNote: note || undefined } },
+      { onSuccess: () => setConfirmAction(null) },
+    );
   }
 
   return (
@@ -38,14 +61,25 @@ function OpenReportRow({ report }: { report: AdminReport }) {
           <Button variant="outline" disabled={resolve.isPending} onClick={() => resolveAs("DISMISSED")}>
             Dismiss
           </Button>
-          <Button variant="destructive" disabled={resolve.isPending} onClick={() => resolveAs("DELISTED")}>
+          <Button variant="destructive" disabled={resolve.isPending} onClick={() => setConfirmAction("DELISTED")}>
             Delist publication
           </Button>
-          <Button variant="destructive" disabled={resolve.isPending} onClick={() => resolveAs("USER_SUSPENDED")}>
+          <Button variant="destructive" disabled={resolve.isPending} onClick={() => setConfirmAction("USER_SUSPENDED")}>
             Suspend author
           </Button>
         </div>
+        <MutationError error={resolve.isError ? resolve.error : null} />
       </div>
+
+      {confirmAction && (
+        <ConfirmActionDialog
+          open
+          onOpenChange={(next) => !next && setConfirmAction(null)}
+          isPending={resolve.isPending}
+          onConfirm={() => resolveAs(confirmAction)}
+          {...DESTRUCTIVE_REPORT_ACTION_COPY[confirmAction]}
+        />
+      )}
     </li>
   );
 }
@@ -72,6 +106,7 @@ function ResolvedReportRow({ report }: { report: AdminReport }) {
           Restore listing
         </Button>
       )}
+      <MutationError error={restore.isError ? restore.error : null} />
     </li>
   );
 }
@@ -94,12 +129,31 @@ function ReportHeader({ report }: { report: AdminReport }) {
   );
 }
 
+const DESTRUCTIVE_COMMENT_ACTION_COPY = {
+  COMMENT_REMOVED: {
+    title: "Remove this comment?",
+    description: "It will no longer be visible to readers. This does not remove it from the blockchain record.",
+    confirmLabel: "Remove comment",
+    pendingLabel: "Removing…",
+  },
+  USER_SUSPENDED: {
+    title: "Suspend this author?",
+    description: "They will lose access to their account until reinstated. Do this only for a clear, reviewed violation.",
+    confirmLabel: "Suspend author",
+    pendingLabel: "Suspending…",
+  },
+} as const;
+
 function OpenCommentReportRow({ report }: { report: AdminCommentReport }) {
   const [note, setNote] = useState("");
+  const [confirmAction, setConfirmAction] = useState<"COMMENT_REMOVED" | "USER_SUSPENDED" | null>(null);
   const resolve = useResolveCommentReport();
 
-  async function resolveAs(action: "DISMISSED" | "COMMENT_REMOVED" | "USER_SUSPENDED") {
-    await resolve.mutateAsync({ id: report.id, input: { action, resolutionNote: note || undefined } });
+  function resolveAs(action: "DISMISSED" | "COMMENT_REMOVED" | "USER_SUSPENDED") {
+    resolve.mutate(
+      { id: report.id, input: { action, resolutionNote: note || undefined } },
+      { onSuccess: () => setConfirmAction(null) },
+    );
   }
 
   return (
@@ -118,14 +172,25 @@ function OpenCommentReportRow({ report }: { report: AdminCommentReport }) {
           <Button variant="outline" disabled={resolve.isPending} onClick={() => resolveAs("DISMISSED")}>
             Dismiss
           </Button>
-          <Button variant="destructive" disabled={resolve.isPending} onClick={() => resolveAs("COMMENT_REMOVED")}>
+          <Button variant="destructive" disabled={resolve.isPending} onClick={() => setConfirmAction("COMMENT_REMOVED")}>
             Remove comment
           </Button>
-          <Button variant="destructive" disabled={resolve.isPending} onClick={() => resolveAs("USER_SUSPENDED")}>
+          <Button variant="destructive" disabled={resolve.isPending} onClick={() => setConfirmAction("USER_SUSPENDED")}>
             Suspend author
           </Button>
         </div>
+        <MutationError error={resolve.isError ? resolve.error : null} />
       </div>
+
+      {confirmAction && (
+        <ConfirmActionDialog
+          open
+          onOpenChange={(next) => !next && setConfirmAction(null)}
+          isPending={resolve.isPending}
+          onConfirm={() => resolveAs(confirmAction)}
+          {...DESTRUCTIVE_COMMENT_ACTION_COPY[confirmAction]}
+        />
+      )}
     </li>
   );
 }
@@ -177,8 +242,7 @@ export function ReportsQueuePage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      <h1 className="text-2xl">Reports</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Reader reports, newest first.</p>
+      <AdminPageHeader title="Reports" description="Reader reports, newest first." />
 
       <Tabs value={contentType} onValueChange={(v) => setContentType(v as "publications" | "comments")} className="mt-4">
         <TabsList>
@@ -194,7 +258,7 @@ export function ReportsQueuePage() {
         </TabsList>
       </Tabs>
 
-      {isLoading && <p className="mt-6 text-muted-foreground">Loading…</p>}
+      {isLoading && <div className="mt-6"><CardSkeletonList /></div>}
       {isEmpty && (
         <EmptyState
           title={status === "OPEN" ? "No open reports" : "Nothing resolved yet"}

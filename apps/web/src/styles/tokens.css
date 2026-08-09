@@ -2,36 +2,44 @@
    via Tailwind's semantic classes (bg-background, text-foreground, ...),
    never raw hex values.
 
+   Values are space-separated "R G B" channels, not hex — Tailwind's
+   bg-x/50-style opacity modifiers only work on colors defined with the
+   rgb(var(--x) / <alpha-value>) pattern (see tailwind.config.ts), which
+   requires the channels split out like this rather than a single hex
+   string. (A hex value here would make every opacity-modified utility
+   — bg-background/95, bg-destructive/10, hover:bg-primary/90, etc. —
+   silently render fully transparent instead of tinted.)
+
    The second group (--input, --ring, --accent*, --secondary*, --card*,
    --popover*, --destructive-foreground) are aliases shadcn/ui primitives
    expect by convention — mapped onto the same NotesChain palette rather
    than introducing new colors, so generated components stay on-brand. */
 
 :root {
-  --background: #f6f1e8;
-  --foreground: #201e1b;
-  --surface: #ffffff;
-  --surface-elevated: #fbf8f2;
-  --primary: #e1502f;
-  --primary-foreground: #ffffff;
-  --muted: #ede7db;
-  --muted-foreground: #6f695d;
-  --border: #ddd5c4;
-  --success: #3f6b4c;
-  --warning: #b8862b;
-  --destructive: #c4361f;
-  --destructive-foreground: #ffffff;
-  --verified: #3f6b4c;
-  --verified-foreground: #f3f7f1;
+  --background: 246 241 232;
+  --foreground: 32 30 27;
+  --surface: 255 255 255;
+  --surface-elevated: 251 248 242;
+  --primary: 225 80 47;
+  --primary-foreground: 255 255 255;
+  --muted: 237 231 219;
+  --muted-foreground: 111 105 93;
+  --border: 221 213 196;
+  --success: 63 107 76;
+  --warning: 184 134 43;
+  --destructive: 196 54 31;
+  --destructive-foreground: 255 255 255;
+  --verified: 63 107 76;
+  --verified-foreground: 243 247 241;
 
   /* Canopy/glow — the "forest" half of the palette, used only for the
      handful of atmospheric moments (footer, hero ambient light, quote
      accents) described in DESIGN_SYSTEM.md's library-in-a-forest brief.
      Never used for interactive elements — ember stays the only accent
      a person can click. */
-  --canopy: #1f3327;
-  --canopy-foreground: #f3efe3;
-  --glow: #f0c48b;
+  --canopy: 31 51 39;
+  --canopy-foreground: 243 239 227;
+  --glow: 240 196 139;
 
   --input: var(--border);
   --ring: var(--primary);
@@ -55,24 +63,24 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #16151a;
-    --foreground: #f1ede3;
-    --surface: #1e1d22;
-    --surface-elevated: #26242b;
-    --primary: #ff6b45;
-    --primary-foreground: #16151a;
-    --muted: #2a2830;
-    --muted-foreground: #9c968a;
-    --border: #34313a;
-    --success: #6fa37e;
-    --warning: #d9a64c;
-    --destructive: #e5674a;
-    --destructive-foreground: #16151a;
-    --verified: #6fa37e;
-    --verified-foreground: #12241a;
-    --canopy: #14231b;
-    --canopy-foreground: #e7e2d3;
-    --glow: #c99a5e;
+    --background: 22 21 26;
+    --foreground: 241 237 227;
+    --surface: 30 29 34;
+    --surface-elevated: 38 36 43;
+    --primary: 255 107 69;
+    --primary-foreground: 22 21 26;
+    --muted: 42 40 48;
+    --muted-foreground: 156 150 138;
+    --border: 52 49 58;
+    --success: 111 163 126;
+    --warning: 217 166 76;
+    --destructive: 229 103 74;
+    --destructive-foreground: 22 21 26;
+    --verified: 111 163 126;
+    --verified-foreground: 18 36 26;
+    --canopy: 20 35 27;
+    --canopy-foreground: 231 226 211;
+    --glow: 201 154 94;
     --shadow-sm: none;
     --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
     --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.5);
@@ -80,43 +88,43 @@
 }
 
 :root[data-theme="light"] {
-  --background: #f6f1e8;
-  --foreground: #201e1b;
-  --surface: #ffffff;
-  --surface-elevated: #fbf8f2;
-  --primary: #e1502f;
-  --primary-foreground: #ffffff;
-  --muted: #ede7db;
-  --muted-foreground: #6f695d;
-  --border: #ddd5c4;
-  --success: #3f6b4c;
-  --warning: #b8862b;
-  --destructive: #c4361f;
-  --destructive-foreground: #ffffff;
-  --verified: #3f6b4c;
-  --verified-foreground: #f3f7f1;
-  --canopy: #1f3327;
-  --canopy-foreground: #f3efe3;
-  --glow: #f0c48b;
+  --background: 246 241 232;
+  --foreground: 32 30 27;
+  --surface: 255 255 255;
+  --surface-elevated: 251 248 242;
+  --primary: 225 80 47;
+  --primary-foreground: 255 255 255;
+  --muted: 237 231 219;
+  --muted-foreground: 111 105 93;
+  --border: 221 213 196;
+  --success: 63 107 76;
+  --warning: 184 134 43;
+  --destructive: 196 54 31;
+  --destructive-foreground: 255 255 255;
+  --verified: 63 107 76;
+  --verified-foreground: 243 247 241;
+  --canopy: 31 51 39;
+  --canopy-foreground: 243 239 227;
+  --glow: 240 196 139;
 }
 
 :root[data-theme="dark"] {
-  --background: #16151a;
-  --foreground: #f1ede3;
-  --surface: #1e1d22;
-  --surface-elevated: #26242b;
-  --primary: #ff6b45;
-  --primary-foreground: #16151a;
-  --muted: #2a2830;
-  --muted-foreground: #9c968a;
-  --border: #34313a;
-  --success: #6fa37e;
-  --warning: #d9a64c;
-  --destructive: #e5674a;
-  --destructive-foreground: #16151a;
-  --verified: #6fa37e;
-  --verified-foreground: #12241a;
-  --canopy: #14231b;
-  --canopy-foreground: #e7e2d3;
-  --glow: #c99a5e;
+  --background: 22 21 26;
+  --foreground: 241 237 227;
+  --surface: 30 29 34;
+  --surface-elevated: 38 36 43;
+  --primary: 255 107 69;
+  --primary-foreground: 22 21 26;
+  --muted: 42 40 48;
+  --muted-foreground: 156 150 138;
+  --border: 52 49 58;
+  --success: 111 163 126;
+  --warning: 217 166 76;
+  --destructive: 229 103 74;
+  --destructive-foreground: 22 21 26;
+  --verified: 111 163 126;
+  --verified-foreground: 18 36 26;
+  --canopy: 20 35 27;
+  --canopy-foreground: 231 226 211;
+  --glow: 201 154 94;
 }

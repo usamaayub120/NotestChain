@@ -4,6 +4,9 @@ import { useBlockchainJobs, useRetryBlockchainJob, type BlockchainJob } from "@/
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/EmptyState";
+import { CardSkeletonList } from "@/components/CardSkeleton";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { MutationError } from "@/components/admin/MutationError";
 
 const STATUS_FILTERS = ["ALL", "PENDING", "PROCESSING", "PROCESSED", "FAILED"] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
@@ -37,9 +40,10 @@ function JobRow({ job }: { job: BlockchainJob }) {
           disabled={retry.isPending}
           onClick={() => retry.mutate({ id: job.id })}
         >
-          Retry
+          {retry.isPending ? "Retrying…" : "Retry"}
         </Button>
       )}
+      <MutationError error={retry.isError ? retry.error : null} />
     </li>
   );
 }
@@ -53,10 +57,10 @@ export function BlockchainJobsPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      <h1 className="text-2xl">Blockchain jobs</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        The publish queue — reconciliation runs automatically every few minutes and flags mismatches to the audit log.
-      </p>
+      <AdminPageHeader
+        title="Blockchain jobs"
+        description="The publish queue — reconciliation runs automatically every few minutes and flags mismatches to the audit log."
+      />
 
       <Tabs
         value={status}
@@ -75,7 +79,7 @@ export function BlockchainJobsPage() {
         </TabsList>
       </Tabs>
 
-      {isLoading && <p className="mt-6 text-muted-foreground">Loading…</p>}
+      {isLoading && <div className="mt-6"><CardSkeletonList /></div>}
       {!isLoading && data?.data.length === 0 && <EmptyState title="No jobs" description="Nothing matches this filter." />}
 
       <ul className="mt-6 space-y-3">{data?.data.map((job) => <JobRow key={job.id} job={job} />)}</ul>

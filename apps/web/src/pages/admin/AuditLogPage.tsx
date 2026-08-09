@@ -2,6 +2,13 @@ import { useState } from "react";
 import { useAuditLog } from "@/hooks/useAdmin";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
+import { CardSkeletonList } from "@/components/CardSkeleton";
+import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+
+function humanizeAction(action: string): string {
+  const words = action.replace(/_/g, " ").toLowerCase();
+  return words.charAt(0).toUpperCase() + words.slice(1);
+}
 
 export function AuditLogPage() {
   const [page, setPage] = useState(1);
@@ -11,10 +18,9 @@ export function AuditLogPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      <h1 className="text-2xl">Audit log</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Every moderation and admin action, newest first.</p>
+      <AdminPageHeader title="Audit log" description="Every moderation and admin action, newest first." />
 
-      {isLoading && <p className="mt-6 text-muted-foreground">Loading…</p>}
+      {isLoading && <div className="mt-6"><CardSkeletonList /></div>}
       {!isLoading && data?.data.length === 0 && (
         <EmptyState title="Nothing logged yet" description="Moderation and admin actions will show up here." />
       )}
@@ -23,7 +29,7 @@ export function AuditLogPage() {
         {data?.data.map((entry) => (
           <li key={entry.id} className="rounded-md border border-border bg-surface p-3 text-sm">
             <div className="flex items-center justify-between gap-3">
-              <span className="font-medium">{entry.action}</span>
+              <span className="font-medium">{humanizeAction(entry.action)}</span>
               <span className="text-xs text-muted-foreground">{new Date(entry.createdAt).toLocaleString()}</span>
             </div>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -31,9 +37,14 @@ export function AuditLogPage() {
               {entry.targetType && ` → ${entry.targetType} ${entry.targetId}`}
             </p>
             {entry.metadata && (
-              <pre className="mt-2 overflow-x-auto rounded bg-muted p-2 font-proof text-xs">
-                {JSON.stringify(entry.metadata, null, 2)}
-              </pre>
+              <details className="mt-2">
+                <summary className="min-h-11 cursor-pointer py-2 text-xs text-muted-foreground">
+                  Technical details
+                </summary>
+                <pre className="mt-1 overflow-x-auto rounded bg-muted p-2 font-proof text-xs">
+                  {JSON.stringify(entry.metadata, null, 2)}
+                </pre>
+              </details>
             )}
           </li>
         ))}
