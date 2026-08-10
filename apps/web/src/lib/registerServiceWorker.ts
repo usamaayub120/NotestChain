@@ -10,6 +10,11 @@ export function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
 
   const updateSW = registerSW({
+    // Without this, registration is deferred until the window "load"
+    // event — which, by the time this module runs, has often already
+    // fired (fonts/CSS/other chunks finish first), so the listener never
+    // catches it and the service worker silently never registers at all.
+    immediate: true,
     onRegisteredSW(_url, registration) {
       if (!registration) return;
       setInterval(() => {
