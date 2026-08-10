@@ -12,6 +12,12 @@
       "runtimeExecutable": "npx",
       "runtimeArgs": ["--yes", "dotenv-cli", "-e", "apps/api/.env", "--", "pnpm", "--filter", "@noteschain/api", "dev"],
       "port": 3001
+    },
+    {
+      "name": "web-preview",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["--filter", "@noteschain/web", "preview", "--port", "4173", "--strictPort"],
+      "port": 4173
     }
   ]
 }
