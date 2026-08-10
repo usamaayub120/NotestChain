@@ -9,7 +9,15 @@ import { createPublicationFromApprovedSubmission } from "../publications/publish
 
 const AUTOSAVE_VERSION_THROTTLE_MS = 30_000;
 
-export function toDraftDTO(draft: Draft) {
+/**
+ * Draft.status is capped at APPROVED by design (see stateMachine.ts) — once
+ * a Publication exists, ITS status (CHAIN_PENDING → ... → PUBLISHED) is the
+ * true lifecycle state, and Draft.status is never updated to reflect it.
+ * Every read path that displays status to the author must therefore prefer
+ * the linked Publication's status when one exists, or a fully published
+ * draft shows as "Approved — ready to publish" forever.
+ */
+export function toDraftDTO(draft: Draft & { publication?: { status: DraftStatus } | null }) {
   return {
     id: draft.id,
     title: draft.title,
@@ -18,7 +26,7 @@ export function toDraftDTO(draft: Draft) {
     identityMode: draft.identityMode,
     publicIdentityId: draft.publicIdentityId,
     discoverability: draft.discoverability,
-    status: draft.status,
+    status: draft.publication?.status ?? draft.status,
     lastSavedAt: draft.lastSavedAt,
     submittedAt: draft.submittedAt,
     createdAt: draft.createdAt,
@@ -27,7 +35,11 @@ export function toDraftDTO(draft: Draft) {
 }
 
 export async function listDraftsForUser(userId: string) {
-  return prisma.draft.findMany({ where: { userId }, orderBy: { updatedAt: "desc" } });
+  return prisma.draft.findMany({
+    where: { userId },
+    orderBy: { updatedAt: "desc" },
+    include: { publication: { select: { status: true } } },
+  });
 }
 
 export async function createDraft(userId: string, input: CreateDraftInput) {
@@ -52,7 +64,13 @@ async function getOwnedDraftOrThrow(userId: string, draftId: string): Promise<Dr
 }
 
 export async function getDraft(userId: string, draftId: string) {
-  return getOwnedDraftOrThrow(userId, draftId);
+  const draft = await prisma.draft.findUnique({
+    where: { id: draftId },
+    include: { publication: { select: { status: true } } },
+  });
+  if (!draft) throw Errors.notFound("Draft not found.");
+  if (draft.userId !== userId) throw Errors.forbidden("You do not own this draft.");
+  return draft;
 }
 
 function requireEditable(draft: Draft) {
