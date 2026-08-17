@@ -2,7 +2,11 @@ import { z } from "zod";
 import { LIMITS } from "@noteschain/shared";
 
 export const createCommentSchema = z.object({
-  body: z.string().trim().min(1).max(LIMITS.BODY_MAX_BYTES),
+  // COMMENT_MAX_BYTES, not the note body limit. These used to be the same
+  // constant, which meant raising the note limit would have silently uncapped
+  // comments too. Comments are a different thing with different abuse
+  // characteristics — they get their own number on purpose.
+  body: z.string().trim().min(1).max(LIMITS.COMMENT_MAX_BYTES),
   parentCommentId: z.string().uuid().optional(),
   isAnonymous: z.boolean().default(false),
   displayName: z.string().trim().min(1).max(LIMITS.DISPLAY_NAME_MAX_LENGTH).optional(),

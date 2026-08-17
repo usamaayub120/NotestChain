@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useParams, Link } from "react-router-dom";
+import { NoteContent } from "@/components/note/NoteContent";
 import { brand } from "@noteschain/shared";
 import { usePublication, usePublicationRevisions } from "@/hooks/usePublications";
 import { AuthorBadge } from "@/components/publication/AuthorBadge";
@@ -10,6 +11,7 @@ import { ShareSheet } from "@/components/publication/ShareSheet";
 import { CommentSection } from "@/components/publication/CommentSection";
 import { ErrorState } from "@/components/ErrorState";
 import { apiFetch } from "@/lib/api";
+import { PageLoader } from "@/components/Loader";
 
 export function PublicationReaderPage() {
   const { id } = useParams<{ id: string }>();
@@ -37,7 +39,7 @@ export function PublicationReaderPage() {
     };
   }, [publication]);
 
-  if (isLoading) return <div className="px-4 py-8 text-muted-foreground">Loading…</div>;
+  if (isLoading) return <PageLoader label="Loading this note" />;
   if (isError || !publication) return <ErrorState message="This publication couldn't be found." onRetry={() => refetch()} />;
 
   return (
@@ -54,7 +56,15 @@ export function PublicationReaderPage() {
         <AuthorBadge author={publication.author} timestamp={publication.createdAt} />
       </div>
 
-      <div className="mt-6 whitespace-pre-wrap text-body leading-relaxed">{publication.content}</div>
+      <NoteContent
+        source={publication.content}
+        // Falls back to PLAINTEXT when absent, which keeps every note
+        // published before markdown shipped rendering exactly as it always
+        // has. Those are immutable and already hashed.
+        format={publication.contentFormat ?? "PLAINTEXT"}
+        shimmer
+        className="mt-6 text-body leading-relaxed"
+      />
 
       {publication.tags.length > 0 && (
         <div className="mt-6 flex flex-wrap gap-2">

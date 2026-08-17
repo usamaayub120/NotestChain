@@ -45,6 +45,19 @@ enum Discoverability {
   UNLISTED
 }
 
+/// How a note's stored text should be interpreted when rendering.
+///
+/// PLAINTEXT is the default on purpose, and the default matters. Every note
+/// published before markdown support is immutable and already hashed; a note
+/// containing `*asterisks*` must keep rendering as asterisks forever. Because
+/// the default fails toward "render literally", a code path that forgets to
+/// set this shows the writer's characters as typed rather than silently
+/// reinterpreting permanent content.
+enum ContentFormat {
+  PLAINTEXT
+  MARKDOWN
+}
+
 enum DraftStatus {
   DRAFT
   PENDING_REVIEW
@@ -99,6 +112,27 @@ enum CommentReportResolution {
   USER_SUSPENDED
 }
 
+/// Every transactional email NotesChain sends. Must stay byte-identical to
+/// the hand-mirrored `EmailKind` object in packages/email/src/kinds.ts —
+/// that package is deliberately Prisma-free, so nothing enforces the two
+/// staying in sync automatically. Change both in the same commit.
+enum EmailKind {
+  PUBLICATION_APPROVED
+  PUBLICATION_REJECTED
+  PUBLICATION_CHANGES_REQUESTED
+  PUBLICATION_CHAIN_FINALIZED
+  PASSWORD_RESET_REQUESTED
+  ACCOUNT_WELCOME
+  COMMENT_RECEIVED
+}
+
+enum EmailJobStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
 // ── Auth ─────────────────────────────────────────────────────────────────
 
 model User {
@@ -114,19 +148,21 @@ model User {
   lastLoginAt        DateTime?
 
   sessions               Session[]
+  passwordResetTokens    PasswordResetToken[]
   identities             PublicIdentity[]
   drafts                 Draft[]
-  submissions            Submission[]        @relation("SubmittedBy")
+  submissions            Submission[]         @relation("SubmittedBy")
   moderationDecisions    ModerationDecision[] @relation("ModeratedBy")
-  publications           Publication[]       @relation("PrivateAuthor")
+  publications           Publication[]        @relation("PrivateAuthor")
   bookmarks              Bookmark[]
   bookmarkCollections    BookmarkCollection[]
-  reportsFiled           Report[]            @relation("ReportedBy")
-  reportsResolved        Report[]            @relation("ResolvedBy")
+  reportsFiled           Report[]             @relation("ReportedBy")
+  reportsResolved        Report[]             @relation("ResolvedBy")
   auditLogs              AuditLog[]
-  comments               Comment[]           @relation("CommentAuthor")
-  commentReportsFiled    CommentReport[]     @relation("CommentReportedBy")
-  commentReportsResolved CommentReport[]     @relation("CommentReportResolvedBy")
+  comments               Comment[]            @relation("CommentAuthor")
+  commentReportsFiled    CommentReport[]      @relation("CommentReportedBy")
+  commentReportsResolved CommentReport[]      @relation("CommentReportResolvedBy")
+  emailJobs              EmailJob[]
 
   @@index([status])
 }
@@ -146,6 +182,23 @@ model Session {
 
   @@index([userId])
   @@index([expiresAt])
+}
+
+/// Same shape as Session's token handling: only the SHA-256 hash is ever
+/// persisted, the raw token is emailed once and never stored anywhere. A
+/// token is single-use (usedAt) and short-lived (expiresAt); resetPassword()
+/// also revokes every existing Session for the user once a reset succeeds,
+/// so a stolen session cookie can't outlive a password change.
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
 }
 
 // ── Identities ───────────────────────────────────────────────────────────
@@ -178,6 +231,8 @@ model Draft {
   user             User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   title            String          @default("")
   content          String          @default("")
+  /// New drafts are markdown; existing ones stay plaintext.
+  contentFormat    ContentFormat   @default(MARKDOWN)
   tags             String[]        @default([])
   identityMode     IdentityMode    @default(NAMED)
   publicIdentityId String?
@@ -215,9 +270,12 @@ model Submission {
   draftId                  String
   draft                    Draft           @relation(fields: [draftId], references: [id], onDelete: Cascade)
   submittedByUserId        String
-  submittedBy               User            @relation("SubmittedBy", fields: [submittedByUserId], references: [id])
+  submittedBy              User            @relation("SubmittedBy", fields: [submittedByUserId], references: [id])
   titleSnapshot            String
   contentSnapshot          String
+  /// Snapshotted so a Submission created before markdown shipped but
+  /// approved after it still renders the way its author saw it.
+  contentFormatSnapshot    ContentFormat   @default(PLAINTEXT)
   tagsSnapshot             String[]        @default([])
   identityModeSnapshot     IdentityMode
   publicIdentityIdSnapshot String?
@@ -233,17 +291,17 @@ model Submission {
 }
 
 model ModerationDecision {
-  id             String            @id @default(uuid())
-  submissionId   String
-  submission     Submission        @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  id              String           @id @default(uuid())
+  submissionId    String
+  submission      Submission       @relation(fields: [submissionId], references: [id], onDelete: Cascade)
   moderatorUserId String
-  moderator      User              @relation("ModeratedBy", fields: [moderatorUserId], references: [id])
-  action         ModerationAction
-  reason         String
-  note           String?
-  flaggedPii     Boolean           @default(false)
-  flaggedAbuse   Boolean           @default(false)
-  createdAt      DateTime          @default(now())
+  moderator       User             @relation("ModeratedBy", fields: [moderatorUserId], references: [id])
+  action          ModerationAction
+  reason          String
+  note            String?
+  flaggedPii      Boolean          @default(false)
+  flaggedAbuse    Boolean          @default(false)
+  createdAt       DateTime         @default(now())
 
   @@index([submissionId])
 }
@@ -261,10 +319,25 @@ model Publication {
   identityMode          IdentityMode
   discoverability       Discoverability
   title                 String
+  /// The note as written. Markdown source when contentFormat is MARKDOWN —
+  /// this exact string is what the content hash covers.
   content               String
+  contentFormat         ContentFormat   @default(PLAINTEXT)
+  /// Markup stripped. Feeds the search vector and ts_headline, so `**bold**`
+  /// never reaches the index or a search snippet.
+  contentPlain          String          @default("")
+  /// UTF-8 byte length of `content`, cross-checked against the on-chain
+  /// content_length for v2 publications.
+  contentBytes          Int             @default(0)
+  /// From the v2 schema onward this is INSIDE the content-hash preimage, so
+  /// it is permanent. Never recompute it for a published row — an algorithm
+  /// change would break verification for every affected note.
   excerpt               String
   tags                  String[]        @default([])
   contentHash           String
+  /// Which on-chain Publication layout this row was published under.
+  /// 1 = body stored on-chain; 2 = only the digest is on-chain.
+  chainSchemaVersion    Int             @default(1)
   status                DraftStatus
   isPlatformVisible     Boolean         @default(true)
   delistingReason       String?
@@ -286,12 +359,12 @@ model Publication {
   // queries; the search module reads it via `$queryRaw` instead.
   searchVector Unsupported("tsvector")?
 
-  chainRecord      PublicationChainRecord?
-  publicationTags  PublicationTag[]
-  bookmarks        Bookmark[]
-  reports          Report[]
-  views            PublicationView[]
-  comments         Comment[]
+  chainRecord     PublicationChainRecord?
+  publicationTags PublicationTag[]
+  bookmarks       Bookmark[]
+  reports         Report[]
+  views           PublicationView[]
+  comments        Comment[]
 
   @@index([discoverability, isPlatformVisible, status])
   @@index([publicIdentityId])
@@ -361,14 +434,14 @@ model BookmarkCollection {
 }
 
 model Bookmark {
-  id           String              @id @default(uuid())
-  userId       String
-  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id            String              @id @default(uuid())
+  userId        String
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
   publicationId String
-  publication  Publication         @relation(fields: [publicationId], references: [id], onDelete: Cascade)
-  collectionId String?
-  collection   BookmarkCollection? @relation(fields: [collectionId], references: [id])
-  createdAt    DateTime            @default(now())
+  publication   Publication         @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  collectionId  String?
+  collection    BookmarkCollection? @relation(fields: [collectionId], references: [id])
+  createdAt     DateTime            @default(now())
 
   @@unique([userId, publicationId])
   @@index([collectionId])
@@ -403,8 +476,8 @@ model Comment {
   publication   Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
 
   parentCommentId String?
-  parentComment    Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
-  replies          Comment[] @relation("CommentReplies")
+  parentComment   Comment?  @relation("CommentReplies", fields: [parentCommentId], references: [id])
+  replies         Comment[] @relation("CommentReplies")
 
   // Denormalized pointer straight to the top-level ancestor (null if this
   // row IS top-level). Set once at creation to parentComment.rootCommentId
@@ -417,9 +490,9 @@ model Comment {
   rootComment   Comment?  @relation("CommentRoot", fields: [rootCommentId], references: [id])
   descendants   Comment[] @relation("CommentRoot")
 
-  authorUserId String
-  author       User    @relation("CommentAuthor", fields: [authorUserId], references: [id])
-  isAnonymous  Boolean @default(false)
+  authorUserId              String
+  author                    User    @relation("CommentAuthor", fields: [authorUserId], references: [id])
+  isAnonymous               Boolean @default(false)
   // Point-in-time snapshot, not a live join — a later commentDisplayName
   // change doesn't retroactively relabel past comments.
   authorDisplayNameSnapshot String?
@@ -520,6 +593,47 @@ model WorkerJob {
   @@index([publicationId])
 }
 
+// ── Email ────────────────────────────────────────────────────────────────
+
+/// A durable, retryable send request — the email equivalent of
+/// OutboxEvent/WorkerJob, but deliberately its own table rather than a
+/// reuse of those. WorkerJob.publicationId is required and non-nullable and
+/// outboxProcessor.ts unconditionally dispatches to the chain-publish
+/// pipeline; making that generic would mean touching the code path that
+/// handles irreversible on-chain publishing for no real benefit. This copies
+/// the same claim/backoff shape (see apps/worker/src/email/claimEmailJob.ts,
+/// which mirrors apps/worker/src/publishing/claimJob.ts almost line for
+/// line) without touching that table at all.
+///
+/// Rows are inserted in the SAME transaction as the business event that
+/// causes them (a moderation decision, a comment, a signup) — if that
+/// transaction rolls back, the notification never gets queued either.
+/// Rendering happens at send time (see the worker's emailProcessor.ts), not
+/// here at enqueue time, so a template fix applies even to jobs already
+/// sitting in the queue when it ships. `data` is validated against the
+/// per-kind zod schema in packages/email BEFORE this row is ever created,
+/// so a malformed payload fails loudly at the call site, not silently later
+/// when the worker tries to render it.
+model EmailJob {
+  id            String         @id @default(uuid())
+  kind          EmailKind
+  toEmail       String
+  toUserId      String?
+  toUser        User?          @relation(fields: [toUserId], references: [id])
+  data          Json
+  status        EmailJobStatus @default(PENDING)
+  attempts      Int            @default(0)
+  maxAttempts   Int            @default(5)
+  nextAttemptAt DateTime       @default(now())
+  lastError     String?
+  sentAt        DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([toUserId])
+}
+
 // ── Operational ──────────────────────────────────────────────────────────
 
 // One row per long-running process (currently just "worker"), updated on a
@@ -534,15 +648,15 @@ model ProcessHeartbeat {
 // ── Audit ────────────────────────────────────────────────────────────────
 
 model AuditLog {
-  id           String   @id @default(uuid())
-  actorUserId  String?
-  actor        User?    @relation(fields: [actorUserId], references: [id])
-  action       String
-  targetType   String?
-  targetId     String?
-  metadata     Json?
-  ipAddress    String?
-  createdAt    DateTime @default(now())
+  id          String   @id @default(uuid())
+  actorUserId String?
+  actor       User?    @relation(fields: [actorUserId], references: [id])
+  action      String
+  targetType  String?
+  targetId    String?
+  metadata    Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
 
   @@index([action, createdAt])
   @@index([targetType, targetId])

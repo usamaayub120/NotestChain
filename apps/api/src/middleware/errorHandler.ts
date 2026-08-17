@@ -17,6 +17,18 @@ export function errorHandler(err: unknown, req: Request, res: Response, _next: N
     });
   }
 
+  // body-parser rejects an oversized body BEFORE any route runs, so without
+  // this branch the response never passes through Errors.* and the client
+  // receives body-parser's own HTML/text shape instead of
+  // { error: { code, message } } — which the web client cannot parse, so the
+  // user sees a generic failure with no explanation. Pre-existing gap, but it
+  // only becomes reachable in practice now that note bodies can be large.
+  if (typeof err === "object" && err !== null && (err as { type?: string }).type === "entity.too.large") {
+    return res.status(413).json({
+      error: { code: "PAYLOAD_TOO_LARGE", message: "That's larger than we can accept in one request." },
+    });
+  }
+
   if (err instanceof ZodError) {
     return res.status(400).json({
       error: { code: "VALIDATION_ERROR", message: "Request validation failed.", details: err.flatten() },

@@ -132,3 +132,46 @@ h4 {
   outline: 2px solid rgb(var(--primary));
   outline-offset: 2px;
 }
+
+/* ── Note marks ──────────────────────────────────────────────────────────
+   Rendered by MarkdownText. Everything here is token-derived, so one set of
+   rules covers light and dark — this codebase has no `dark:` variants by
+   design (DESIGN_SYSTEM.md §3.3: reference the tokens, never raw hex). */
+
+/* The UA stylesheet gives <mark> a hard-coded yellow/black. Left alone that
+   is a raw-colour violation in light mode and unreadable in dark, so both
+   properties have to be reset rather than overridden piecemeal. */
+mark {
+  background-color: rgb(var(--primary) / 0.1);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 0.15em;
+  /* Keeps the rounded ends intact when a mark wraps across lines. */
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* ==shimmer== — a slow sweep of accent light. --glow is the palette's
+   atmospheric token (DESIGN_SYSTEM.md reserves it for exactly this kind of
+   moment and forbids it on anything clickable; a mark is not interactive).
+   The gradient layers over the tint above, so the tint is always the floor
+   and the animation only ever adds to it. */
+.mark-shimmer {
+  background-image: linear-gradient(
+    100deg,
+    transparent 35%,
+    rgb(var(--glow) / 0.55) 50%,
+    transparent 65%
+  );
+  background-size: 260% 100%;
+  background-repeat: no-repeat;
+}
+
+/* Redundant with the keyframe design — the global reduced-motion rule
+   already collapses the animation onto its static 100% state. Kept as a
+   backstop, because that trick is clever and clever things deserve one. */
+@media (prefers-reduced-motion: reduce) {
+  .mark-shimmer {
+    background-image: none;
+  }
+}

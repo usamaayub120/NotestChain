@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { RequireRole } from "./RequireRole";
+import { SESSION_CHECK_LOADER_DELAY_MS } from "@/components/Loader";
 
 const mockUseCurrentUser = vi.fn();
 vi.mock("@/hooks/useAuth", () => ({ useCurrentUser: () => mockUseCurrentUser() }));
@@ -25,10 +26,35 @@ function renderWithRole(role: "MODERATOR" | "ADMIN") {
 }
 
 describe("RequireRole", () => {
-  it("renders nothing while the current user is loading", () => {
+  it("shows nothing at first while the current user is loading", () => {
+    // The important half of this assertion is that the protected content is
+    // NOT rendered and no redirect fires while the role is still unknown.
+    // Staying blank at first is also deliberate: the loader is delayed so a
+    // fast session check never flashes one.
     mockUseCurrentUser.mockReturnValue({ data: undefined, isLoading: true });
     const { container } = renderWithRole("ADMIN");
     expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByText("protected content")).not.toBeInTheDocument();
+    expect(screen.queryByText("login page")).not.toBeInTheDocument();
+  });
+
+  it("shows a loader once a slow session check passes the delay", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      mockUseCurrentUser.mockReturnValue({ data: undefined, isLoading: true });
+      renderWithRole("ADMIN");
+
+      await act(async () => {
+        vi.advanceTimersByTime(SESSION_CHECK_LOADER_DELAY_MS + 10);
+      });
+
+      expect(screen.getByRole("status")).toBeInTheDocument();
+      expect(screen.getByText("Checking your session")).toBeInTheDocument();
+      // Still no premature decision about access.
+      expect(screen.queryByText("protected content")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("redirects to /login when there is no user", () => {

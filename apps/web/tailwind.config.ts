@@ -123,13 +123,45 @@ export default {
           "0%": { opacity: "0", transform: "scale(0.85)" },
           "100%": { opacity: "1", transform: "scale(1)" },
         },
+        // Loading state — a slow breath over strokes that have already drawn
+        // themselves in. Ends at 0.55 opacity rather than 1 so the
+        // reduced-motion rule in globals.css (iteration-count:1, ~0ms) lands
+        // on a calm, visible resting state instead of a blank or flashing
+        // one. Same idiom as kept-pulse.
+        breathe: {
+          "0%": { opacity: "1" },
+          "100%": { opacity: "0.55" },
+        },
+        // ==shimmer== marks — one slow sweep of accent light across the
+        // highlighted words. Both ends park the gradient band off the
+        // element, which is what makes the loop restart invisible and, more
+        // importantly, means the reduced-motion rule in globals.css
+        // (iteration-count:1, duration:0.01ms) lands on 100% — a bare static
+        // tint — with no separate fallback branch. Same idiom as kept-pulse.
+        shimmer: {
+          "0%": { backgroundPosition: "180% 0" },
+          "100%": { backgroundPosition: "-80% 0" },
+        },
       },
       animation: {
         drift: "drift 50s ease-in-out infinite",
         "drift-reverse": "drift-reverse 65s ease-in-out infinite",
-        draw: "draw 1.4s ease-out forwards",
+        // `both`, not `forwards`. With a non-zero animation-delay and only
+        // forwards fill, a path holds its *specified* strokeDashoffset (0 =
+        // fully drawn) throughout the delay, then snaps to undrawn the moment
+        // the animation starts and draws in again. Staggered strokes visibly
+        // flash into existence and vanish before they draw. Backwards fill
+        // makes them hold the undrawn first frame instead. Affects every
+        // staggered use — Loader and WritingMark both.
+        draw: "draw 1.4s ease-out both",
         "kept-pulse": "kept-pulse 1.2s ease-in-out infinite alternate forwards",
         "kept-in": "kept-in 220ms cubic-bezier(0.32,0.72,0,1) forwards",
+        // Slower than kept-pulse (1.2s): that one signals work in flight on a
+        // specific proof, this is ambient waiting and should not feel urgent.
+        breathe: "breathe 2s ease-in-out infinite alternate forwards",
+        // Non-alternating on purpose: `alternate` would swing the band back
+        // like a pendulum, which reads as decoration rather than light.
+        shimmer: "shimmer 3.6s ease-in-out infinite forwards",
       },
     },
   },

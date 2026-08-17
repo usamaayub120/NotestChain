@@ -1,6 +1,7 @@
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../lib/prisma.js";
 import { logger } from "../lib/logger.js";
+import { fetchAllPublicationAccounts } from "@noteschain/blockchain-client";
 import { getSolanaClient } from "../publishing/solanaClient.js";
 
 /**
@@ -12,16 +13,14 @@ import { getSolanaClient } from "../publishing/solanaClient.js";
 export async function runReconciliation(): Promise<void> {
   const { program } = getSolanaClient();
 
-  const onChainAccounts = await program.account.publication.all();
-  const onChainById = new Map<string, (typeof onChainAccounts)[number]>();
-  for (const entry of onChainAccounts) {
-    const id = BigInt((entry.account.publicationId as { toString(): string }).toString()).toString();
-    onChainById.set(id, entry);
-  }
+  // Both schemas, merged. Sweeping with program.account.publication.all()
+  // alone would match only the v1 discriminator and report every v2
+  // publication as missing from the chain.
+  const onChainById = await fetchAllPublicationAccounts(program);
 
   const dbPublished = await prisma.publication.findMany({
     where: { status: "PUBLISHED", onChainPublicationId: { not: null } },
-    select: { id: true, contentHash: true, onChainPublicationId: true },
+    select: { id: true, contentHash: true, onChainPublicationId: true, chainSchemaVersion: true },
   });
 
   const seenIds = new Set<string>();
@@ -38,7 +37,17 @@ export async function runReconciliation(): Promise<void> {
       continue;
     }
 
-    const onChainHash = Buffer.from(match.account.contentHash as number[]).toString("hex");
+    if (match.account.schemaVersion !== pub.chainSchemaVersion) {
+      await flagIssue("RECONCILIATION_VERSION_MISMATCH", pub.id, {
+        onChainPublicationId: key,
+        onChainSchemaVersion: match.account.schemaVersion,
+        dbSchemaVersion: pub.chainSchemaVersion,
+      });
+      mismatches++;
+      continue;
+    }
+
+    const onChainHash = match.account.contentHash;
     if (onChainHash !== pub.contentHash) {
       await flagIssue("RECONCILIATION_HASH_MISMATCH", pub.id, {
         onChainPublicationId: key,
@@ -59,14 +68,15 @@ export async function runReconciliation(): Promise<void> {
     if (!seenIds.has(key)) {
       await flagIssue("RECONCILIATION_ORPHAN_ON_CHAIN", null, {
         onChainPublicationId: key,
-        publicationPda: entry.publicKey.toBase58(),
+        publicationPda: entry.address.toBase58(),
+        schemaVersion: entry.account.schemaVersion,
       });
       mismatches++;
     }
   }
 
   logger.info(
-    { onChainCount: onChainAccounts.length, dbPublishedCount: dbPublished.length, mismatches },
+    { onChainCount: onChainById.size, dbPublishedCount: dbPublished.length, mismatches },
     "Reconciliation sweep complete",
   );
 }

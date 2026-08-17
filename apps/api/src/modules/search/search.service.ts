@@ -78,8 +78,20 @@ export async function searchPublications(query: SearchQueryInput): Promise<Searc
           : Prisma.sql`p."createdAt" DESC`;
 
   const rankSelect = tsquery ? Prisma.sql`ts_rank(p."searchVector", ${tsquery})` : Prisma.sql`NULL`;
+  // Two deliberate choices here.
+  //
+  // "contentPlain", not "content": ts_headline inlines <b> markers into the
+  // text it is given, and sanitizeHeadline() below escapes everything then
+  // restores exactly those markers. Handing it raw markdown would put
+  // literal `**` into search snippets and leave the asterisks stranded
+  // around a highlighted word.
+  //
+  // left(..., 20000): ts_headline re-tokenizes the whole document per row.
+  // That was free when a note was 600 bytes; at 20,000 characters across a
+  // page of results it is not. The cost of the cap is that a match past the
+  // first 20k characters of a very long note gets no snippet fragment.
   const headlineSelect = tsquery
-    ? Prisma.sql`ts_headline('english', p."content", ${tsquery}, 'MaxWords=35, MinWords=15, MaxFragments=1')`
+    ? Prisma.sql`ts_headline('english', left(p."contentPlain", 20000), ${tsquery}, 'MaxWords=35, MinWords=15, MaxFragments=1')`
     : Prisma.sql`NULL`;
 
   const offset = (query.page - 1) * query.pageSize;

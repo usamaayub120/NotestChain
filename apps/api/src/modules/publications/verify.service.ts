@@ -1,5 +1,5 @@
 import { VerificationState } from "@noteschain/shared";
-import { contentHashHex, derivePublicationPda } from "@noteschain/blockchain-client";
+import { contentHashHex, contentHashV2Hex, derivePublicationPda, fetchPublicationAccount } from "@noteschain/blockchain-client";
 import { prisma } from "../../lib/prisma.js";
 import { Errors } from "../../lib/apiError.js";
 import { logger } from "../../lib/logger.js";
@@ -57,7 +57,7 @@ export async function verifyPublication(id: string): Promise<VerificationResult>
 
   let account;
   try {
-    account = await program.account.publication.fetch(expectedPda);
+    account = await fetchPublicationAccount(program, connection, expectedPda);
   } catch (err) {
     logger.warn({ err, publicationId: id }, "On-chain account failed to decode");
     return result(
@@ -66,8 +66,32 @@ export async function verifyPublication(id: string): Promise<VerificationResult>
     );
   }
 
-  const onChainHash = Buffer.from(account.contentHash as number[]).toString("hex");
-  const expectedHash = contentHashHex(pub.title, pub.content);
+  if (!account) {
+    return result(VerificationState.ACCOUNT_NOT_FOUND, "No on-chain account exists at the expected address.");
+  }
+
+  // The DB records which schema a publication was written under. If the chain
+  // disagrees, that is a distinct failure from a content mismatch and saying
+  // so is the difference between "someone edited this note" and "our records
+  // are inconsistent".
+  if (account.schemaVersion !== pub.chainSchemaVersion) {
+    return result(
+      VerificationState.VERSION_MISMATCH,
+      "The on-chain record uses a different schema than this publication expects.",
+    );
+  }
+
+  // This is where the v2 design earns its keep. Verification never read the
+  // account's stored body even under v1 — it always recomputed the hash from
+  // the database and compared digests. Moving the body off-chain therefore
+  // changes nothing about how a note is proven; it only means this check is
+  // now the primary proof rather than a redundant one.
+  const onChainHash = account.contentHash;
+  const expectedHash =
+    account.schemaVersion === 2
+      ? contentHashV2Hex(pub.title, pub.excerpt, pub.content)
+      : contentHashHex(pub.title, pub.content);
+
   if (onChainHash !== expectedHash || onChainHash !== pub.contentHash) {
     return result(
       VerificationState.HASH_MISMATCH,
@@ -75,7 +99,17 @@ export async function verifyPublication(id: string): Promise<VerificationResult>
     );
   }
 
-  const onChainPublicationId = BigInt((account.publicationId as { toString(): string }).toString());
+  // Cheap corroborating check that only v2 can make: the chain records how
+  // many bytes the body had, so a truncated or swapped body is caught even
+  // before hashing.
+  if (account.schemaVersion === 2 && Number(account.contentLength) !== pub.contentBytes) {
+    return result(
+      VerificationState.HASH_MISMATCH,
+      "The on-chain content length doesn't match this publication's stored content.",
+    );
+  }
+
+  const onChainPublicationId = account.publicationId;
   if (onChainPublicationId !== BigInt(pub.onChainPublicationId.toString())) {
     return result(VerificationState.PDA_MISMATCH, "The on-chain publication id doesn't match the expected value.");
   }

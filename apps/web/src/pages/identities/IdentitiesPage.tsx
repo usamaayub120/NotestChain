@@ -2,6 +2,7 @@ import { Link } from "react-router-dom";
 import { type Identity, useIdentities, useUpdateIdentity } from "@/hooks/useIdentities";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
+import { SectionLoader } from "@/components/Loader";
 
 export function IdentitiesPage() {
   const { data: identities, isLoading } = useIdentities();
@@ -18,7 +19,7 @@ export function IdentitiesPage() {
         Your real name and any pseudonyms. Readers never see that two pseudonyms belong to the same account.
       </p>
 
-      {isLoading && <p className="mt-6 text-muted-foreground">Loading…</p>}
+      {isLoading && <SectionLoader label="Loading your identities" />}
 
       {!isLoading && (!identities || identities.length === 0) && (
         <EmptyState

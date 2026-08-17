@@ -15,7 +15,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/EmptyState";
 import { CardSkeletonList } from "@/components/CardSkeleton";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
-import { ConfirmActionDialog } from "@/components/admin/ConfirmActionDialog";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { MutationError } from "@/components/admin/MutationError";
 
 const DESTRUCTIVE_REPORT_ACTION_COPY = {

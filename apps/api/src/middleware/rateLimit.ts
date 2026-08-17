@@ -35,6 +35,22 @@ export const commentRateLimit = rateLimit({
   message: { error: { code: "RATE_LIMITED", message: "Too many comments. Please slow down." } },
 });
 
+/**
+ * Drafts previously ran on the general 300/min limit, which was fine when an
+ * autosave payload was at most a few hundred bytes. A note body is now up to
+ * 20,000 characters and every save also writes a DraftVersion snapshot, so
+ * the cost per request is orders of magnitude higher. 60/min is one save per
+ * second — far above the 1200ms debounce any real editor session produces,
+ * and low enough that a scripted client cannot flood the version history.
+ */
+export const draftWriteRateLimit = rateLimit({
+  windowMs: 60_000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: "RATE_LIMITED", message: "Saving too quickly. Give it a moment." } },
+});
+
 export const generalRateLimit = rateLimit({
   windowMs: 60_000,
   max: 300,

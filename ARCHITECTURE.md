@@ -44,14 +44,53 @@ sharing one Prisma client and one DB connection pool.
 |---|---|---|
 | Draft content, versions, autosave | PostgreSQL | Never leaves the DB. Never on-chain. |
 | Moderation decisions, notes, reports, audit log | PostgreSQL | Off-chain forever. |
-| **Finalized publication content** | **Solana account** | DB `Publication.content` is a cached copy for fast reads/search; it is rebuildable from chain. |
+| **Finalized publication content** (v1 publications) | **Solana account** | DB `Publication.content` is a cached copy for fast reads/search; it is rebuildable from chain. |
+| **Finalized publication content** (v2 publications) | **PostgreSQL** | The chain holds `content_hash` + title + a 280-byte excerpt, not the body. Content is **verifiable against** the chain, no longer **rebuildable from** it. See §2.1. |
 | User↔anonymous-publication linkage | PostgreSQL | Never on-chain, used only for abuse handling. |
-| Search index | PostgreSQL `tsvector` | Rebuildable from `Publication` rows, which are rebuildable from chain + minimal off-chain metadata (author linkage, moderation provenance) that itself cannot be recovered from chain. |
+| Search index | PostgreSQL `tsvector` | Rebuildable from `Publication.contentPlain` (the markup-stripped projection — the index must never see raw markdown, or `**bold**` becomes a search token). Those rows are rebuildable from chain only for v1; for v2 they depend on the Postgres backup. |
 
 **Rule enforced everywhere in code:** a publication is not "done" because an RPC
 call returned a transaction signature. It is only `PUBLISHED` after the worker
 observes **finalized** commitment, fetches the account, and verifies PDA +
 content hash. See §6.
+
+### 2.1 Why v2 moved the body off-chain, and what that costs
+
+v1 stored the whole note inside the Solana account. That is why the body was
+capped at **600 bytes**: Solana's hard limit is 1232 bytes per transaction, and
+title (100) + author display (50) + body all had to fit inside it alongside
+signatures, account keys, and the blockhash. There was roughly 150 bytes of
+headroom. No amount of tuning made long notes possible under that design, and
+readers had asked for them.
+
+v2 (`publish_publication_v2`, `PublicationV2`) commits
+`sha256("noteschain/pub/v2" || len-prefixed title, excerpt, content)` and stores
+title + a 280-byte excerpt. The body lives in Postgres.
+
+**What is lost:** on-chain data availability. The chain can no longer prove the
+digest is the hash of anything, and content is not reconstructible from chain
+alone. Postgres is the source of truth for note text.
+
+**What is kept:** the guarantee people actually rely on — an immutable,
+publicly witnessed, slot-timestamped *commitment*. At that slot, under that
+publication id, the platform authority committed to that digest, and nobody
+(including us) can change it afterward. A reader given body B can check
+`sha256_v2(title, excerpt, B)` against the chain and know those exact bytes
+existed then and have not been substituted since.
+
+**On the on-chain hash recomputation v1 did and v2 cannot:** it is worth being
+precise about how much that was ever worth. `require_keys_eq!(authority,
+platform.authority)` means only the platform key can publish at all, so the
+recomputation never defended against a third party — it caught bugs in our own
+worker. That role now belongs to the worker's pre-submit check
+(`publishToChain.ts`) and to live verification on read (`verify.service.ts`),
+neither of which ever read the account's stored body even under v1.
+
+Three off-chain guards replace what the chain used to provide:
+`Publication.contentBytes` cross-checked against the on-chain `content_length`;
+a Postgres trigger making `content`/`title`/`excerpt`/`contentHash` immutable
+once `status = PUBLISHED`; and **backups, which are now load-bearing rather
+than a convenience** — see BACKUP_RECOVERY.md.
 
 ## 3. Resolved contradictions / decisions
 
@@ -203,11 +242,33 @@ recording the signature, and the tx actually landed" cleanly).
 ## 7. Solana program summary
 
 See `programs/decentralized_notes/src/lib.rs` for the authoritative version.
-Instructions: `initialize_platform`, `publish_publication`, `rotate_authority`.
-No `update_publication`, no `delete_publication`, no `close_publication` —
-by design (§2.4 of the product spec). Size limits are enforced on-chain
-(title ≤ 100 UTF-8 bytes, author display ≤ 50, body ≤ 600) as a second line
-of defense behind the API's own validation.
+Instructions: `initialize_platform`, `publish_publication`,
+`publish_publication_v2`, `rotate_authority`. No `update_publication`, no
+`delete_publication`, no `close_publication` — by design (§2.4 of the product
+spec).
+
+Two account types, both live, both readable:
+
+| | `Publication` (v1) | `PublicationV2` |
+|---|---|---|
+| Body | stored on-chain, ≤ 600 bytes | off-chain; only the digest is committed |
+| Excerpt | not stored | ≤ 280 bytes, **inside the hash preimage** |
+| Account size | 887 bytes | 575 bytes (~31% less rent) |
+| Hash checked on-chain | yes | no — see §2.1 |
+| Status | frozen, still deployed | what new publications use |
+
+Title ≤ 100 UTF-8 bytes and author display ≤ 50 are enforced on-chain in both,
+as a second line of defense behind the API's own validation.
+
+v1 is deliberately left deployed and untouched rather than removed: existing
+accounts must keep decoding, and the v1 path stays reproducible in tests. The
+two share one PDA seed (`["publication", id]`) and one `publication_counter`,
+so the id space stays single and monotone — §3.1's invariant is unchanged. Any
+code reading a publication account must go through
+`fetchPublicationAccount` / `fetchAllPublicationAccounts` in
+`packages/blockchain-client`, which dispatch on the discriminator. Calling
+`program.account.publication.all()` directly matches only v1 and will silently
+report every v2 publication as missing from the chain.
 
 ## 8. Deployment
 

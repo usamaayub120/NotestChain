@@ -20,6 +20,7 @@ export interface Publication {
   id: string;
   title: string;
   content: string;
+  contentFormat?: "PLAINTEXT" | "MARKDOWN";
   excerpt: string;
   tags: string[];
   identityMode: "NAMED" | "PSEUDONYMOUS" | "ANONYMOUS";

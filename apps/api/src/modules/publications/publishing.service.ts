@@ -1,14 +1,20 @@
 import type { Prisma, Submission } from "@prisma/client";
-import { contentHashHex } from "@noteschain/blockchain-client";
+import { contentHashHex, contentHashV2Hex } from "@noteschain/blockchain-client";
+import { computeExcerpt, markdownToPlainText, utf8ByteLength } from "@noteschain/shared";
 import { Errors } from "../../lib/apiError.js";
 import { env } from "../../config/env.js";
 
-const EXCERPT_MAX_CHARS = 140;
+export { computeExcerpt };
 
-export function computeExcerpt(content: string, maxChars = EXCERPT_MAX_CHARS): string {
-  if (content.length <= maxChars) return content;
-  return `${content.slice(0, maxChars).trimEnd()}…`;
-}
+/**
+ * The on-chain schema new publications are written under.
+ *
+ * v1 kept the whole note body inside the Solana account, which is why the
+ * body was capped at 600 bytes — title + author display + body all had to fit
+ * inside Solana's hard 1232-byte transaction limit. v2 commits only the
+ * digest, which is what makes long notes possible.
+ */
+const CHAIN_SCHEMA_VERSION = 2;
 
 /**
  * Turns an approved Submission into a Publication row + an outbox event, in
@@ -26,7 +32,25 @@ export async function createPublicationFromApprovedSubmission(
     throw Errors.conflict("This draft has already been published.");
   }
 
-  const contentHash = contentHashHex(submission.titleSnapshot, submission.contentSnapshot);
+  const title = submission.titleSnapshot;
+  const content = submission.contentSnapshot;
+  const contentFormat = submission.contentFormatSnapshot;
+
+  // The plain projection is what search indexes and what the excerpt is cut
+  // from, so `**bold**` never reaches the index, a search snippet, or a card
+  // preview. For a plaintext note it is the content unchanged.
+  const contentPlain = contentFormat === "MARKDOWN" ? markdownToPlainText(content) : content;
+
+  // Grapheme-safe and byte-capped. This value is about to become permanent:
+  // under the v2 schema the excerpt is inside the hash preimage, so a
+  // character sliced in half here would be hashed onto the chain forever.
+  const excerpt = computeExcerpt(contentPlain);
+
+  // v1 hashed title + body. v2 hashes title + excerpt + body under a domain
+  // tag with length prefixes, because the body can now contain any bytes —
+  // including the 0x1E that v1 used as a field separator.
+  const contentHash =
+    CHAIN_SCHEMA_VERSION === 2 ? contentHashV2Hex(title, excerpt, content) : contentHashHex(title, content);
 
   const publication = await tx.publication.create({
     data: {
@@ -35,11 +59,15 @@ export async function createPublicationFromApprovedSubmission(
       publicIdentityId: submission.publicIdentityIdSnapshot,
       identityMode: submission.identityModeSnapshot,
       discoverability: submission.discoverabilitySnapshot,
-      title: submission.titleSnapshot,
-      content: submission.contentSnapshot,
-      excerpt: computeExcerpt(submission.contentSnapshot),
+      title,
+      content,
+      contentFormat,
+      contentPlain,
+      contentBytes: utf8ByteLength(content),
+      excerpt,
       tags: submission.tagsSnapshot,
       contentHash,
+      chainSchemaVersion: CHAIN_SCHEMA_VERSION,
       status: "CHAIN_PENDING",
       isPlatformVisible: true,
     },

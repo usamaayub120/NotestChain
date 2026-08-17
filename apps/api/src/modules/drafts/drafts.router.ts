@@ -8,6 +8,7 @@ import {
 } from "@noteschain/validation";
 import { asyncHandler, ok, requireParam } from "../../lib/http.js";
 import { requireAuth } from "../../middleware/auth.js";
+import { draftWriteRateLimit } from "../../middleware/rateLimit.js";
 import {
   autosaveDraft,
   confirmPublish,
@@ -25,6 +26,10 @@ import {
 
 export const draftsRouter = Router();
 draftsRouter.use(requireAuth);
+// Writes only — reading your own drafts list stays on the general limit.
+draftsRouter.use((req, res, next) =>
+  req.method === "GET" ? next() : draftWriteRateLimit(req, res, next),
+);
 
 draftsRouter.get(
   "/",

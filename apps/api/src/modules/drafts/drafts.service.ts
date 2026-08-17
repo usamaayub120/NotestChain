@@ -1,5 +1,5 @@
 import type { Draft } from "@prisma/client";
-import { DraftStatus } from "@noteschain/shared";
+import { DraftStatus, normalizeContent } from "@noteschain/shared";
 import type { CreateDraftInput, UpdateDraftInput, DraftInput } from "@noteschain/validation";
 import { draftInputSchema } from "@noteschain/validation";
 import { prisma } from "../../lib/prisma.js";
@@ -22,6 +22,7 @@ export function toDraftDTO(draft: Draft & { publication?: { status: DraftStatus 
     id: draft.id,
     title: draft.title,
     content: draft.content,
+    contentFormat: draft.contentFormat,
     tags: draft.tags,
     identityMode: draft.identityMode,
     publicIdentityId: draft.publicIdentityId,
@@ -111,6 +112,35 @@ async function maybeCreateVersion(draft: Draft, throttleMs: number | null) {
       content: draft.content,
     },
   });
+
+  await pruneOldVersions(draft.id);
+}
+
+/**
+ * Keeps only the newest MAX_VERSIONS_PER_DRAFT snapshots.
+ *
+ * This was harmless when a body was capped at 600 bytes — an hour of editing
+ * cost a few hundred KB at worst. With notes up to 20,000 characters, an
+ * unbounded version history means ~120 snapshots per hour of active editing,
+ * each holding a full copy of the note, and a client that saves aggressively
+ * can drive it much higher. The history is a safety net for the author, not
+ * an archive; the most recent 50 restore points are what that needs.
+ */
+const MAX_VERSIONS_PER_DRAFT = 50;
+
+async function pruneOldVersions(draftId: string) {
+  const survivors = await prisma.draftVersion.findMany({
+    where: { draftId },
+    orderBy: { versionNumber: "desc" },
+    take: MAX_VERSIONS_PER_DRAFT,
+    select: { versionNumber: true },
+  });
+  if (survivors.length < MAX_VERSIONS_PER_DRAFT) return;
+
+  const oldest = survivors[survivors.length - 1]!.versionNumber;
+  await prisma.draftVersion.deleteMany({
+    where: { draftId, versionNumber: { lt: oldest } },
+  });
 }
 
 async function applyDraftPatch(
@@ -186,7 +216,14 @@ export async function restoreDraftVersion(userId: string, draftId: string, versi
 async function validateForSubmission(userId: string, draft: Draft): Promise<DraftInput> {
   const parsed = draftInputSchema.safeParse({
     title: draft.title,
-    content: draft.content,
+    // Normalised exactly once, here, on the way into the permanent record:
+    // CRLF collapsed, C0 controls stripped (Postgres TEXT rejects NUL
+    // outright), NFC applied. Deliberately NOT done inside the hash
+    // function — hashing normalised-on-the-fly input would make
+    // verification depend on the runtime's Unicode tables, so a dependency
+    // bump could stop old notes verifying. Store what we hash; hash what we
+    // store.
+    content: normalizeContent(draft.content),
     tags: draft.tags,
     identityMode: draft.identityMode,
     publicIdentityId: draft.publicIdentityId,
@@ -215,6 +252,11 @@ export async function submitDraft(userId: string, draftId: string) {
         submittedByUserId: userId,
         titleSnapshot: validated.title,
         contentSnapshot: validated.content,
+        // Snapshotted from the draft, not hardcoded: a draft written before
+        // markdown shipped is PLAINTEXT and must stay that way through
+        // approval, or its asterisks change meaning on the way to being
+        // permanent.
+        contentFormatSnapshot: draft.contentFormat,
         tagsSnapshot: validated.tags,
         identityModeSnapshot: validated.identityMode,
         publicIdentityIdSnapshot: validated.publicIdentityId ?? null,

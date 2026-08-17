@@ -3,6 +3,7 @@ import { usePendingSubmissions } from "@/hooks/useModeration";
 import { EmptyState } from "@/components/EmptyState";
 import { CardSkeletonList } from "@/components/CardSkeleton";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
+import { markdownToPlainText } from "@noteschain/shared";
 
 export function ModerationQueuePage() {
   const { data: submissions, isLoading } = usePendingSubmissions();
@@ -24,7 +25,14 @@ export function ModerationQueuePage() {
               className="block rounded-md border border-border bg-surface p-4 hover:bg-muted"
             >
               <p className="font-medium">{submission.titleSnapshot}</p>
-              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{submission.contentSnapshot}</p>
+              {/* Queue previews are stripped; the detail page shows the
+                  rendered note and its source, which is where a moderator
+                  actually decides. */}
+              <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                {submission.contentFormatSnapshot === "MARKDOWN"
+                  ? markdownToPlainText(submission.contentSnapshot)
+                  : submission.contentSnapshot}
+              </p>
               <p className="mt-2 text-xs text-muted-foreground">
                 {submission.identityModeSnapshot} · submitted {new Date(submission.createdAt).toLocaleString()}
               </p>

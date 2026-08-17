@@ -207,6 +207,194 @@ export type DecentralizedNotes = {
       ]
     },
     {
+      "name": "publishPublicationV2",
+      "docs": [
+        "Creates an immutable PublicationV2 account: the note body lives in",
+        "Postgres, and only its digest is committed here.",
+        "",
+        "# Why the on-chain hash recomputation is gone",
+        "",
+        "`publish_publication` (v1) recomputes sha256 over the body and",
+        "compares it to `content_hash`. This instruction cannot: it never sees",
+        "the body. Stating the tradeoff plainly, because the v1 doc comment",
+        "above promises a check that does not happen here:",
+        "",
+        "**Lost** — on-chain data availability. `content_hash` is now 32 bytes",
+        "the platform authority asserted, and the chain cannot prove it is the",
+        "hash of anything. Postgres becomes the source of truth for the note",
+        "text; see ARCHITECTURE.md §2 and BACKUP_RECOVERY.md.",
+        "",
+        "**Not lost** — the integrity guarantee people actually rely on. This",
+        "is still an immutable, publicly witnessed, slot-timestamped",
+        "commitment: at this slot, under this publication id, the authority",
+        "committed to this digest, and nobody (including the platform) can",
+        "change it afterward. Serve a reader body B, and if",
+        "sha256_v2(title, excerpt, B) equals the stored digest they know those",
+        "exact bytes existed then and have not been substituted since.",
+        "",
+        "Worth being precise about how much the v1 recomputation was ever",
+        "worth: `require_keys_eq!(authority, platform.authority)` means only",
+        "the platform key can publish at all, so it never defended against a",
+        "third party — it caught bugs in our own worker. That role is now held",
+        "by the worker's pre-submit check and by live verification on read.",
+        "",
+        "# Hash preimage (permanent — do not change)",
+        "",
+        "```text",
+        "sha256( \"noteschain/pub/v2\"",
+        "|| u32le(len(title))   || title",
+        "|| u32le(len(excerpt)) || excerpt",
+        "|| u32le(len(content)) || content )",
+        "```",
+        "",
+        "Length-prefixed rather than v1's 0x1E separator, which is not safe",
+        "once a body can be 20,000 characters of pasted text containing 0x1E.",
+        "Must stay byte-identical to `computeContentHashV2` in",
+        "packages/blockchain-client/src/hash.ts."
+      ],
+      "discriminator": [
+        13,
+        44,
+        61,
+        3,
+        7,
+        193,
+        32,
+        198
+      ],
+      "accounts": [
+        {
+          "name": "platformConfig",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  108,
+                  97,
+                  116,
+                  102,
+                  111,
+                  114,
+                  109
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "publication",
+          "docs": [
+            "Same seeds as v1 on purpose. The PDA derives from seeds and program id",
+            "only — `space` is not an input — so the two schemas share one",
+            "monotone id space under the single `publication_counter`, which is the",
+            "invariant ARCHITECTURE.md §3.1 rests on. A v2-specific seed would fork",
+            "that id space and break it."
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  117,
+                  98,
+                  108,
+                  105,
+                  99,
+                  97,
+                  116,
+                  105,
+                  111,
+                  110
+                ]
+              },
+              {
+                "kind": "arg",
+                "path": "publicationId"
+              }
+            ]
+          }
+        },
+        {
+          "name": "previousPublicationAccount",
+          "docs": [
+            "Unchecked because a revision may point at a v1 or a v2 account and a",
+            "typed `Account<'info, _>` can only be one of them. The handler does",
+            "the owner, discriminator, and key checks explicitly.",
+            "is one of the two Publication types, key matches the claimed pubkey."
+          ],
+          "optional": true
+        },
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "systemProgram",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "publicationId",
+          "type": "u64"
+        },
+        {
+          "name": "identityMode",
+          "type": "u8"
+        },
+        {
+          "name": "discoverability",
+          "type": "u8"
+        },
+        {
+          "name": "identityReferenceHash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "contentHash",
+          "type": {
+            "array": [
+              "u8",
+              32
+            ]
+          }
+        },
+        {
+          "name": "contentLength",
+          "type": "u64"
+        },
+        {
+          "name": "title",
+          "type": "string"
+        },
+        {
+          "name": "authorDisplaySnapshot",
+          "type": "string"
+        },
+        {
+          "name": "excerpt",
+          "type": "string"
+        },
+        {
+          "name": "previousPublication",
+          "type": {
+            "option": "pubkey"
+          }
+        }
+      ]
+    },
+    {
       "name": "rotateAuthority",
       "docs": [
         "Current authority only. Does not revoke or transfer program",
@@ -284,6 +472,19 @@ export type DecentralizedNotes = {
         251,
         247
       ]
+    },
+    {
+      "name": "publicationV2",
+      "discriminator": [
+        181,
+        164,
+        139,
+        13,
+        147,
+        192,
+        16,
+        65
+      ]
     }
   ],
   "errors": [
@@ -356,6 +557,21 @@ export type DecentralizedNotes = {
       "code": 6013,
       "name": "counterOverflow",
       "msg": "Publication counter overflow."
+    },
+    {
+      "code": 6014,
+      "name": "excerptTooLong",
+      "msg": "Excerpt exceeds the maximum allowed size."
+    },
+    {
+      "code": 6015,
+      "name": "missingContentHash",
+      "msg": "Content hash must not be all zeroes."
+    },
+    {
+      "code": 6016,
+      "name": "emptyContent",
+      "msg": "Content length must be greater than zero."
     }
   ],
   "types": [
@@ -446,6 +662,97 @@ export type DecentralizedNotes = {
           },
           {
             "name": "content",
+            "type": "string"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "publicationV2",
+      "docs": [
+        "v2 publication. A separate account type rather than extra fields on",
+        "`Publication`, for two reasons:",
+        "",
+        "* Borsh account layout is positional with no trailing-optional, so",
+        "appending a field to `Publication` would make every already-written",
+        "account fail to deserialize with \"unexpected EOF\".",
+        "* Two structs give two Anchor-generated decoders, each with its own",
+        "discriminator, so v1 accounts keep decoding exactly as before.",
+        "",
+        "The one thing NOT to do here is reuse `Publication.content` to hold the",
+        "excerpt: every existing reader would treat a 280-byte blurb as the full",
+        "note body."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "version",
+            "type": "u8"
+          },
+          {
+            "name": "publicationId",
+            "type": "u64"
+          },
+          {
+            "name": "identityMode",
+            "type": "u8"
+          },
+          {
+            "name": "discoverability",
+            "type": "u8"
+          },
+          {
+            "name": "publishedAt",
+            "type": "i64"
+          },
+          {
+            "name": "previousPublication",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "identityReferenceHash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "contentHash",
+            "type": {
+              "array": [
+                "u8",
+                32
+              ]
+            }
+          },
+          {
+            "name": "contentLength",
+            "docs": [
+              "UTF-8 byte length of the off-chain body. Makes the record",
+              "self-describing and gives verifiers a cheap pre-check before they",
+              "fetch and hash the content."
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "title",
+            "type": "string"
+          },
+          {
+            "name": "authorDisplaySnapshot",
+            "type": "string"
+          },
+          {
+            "name": "excerpt",
             "type": "string"
           },
           {

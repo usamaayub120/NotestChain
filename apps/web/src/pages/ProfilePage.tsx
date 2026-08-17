@@ -4,6 +4,7 @@ import { PublicationCard } from "@/components/publication/PublicationCard";
 import { CardSkeletonList } from "@/components/CardSkeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
+import { PageLoader } from "@/components/Loader";
 
 export function ProfilePage({ usernameOverride }: { usernameOverride?: string } = {}) {
   const params = useParams<{ username: string }>();
@@ -11,7 +12,7 @@ export function ProfilePage({ usernameOverride }: { usernameOverride?: string } 
   const { data: profile, isLoading, isError, refetch } = useProfile(username);
   const { data: publications, isLoading: pubsLoading } = useProfilePublications(username);
 
-  if (isLoading) return <div className="px-4 py-8 text-muted-foreground">Loading…</div>;
+  if (isLoading) return <PageLoader label="Loading profile" />;
   if (isError || !profile) return <ErrorState message="This profile couldn't be found." onRetry={() => refetch()} />;
 
   return (

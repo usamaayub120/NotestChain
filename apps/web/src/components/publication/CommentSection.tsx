@@ -3,6 +3,7 @@ import { CommentComposer } from "@/components/publication/CommentComposer";
 import { CommentsEnabledToggle } from "@/components/publication/CommentsEnabledToggle";
 import { useComments } from "@/hooks/useComments";
 import type { Publication } from "@/hooks/usePublications";
+import { SectionLoader } from "@/components/Loader";
 
 export function CommentSection({ publication }: { publication: Publication }) {
   const { data, isLoading } = useComments(publication.commentsEnabled ? publication.id : undefined);
@@ -24,7 +25,7 @@ export function CommentSection({ publication }: { publication: Publication }) {
             <CommentComposer publicationId={publication.id} />
           </div>
 
-          {isLoading && <p className="mt-6 text-sm text-muted-foreground">Loading…</p>}
+          {isLoading && <SectionLoader label="Loading comments" />}
           {!isLoading && data?.data.length === 0 && (
             <p className="mt-6 text-sm text-muted-foreground">Nothing here yet — be the first to comment.</p>
           )}

@@ -39,6 +39,11 @@ export function toPublicationDTO(pub: PublicationWithRelations, viewerUserId?: s
     id: pub.id,
     title: pub.title,
     content: pub.content,
+    // The renderer needs this to decide between parsing markdown and showing
+    // the text exactly as typed. Notes published before markdown shipped are
+    // PLAINTEXT and must keep rendering literally — they are immutable and
+    // already hashed.
+    contentFormat: pub.contentFormat,
     excerpt: pub.excerpt,
     tags: pub.tags,
     identityMode: pub.identityMode,

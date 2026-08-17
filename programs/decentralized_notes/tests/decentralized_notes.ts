@@ -12,6 +12,32 @@ function contentHash(title: string, content: string): Buffer {
   return createHash("sha256").update(title + "\x1e" + content).digest();
 }
 
+// Must stay byte-identical to computeContentHashV2 in
+// packages/blockchain-client/src/hash.ts. Domain-tagged and
+// length-prefixed, because a 20,000-character body can contain the 0x1E
+// byte that v1 used as a field separator.
+const V2_DOMAIN = "noteschain/pub/v2";
+
+function lengthPrefixed(value: string): Buffer {
+  const bytes = Buffer.from(value, "utf8");
+  const len = Buffer.alloc(4);
+  len.writeUInt32LE(bytes.length);
+  return Buffer.concat([len, bytes]);
+}
+
+function contentHashV2(title: string, excerpt: string, content: string): Buffer {
+  return createHash("sha256")
+    .update(
+      Buffer.concat([
+        Buffer.from(V2_DOMAIN, "ascii"),
+        lengthPrefixed(title),
+        lengthPrefixed(excerpt),
+        lengthPrefixed(content),
+      ]),
+    )
+    .digest();
+}
+
 function identityHash(identityId: string): Buffer {
   return createHash("sha256").update(identityId).digest();
 }
@@ -634,5 +660,293 @@ describe("decentralized_notes", () => {
     assert.isUndefined(methods.updatePublication);
     assert.isUndefined(methods.deletePublication);
     assert.isUndefined(methods.closePublication);
+  });
+
+  // ── v2: hash-on-chain publications ───────────────────────────────────
+
+  describe("publish_publication_v2", () => {
+    const BODY = "**A long note** that lives in Postgres, ".repeat(200);
+
+    it("publishes with the body off-chain and marks the account version 2", async () => {
+      const id = await currentCounter();
+      const pda = publicationPda(id);
+      const title = "A note with a real body";
+      const excerpt = "A long note that lives in Postgres...";
+      const hash = contentHashV2(title, excerpt, BODY);
+
+      await program.methods
+        .publishPublicationV2(
+          new BN(id.toString()),
+          IDENTITY_MODE.ANONYMOUS,
+          DISCOVERABILITY.PUBLIC,
+          Array.from(Buffer.alloc(32)),
+          Array.from(hash),
+          new BN(Buffer.byteLength(BODY, "utf8")),
+          title,
+          "",
+          excerpt,
+          null,
+        )
+        .accounts({ previousPublicationAccount: null, authority: provider.wallet.publicKey })
+        .rpc();
+
+      const account = await program.account.publicationV2.fetch(pda);
+      assert.equal(account.version, 2);
+      assert.equal(account.title, title);
+      assert.equal(account.excerpt, excerpt);
+      assert.equal(account.contentLength.toNumber(), Buffer.byteLength(BODY, "utf8"));
+      assert.equal(Buffer.from(account.contentHash).toString("hex"), hash.toString("hex"));
+      // The whole point: a body far past v1's 600-byte cap is publishable.
+      assert.isAbove(Buffer.byteLength(BODY, "utf8"), 600);
+    });
+
+    it("allocates a smaller account than v1", async () => {
+      const v2Id = (await currentCounter()) - 1n;
+      const info = await provider.connection.getAccountInfo(publicationPda(v2Id));
+      assert.equal(info!.data.length, 575);
+    });
+
+    it("rejects an over-long excerpt", async () => {
+      const id = await currentCounter();
+      const excerpt = "x".repeat(281);
+      let threw = false;
+      try {
+        await program.methods
+          .publishPublicationV2(
+            new BN(id.toString()),
+            IDENTITY_MODE.ANONYMOUS,
+            DISCOVERABILITY.PUBLIC,
+            Array.from(Buffer.alloc(32)),
+            Array.from(contentHashV2("t", excerpt, "body")),
+            new BN(4),
+            "t",
+            "",
+            excerpt,
+            null,
+          )
+          .accounts({ previousPublicationAccount: null, authority: provider.wallet.publicKey })
+          .rpc();
+      } catch (err) {
+        threw = true;
+        assert.include(String(err), "ExcerptTooLong");
+      }
+      assert.isTrue(threw);
+    });
+
+    it("rejects an all-zero content hash", async () => {
+      const id = await currentCounter();
+      let threw = false;
+      try {
+        await program.methods
+          .publishPublicationV2(
+            new BN(id.toString()),
+            IDENTITY_MODE.ANONYMOUS,
+            DISCOVERABILITY.PUBLIC,
+            Array.from(Buffer.alloc(32)),
+            Array.from(Buffer.alloc(32)),
+            new BN(4),
+            "t",
+            "",
+            "e",
+            null,
+          )
+          .accounts({ previousPublicationAccount: null, authority: provider.wallet.publicKey })
+          .rpc();
+      } catch (err) {
+        threw = true;
+        assert.include(String(err), "MissingContentHash");
+      }
+      assert.isTrue(threw);
+    });
+
+    it("rejects a zero content length", async () => {
+      const id = await currentCounter();
+      let threw = false;
+      try {
+        await program.methods
+          .publishPublicationV2(
+            new BN(id.toString()),
+            IDENTITY_MODE.ANONYMOUS,
+            DISCOVERABILITY.PUBLIC,
+            Array.from(Buffer.alloc(32)),
+            Array.from(contentHashV2("t", "e", "")),
+            new BN(0),
+            "t",
+            "",
+            "e",
+            null,
+          )
+          .accounts({ previousPublicationAccount: null, authority: provider.wallet.publicKey })
+          .rpc();
+      } catch (err) {
+        threw = true;
+        assert.include(String(err), "EmptyContent");
+      }
+      assert.isTrue(threw);
+    });
+
+    it("rejects a non-authority signer", async () => {
+      const impostor = await fundedKeypair();
+      const id = await currentCounter();
+      let threw = false;
+      try {
+        await program.methods
+          .publishPublicationV2(
+            new BN(id.toString()),
+            IDENTITY_MODE.ANONYMOUS,
+            DISCOVERABILITY.PUBLIC,
+            Array.from(Buffer.alloc(32)),
+            Array.from(contentHashV2("t", "e", "body")),
+            new BN(4),
+            "t",
+            "",
+            "e",
+            null,
+          )
+          .accounts({ previousPublicationAccount: null, authority: impostor.publicKey })
+          .signers([impostor])
+          .rpc();
+      } catch (err) {
+        threw = true;
+        assert.include(String(err), "Unauthorized");
+      }
+      assert.isTrue(threw);
+    });
+
+    it("accepts a v1 account as the previous publication of a v2 revision", async () => {
+      // v1 and v2 share one seed and one id counter, so a revision chain can
+      // legitimately cross schemas. This is why the handler checks the
+      // discriminator by hand instead of using a typed Account<'info, _>.
+      const v1Id = await currentCounter();
+      const v1Pda = publicationPda(v1Id);
+      const v1Title = "The original";
+      const v1Body = "Short enough for v1.";
+      await program.methods
+        .publishPublication(
+          new BN(v1Id.toString()),
+          IDENTITY_MODE.ANONYMOUS,
+          DISCOVERABILITY.PUBLIC,
+          Array.from(Buffer.alloc(32)),
+          Array.from(contentHash(v1Title, v1Body)),
+          v1Title,
+          "",
+          v1Body,
+          null,
+        )
+        .accounts({ previousPublicationAccount: null, authority: provider.wallet.publicKey })
+        .rpc();
+
+      const v2Id = await currentCounter();
+      const title = "The revision";
+      const excerpt = "Now with room to breathe.";
+      await program.methods
+        .publishPublicationV2(
+          new BN(v2Id.toString()),
+          IDENTITY_MODE.ANONYMOUS,
+          DISCOVERABILITY.PUBLIC,
+          Array.from(Buffer.alloc(32)),
+          Array.from(contentHashV2(title, excerpt, BODY)),
+          new BN(Buffer.byteLength(BODY, "utf8")),
+          title,
+          "",
+          excerpt,
+          v1Pda,
+        )
+        .accounts({ previousPublicationAccount: v1Pda, authority: provider.wallet.publicKey })
+        .rpc();
+
+      const account = await program.account.publicationV2.fetch(publicationPda(v2Id));
+      assert.isTrue(account.previousPublication!.equals(v1Pda));
+    });
+
+    it("rejects a previous_publication account that is not owned by this program", async () => {
+      const id = await currentCounter();
+      const stranger = await fundedKeypair();
+      let threw = false;
+      try {
+        await program.methods
+          .publishPublicationV2(
+            new BN(id.toString()),
+            IDENTITY_MODE.ANONYMOUS,
+            DISCOVERABILITY.PUBLIC,
+            Array.from(Buffer.alloc(32)),
+            Array.from(contentHashV2("t", "e", "body")),
+            new BN(4),
+            "t",
+            "",
+            "e",
+            stranger.publicKey,
+          )
+          .accounts({ previousPublicationAccount: stranger.publicKey, authority: provider.wallet.publicKey })
+          .rpc();
+      } catch (err) {
+        threw = true;
+        assert.include(String(err), "InvalidPreviousPublication");
+      }
+      assert.isTrue(threw);
+    });
+  });
+
+  describe("v1 and v2 coexist", () => {
+    it("keeps one monotone id space across both schemas", async () => {
+      const before = await currentCounter();
+
+      const v1Id = before;
+      await program.methods
+        .publishPublication(
+          new BN(v1Id.toString()),
+          IDENTITY_MODE.ANONYMOUS,
+          DISCOVERABILITY.PUBLIC,
+          Array.from(Buffer.alloc(32)),
+          Array.from(contentHash("a", "b")),
+          "a",
+          "",
+          "b",
+          null,
+        )
+        .accounts({ previousPublicationAccount: null, authority: provider.wallet.publicKey })
+        .rpc();
+
+      const v2Id = await currentCounter();
+      assert.equal(v2Id, v1Id + 1n);
+
+      await program.methods
+        .publishPublicationV2(
+          new BN(v2Id.toString()),
+          IDENTITY_MODE.ANONYMOUS,
+          DISCOVERABILITY.PUBLIC,
+          Array.from(Buffer.alloc(32)),
+          Array.from(contentHashV2("c", "d", "e")),
+          new BN(1),
+          "c",
+          "",
+          "d",
+          null,
+        )
+        .accounts({ previousPublicationAccount: null, authority: provider.wallet.publicKey })
+        .rpc();
+
+      assert.equal(await currentCounter(), v1Id + 2n);
+    });
+
+    it("still decodes pre-existing v1 accounts under the regenerated IDL", async () => {
+      // The compatibility guarantee the whole v2 design rests on: adding a
+      // second account type must not break reading the first.
+      const all = await program.account.publication.all();
+      assert.isAbove(all.length, 0);
+      for (const { account } of all) {
+        assert.equal(account.version, 1);
+        assert.isString(account.content);
+      }
+    });
+
+    it("keeps the two account types separate", async () => {
+      const v1 = await program.account.publication.all();
+      const v2 = await program.account.publicationV2.all();
+      const v1Ids = new Set(v1.map((a) => a.account.publicationId.toString()));
+      const v2Ids = new Set(v2.map((a) => a.account.publicationId.toString()));
+      for (const id of v2Ids) assert.isFalse(v1Ids.has(id));
+      assert.isAbove(v2.length, 0);
+    });
   });
 });

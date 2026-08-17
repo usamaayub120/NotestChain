@@ -14,11 +14,14 @@ export function PublicationWarningDialog({
   onOpenChange,
   onConfirm,
   isPending,
+  error,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => void;
   isPending?: boolean;
+  /** Shown inside the dialog so a failure keeps its context. */
+  error?: string | null;
 }) {
   const [acknowledged, setAcknowledged] = useState(false);
 
@@ -65,6 +68,12 @@ export function PublicationWarningDialog({
           />
           I understand this can't be undone.
         </label>
+
+        {error && (
+          <p role="alert" className="text-sm font-medium text-destructive">
+            {error}
+          </p>
+        )}
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

@@ -7,6 +7,7 @@ export interface SubmissionSummary {
   submittedByUserId: string;
   titleSnapshot: string;
   contentSnapshot: string;
+  contentFormatSnapshot?: "PLAINTEXT" | "MARKDOWN";
   tagsSnapshot: string[];
   identityModeSnapshot: string;
   discoverabilitySnapshot: string;

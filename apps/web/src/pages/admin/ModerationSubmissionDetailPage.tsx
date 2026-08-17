@@ -10,9 +10,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ErrorState } from "@/components/ErrorState";
-import { CardSkeletonList } from "@/components/CardSkeleton";
-import { ConfirmActionDialog } from "@/components/admin/ConfirmActionDialog";
+import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { MutationError } from "@/components/admin/MutationError";
+import { NoteContent } from "@/components/note/NoteContent";
+import { PageLoader } from "@/components/Loader";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export function ModerationSubmissionDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -27,7 +29,7 @@ export function ModerationSubmissionDetailPage() {
   const [flaggedAbuse, setFlaggedAbuse] = useState(false);
   const [confirmingReject, setConfirmingReject] = useState(false);
 
-  if (isLoading) return <div className="mx-auto max-w-2xl px-4 py-8"><CardSkeletonList count={1} /></div>;
+  if (isLoading) return <PageLoader label="Loading this submission" />;
   if (isError || !data) return <ErrorState onRetry={() => refetch()} />;
 
   const { submission, priorSubmissions, possibleDuplicates } = data;
@@ -66,9 +68,37 @@ export function ModerationSubmissionDetailPage() {
         {submission.submittedBy.email} ({submission.submittedBy.status})
       </p>
 
-      <div className="mt-4 whitespace-pre-wrap rounded-md border border-border bg-surface p-4 text-body">
-        {submission.contentSnapshot}
-      </div>
+      {/* A moderator is approving the exact bytes that become permanent, so
+          they get both views. Rendered is the default because it is what a
+          reader will see; Source exists so marker abuse (a note that is
+          mostly shimmer, say) is visible rather than hidden behind styling.
+          Source uses font-sans, not font-mono — DESIGN_SYSTEM.md §4 reserves
+          mono for signatures, PDAs, and hashes, and markdown source is
+          prose. Please don't "fix" that to mono. */}
+      {submission.contentFormatSnapshot === "MARKDOWN" ? (
+        <Tabs defaultValue="rendered" className="mt-4">
+          <TabsList>
+            <TabsTrigger value="rendered">Rendered</TabsTrigger>
+            <TabsTrigger value="source">Source</TabsTrigger>
+          </TabsList>
+          <TabsContent value="rendered">
+            <NoteContent
+              source={submission.contentSnapshot}
+              format="MARKDOWN"
+              className="rounded-md border border-border bg-surface p-4 text-body"
+            />
+          </TabsContent>
+          <TabsContent value="source">
+            <div className="whitespace-pre-wrap rounded-md border border-border bg-muted p-4 text-sm">
+              {submission.contentSnapshot}
+            </div>
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <div className="mt-4 whitespace-pre-wrap rounded-md border border-border bg-surface p-4 text-body">
+          {submission.contentSnapshot}
+        </div>
+      )}
 
       {submission.tagsSnapshot.length > 0 && (
         <div className="mt-3 flex flex-wrap gap-1.5">

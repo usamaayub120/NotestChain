@@ -6,6 +6,7 @@ export interface Draft {
   id: string;
   title: string;
   content: string;
+  contentFormat?: "PLAINTEXT" | "MARKDOWN";
   tags: string[];
   identityMode: "NAMED" | "PSEUDONYMOUS" | "ANONYMOUS";
   publicIdentityId: string | null;
@@ -33,6 +34,7 @@ export interface DraftVersion {
   versionNumber: number;
   title: string;
   content: string;
+  contentFormat?: "PLAINTEXT" | "MARKDOWN";
   createdAt: string;
 }
 

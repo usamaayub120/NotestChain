@@ -71,6 +71,10 @@ export const VerificationState = {
   HASH_MISMATCH: "HASH_MISMATCH",
   PDA_MISMATCH: "PDA_MISMATCH",
   UNSUPPORTED_VERSION: "UNSUPPORTED_VERSION",
+  /// The account decoded fine but uses a different Publication schema than
+  /// the database expects — an inconsistency in our records, not evidence
+  /// that the note was altered. Distinct from HASH_MISMATCH on purpose.
+  VERSION_MISMATCH: "VERSION_MISMATCH",
   RPC_UNAVAILABLE: "RPC_UNAVAILABLE",
   NOT_FINALIZED: "NOT_FINALIZED",
 } as const;

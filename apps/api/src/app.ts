@@ -67,7 +67,11 @@ export function createApp() {
   app.use("/api/v1", healthRouter);
   app.use("/api/v1/auth", authRouter);
   app.use("/api/v1/identities", identitiesRouter);
-  app.use("/api/v1/drafts", draftsRouter);
+  // A route-scoped body limit rather than raising the global one: a 20,000
+  // character note is at most ~80KB of UTF-8, but JSON string escaping can
+  // inflate worst-case input several times over. Only drafts need the extra
+  // headroom, so only drafts get it — every other endpoint stays at 256kb.
+  app.use("/api/v1/drafts", express.json({ limit: "1mb" }), draftsRouter);
   app.use("/api/v1/moderation", moderationRouter);
   app.use("/api/v1/publications", publicationsRouter);
   app.use("/api/v1/profiles", profilesRouter);
