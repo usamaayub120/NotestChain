@@ -43,3 +43,17 @@ export function useLogout() {
     onSuccess: () => queryClient.setQueryData(["auth", "me"], null),
   });
 }
+
+export function useForgotPassword() {
+  return useMutation({
+    mutationFn: (input: { email: string }) =>
+      apiFetch<{ message: string }>("/auth/forgot-password", { method: "POST", body: input }),
+  });
+}
+
+export function useResetPassword() {
+  return useMutation({
+    mutationFn: (input: { token: string; password: string }) =>
+      apiFetch<{ success: boolean }>("/auth/reset-password", { method: "POST", body: input }),
+  });
+}

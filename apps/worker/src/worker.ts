@@ -2,6 +2,7 @@ import { env } from "./config/env.js";
 import { logger } from "./lib/logger.js";
 import { prisma } from "./lib/prisma.js";
 import { beatHeartbeat } from "./heartbeat.js";
+import { claimAndProcessEmailJobs } from "./email/emailProcessor.js";
 import { claimAndProcessOutbox } from "./publishing/outboxProcessor.js";
 import { runReconciliation } from "./reconciliation/reconcile.js";
 
@@ -13,6 +14,7 @@ let lastReconciledAt = 0;
 async function tick(): Promise<void> {
   await beatHeartbeat({ cluster: env.SOLANA_CLUSTER });
   await claimAndProcessOutbox();
+  await claimAndProcessEmailJobs();
 
   if (Date.now() - lastReconciledAt >= env.WORKER_RECONCILE_INTERVAL_MS) {
     lastReconciledAt = Date.now();

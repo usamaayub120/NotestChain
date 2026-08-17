@@ -1,7 +1,10 @@
 import argon2 from "argon2";
+import type { Prisma } from "@prisma/client";
 import { AccountStatus, Role } from "@noteschain/shared";
+import { EmailKind, buildEmailJobData } from "@noteschain/email";
 import { prisma } from "../../lib/prisma.js";
 import { ARGON2_OPTIONS } from "../../config/security.js";
+import { env } from "../../config/env.js";
 
 export class AuthError extends Error {
   constructor(
@@ -32,8 +35,26 @@ export async function registerUser(email: string, password: string) {
   }
 
   const passwordHash = await hashPassword(password);
-  return prisma.user.create({
-    data: { email, passwordHash, role: Role.USER, status: AccountStatus.ACTIVE },
+  const welcomeEmailData = buildEmailJobData(EmailKind.ACCOUNT_WELCOME, {
+    startWritingUrl: `${env.PUBLIC_WEB_ORIGIN}/drafts`,
+  });
+
+  // User + welcome-email job in one transaction: this is a welcome-only
+  // email (no verification gate, no change to login), so the only property
+  // that matters is that an account never exists without one queued.
+  return prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({
+      data: { email, passwordHash, role: Role.USER, status: AccountStatus.ACTIVE },
+    });
+    await tx.emailJob.create({
+      data: {
+        kind: EmailKind.ACCOUNT_WELCOME,
+        toEmail: user.email,
+        toUserId: user.id,
+        data: welcomeEmailData as Prisma.InputJsonValue,
+      },
+    });
+    return user;
   });
 }
 

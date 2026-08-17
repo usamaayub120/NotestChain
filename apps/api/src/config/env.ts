@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { emailEnvShape, isSmtpConfigured } from "@noteschain/email";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -36,6 +37,8 @@ const envSchema = z.object({
   // which is a separate, later step — crashing startup without it would
   // block deploying the feature before that's done.
   TURNSTILE_SECRET_KEY: z.string().optional(),
+
+  ...emailEnvShape,
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -52,6 +55,15 @@ function loadEnv(): Env {
   }
   if (parsed.data.NODE_ENV === "production" && !process.env.TURNSTILE_SECRET_KEY) {
     console.warn("TURNSTILE_SECRET_KEY not set — captcha verification is bypassed until a Cloudflare Turnstile secret is configured.");
+  }
+  // Soft-warn, not hard-fail: the API only ever enqueues an EmailJob row, it
+  // never opens an SMTP connection itself. Without SMTP configured, jobs
+  // simply queue up as PENDING until the worker can send them — a visible,
+  // recoverable state, not a broken request. The worker enforces this
+  // strictly at its own startup, since it's the process that actually needs
+  // working credentials.
+  if (parsed.data.NODE_ENV === "production" && !isSmtpConfigured(parsed.data)) {
+    console.warn("SMTP is not fully configured — emails will queue but the worker won't be able to send them yet.");
   }
   return parsed.data;
 }

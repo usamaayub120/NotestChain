@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { loginSchema, registerSchema } from "@noteschain/validation";
+import { forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema } from "@noteschain/validation";
 import { asyncHandler, ok } from "../../lib/http.js";
 import { Errors } from "../../lib/apiError.js";
 import { prisma } from "../../lib/prisma.js";
@@ -9,6 +9,7 @@ import { requireAuth } from "../../middleware/auth.js";
 import { recordAudit } from "../../lib/audit.js";
 import { AuthError, authenticateUser, registerUser, toPublicUser } from "./auth.service.js";
 import { createSession, refreshSession, revokeSession } from "./session.service.js";
+import { requestPasswordReset, resetPassword } from "./passwordReset.service.js";
 import { clearSessionCookies, setSessionCookies } from "./cookies.js";
 
 export const authRouter = Router();
@@ -49,6 +50,29 @@ authRouter.post(
       }
       throw err;
     }
+  }),
+);
+
+authRouter.post(
+  "/forgot-password",
+  authRateLimit,
+  asyncHandler(async (req, res) => {
+    const input = forgotPasswordSchema.parse(req.body);
+    await requestPasswordReset(input.email);
+    // Identical response whether or not the email exists — see
+    // requestPasswordReset's doc comment for why.
+    return ok(res, { message: "If that email has an account, a reset link is on its way." });
+  }),
+);
+
+authRouter.post(
+  "/reset-password",
+  authRateLimit,
+  asyncHandler(async (req, res) => {
+    const input = resetPasswordSchema.parse(req.body);
+    const { userId } = await resetPassword(input.token, input.password);
+    await recordAudit({ actorUserId: userId, action: "PASSWORD_RESET", targetType: "User", targetId: userId, ipAddress: req.ip });
+    return ok(res, { success: true });
   }),
 );
 

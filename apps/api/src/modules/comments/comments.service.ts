@@ -1,8 +1,10 @@
-import type { Comment } from "@prisma/client";
+import type { Comment, Prisma } from "@prisma/client";
 import type { CreateCommentInput } from "@noteschain/validation";
+import { EmailKind, buildEmailJobData } from "@noteschain/email";
 import { prisma } from "../../lib/prisma.js";
 import { Errors } from "../../lib/apiError.js";
 import { verifyCaptcha } from "../../lib/captcha.js";
+import { env } from "../../config/env.js";
 
 const REPLY_INLINE_CAP = 50;
 
@@ -133,16 +135,46 @@ export async function createComment(publicationId: string, authorUserId: string,
     }
   }
 
-  const comment = await prisma.comment.create({
-    data: {
-      publicationId,
-      parentCommentId: input.parentCommentId,
-      rootCommentId,
-      authorUserId,
-      isAnonymous: input.isAnonymous,
-      authorDisplayNameSnapshot,
-      body: input.body,
-    },
+  // Only the anonymity the COMMENTER chose is reflected here — never
+  // whether the recipient (the publication's author) is anonymous, which
+  // stays completely outside this notification.
+  const commenterName = authorDisplayNameSnapshot ?? "Someone";
+  const notifyAuthor = publication.privateAuthorUserId !== authorUserId;
+
+  const comment = await prisma.$transaction(async (tx) => {
+    const created = await tx.comment.create({
+      data: {
+        publicationId,
+        parentCommentId: input.parentCommentId,
+        rootCommentId,
+        authorUserId,
+        isAnonymous: input.isAnonymous,
+        authorDisplayNameSnapshot,
+        body: input.body,
+      },
+    });
+
+    if (notifyAuthor) {
+      const author = await tx.user.findUnique({ where: { id: publication.privateAuthorUserId }, select: { email: true } });
+      if (author) {
+        const emailData = buildEmailJobData(EmailKind.COMMENT_RECEIVED, {
+          publicationTitle: publication.title,
+          publicationUrl: `${env.PUBLIC_WEB_ORIGIN}/p/${publicationId}`,
+          commenterName,
+          commentBody: input.body,
+        });
+        await tx.emailJob.create({
+          data: {
+            kind: EmailKind.COMMENT_RECEIVED,
+            toEmail: author.email,
+            toUserId: publication.privateAuthorUserId,
+            data: emailData as Prisma.InputJsonValue,
+          },
+        });
+      }
+    }
+
+    return created;
   });
 
   return toCommentDTO(comment, authorUserId);

@@ -8,7 +8,7 @@
     "pnpm": ">=9"
   },
   "scripts": {
-    "build:packages": "pnpm --filter @noteschain/shared build && pnpm --filter @noteschain/validation build && pnpm --filter @noteschain/blockchain-client build",
+    "build:packages": "pnpm --filter @noteschain/shared build && pnpm --filter @noteschain/validation build && pnpm --filter @noteschain/blockchain-client build && pnpm --filter @noteschain/email build",
     "dev": "pnpm build:packages && concurrently -n web,api,worker -c blue,green,yellow \"pnpm --filter @noteschain/web dev\" \"pnpm --filter @noteschain/api dev\" \"pnpm --filter @noteschain/worker dev\"",
     "dev:up": "docker compose -f docker-compose.dev.yml up -d postgres",
     "dev:down": "docker compose -f docker-compose.dev.yml down",

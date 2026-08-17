@@ -14,6 +14,7 @@
   "dependencies": {
     "@coral-xyz/anchor": "^0.31.1",
     "@noteschain/blockchain-client": "workspace:*",
+    "@noteschain/email": "workspace:*",
     "@noteschain/shared": "workspace:*",
     "@noteschain/validation": "workspace:*",
     "@prisma/client": "^5.22.0",

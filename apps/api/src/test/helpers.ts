@@ -41,6 +41,8 @@ export async function promoteRole(userId: string, role: Role): Promise<void> {
 /** Clears everything an integration test run could have created — run between test files, not inside one, since fileParallelism is off. */
 export async function resetTestDb(): Promise<void> {
   await prisma.$transaction([
+    prisma.emailJob.deleteMany(),
+    prisma.passwordResetToken.deleteMany(),
     prisma.auditLog.deleteMany(),
     prisma.report.deleteMany(),
     prisma.workerJob.deleteMany(),
