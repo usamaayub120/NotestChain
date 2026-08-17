@@ -191,6 +191,101 @@ pull.) The mounted keypair path must match whatever
 `SOLANA_PUBLISHER_KEYPAIR_PATH` is set to in the VPS's `.env` — see
 `RUNBOOK.md` §3 for generating/rotating that keypair.
 
+### This project's actual production deployment
+
+The generic instructions above describe the mechanism; this section
+describes the specific box this app is actually running on, for whoever
+next needs to redeploy it.
+
+**This is a shared VPS running several unrelated projects** (containers
+named `tradepsx-*`, `portfolio-*`, plus a `shared-postgres` container used
+by more than one of them). Only ever touch the `noteschain` container, the
+`noteschain.org`/`notes.usamaayub.com` nginx site files, and
+`/opt/noteschain/*` — nothing else on the box is in scope, even if you
+notice something that looks wrong.
+
+**Connecting.** SSH access is defined in `~/.codex/ssh-config.toml` on the
+operator's machine (key `my_vps`): host, port, username, and the path to
+the private key. Read that file rather than hardcoding the host/user here,
+since it's the source of truth and this doc would otherwise rot the moment
+it changes. From a shell that has the key:
+
+```bash
+ssh -i <private_key_path from ssh-config.toml> <username>@<host>
+```
+
+**Layout on the VPS:**
+
+- `/opt/noteschain/docker-compose.yml` — the compose file that actually
+  defines the running `noteschain` container (image, port mapping
+  `127.0.0.1:8090:80`, the keypair bind mount, and every runtime env var).
+  Non-secret env vars are hardcoded directly in this file; the few secrets
+  (`DATABASE_URL`, `SESSION_SECRET`, `TURNSTILE_SECRET_KEY`, `SMTP_PASSWORD`)
+  are `${VAR}`-interpolated from a sibling `.env` file in the same
+  directory. The container joins an external `shared-services` Docker
+  network — that's how it reaches `shared-postgres`.
+- `/opt/noteschain/.env` — the small secrets-only file referenced above.
+  Never `cat` this over SSH into a session transcript; append/edit with a
+  targeted `grep`/`printf`/`sed` instead of dumping it.
+- `/home/codexops/noteschain/secrets/solana-publisher.json` — the
+  publisher keypair, bind-mounted read-only into the container at
+  `/run/secrets/solana-publisher.json`. This path is separate from
+  `/opt/noteschain` and predates the compose migration; leave it where it
+  is rather than "tidying" it into `/opt`.
+- `/home/codexops/noteschain/.env` — a **stale, unused** leftover from
+  before this was moved to docker-compose. Nothing reads it. Don't edit it
+  expecting an effect; if it's ever in the way, confirm it's still unused
+  before removing it.
+
+**nginx + Let's Encrypt.** Both domains are configured in
+`/etc/nginx/sites-available/` (symlinked into `sites-enabled/`), certs
+issued via certbot's webroot method (`-w /var/www/certbot`, ECDSA keys) —
+the same pattern used for every other site already on this box:
+
+- `noteschain.org` — the live app. HTTP block 301s to HTTPS; the HTTPS
+  block proxies to `http://127.0.0.1:8090` (the container's published
+  port) and holds its own Let's Encrypt cert for `noteschain.org` +
+  `www.noteschain.org`.
+- `notes.usamaayub.com` — the old domain. Both its HTTP and HTTPS blocks
+  now just `return 301 https://noteschain.org$request_uri;`. It keeps its
+  own pre-existing cert only so the redirect itself can be served over TLS.
+
+To renew or extend certs, use `certbot certonly --webroot -w
+/var/www/certbot -d <domain>` matching the existing invocations — don't
+switch to a different certbot plugin/method for this app, since it'd be
+the only site on the box managed differently.
+
+**Redeploying new code** (after CI has pushed a new image to GHCR):
+
+```bash
+docker pull ghcr.io/usamaayub120/notestchain:latest
+cd /opt/noteschain && docker compose up -d   # recreates the container with the new image
+```
+
+`docker compose up -d` only recreates the container if the image or the
+compose file's config changed — safe to run even when nothing's new.
+**If the push included a new Prisma migration, apply it after the
+container is back up** (the image doesn't run migrations on its own):
+
+```bash
+docker exec noteschain sh -c 'cd /app && node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma'
+```
+
+The worker logs `relation "X" does not exist` and fails its tick loop
+every `WORKER_POLL_INTERVAL_MS` until this is run — that's the tell that a
+migration was missed, not a sign anything else is wrong.
+
+**Adding a new env var** (e.g. a future feature needs another secret or
+config value): edit `/opt/noteschain/docker-compose.yml` directly for
+non-secrets, or add a line to `/opt/noteschain/.env` plus a `${VAR}`
+reference in the compose file for secrets — then `docker compose up -d` to
+apply it. Remember the **Dockerfile itself must also know about any new
+workspace package** under `packages/*` (each stage copies
+`package.json`/`node_modules`/`dist` by explicit name, so a new package
+that isn't added there breaks the CI Docker build with a
+`--frozen-lockfile` install failure, not something else more obviously
+about the missing package).
+
 ## Admin account creation
 
 ```bash
