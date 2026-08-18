@@ -1,6 +1,11 @@
 import type { Response } from "express";
 import { env } from "../../config/env.js";
-import { CSRF_COOKIE_NAME, SESSION_COOKIE_NAME } from "../../config/security.js";
+import {
+  CSRF_COOKIE_NAME,
+  SESSION_COOKIE_NAME,
+  VISITOR_COOKIE_NAME,
+  VISITOR_COOKIE_TTL_MS,
+} from "../../config/security.js";
 import type { IssuedSession } from "./session.service.js";
 
 function baseCookieOptions() {
@@ -30,4 +35,17 @@ export function clearSessionCookies(res: Response): void {
   const opts = baseCookieOptions();
   res.clearCookie(SESSION_COOKIE_NAME, opts);
   res.clearCookie(CSRF_COOKIE_NAME, opts);
+}
+
+/**
+ * A random, HTTP-only first-party identifier used only to de-duplicate
+ * publication readers. The database receives a one-way hash, never this
+ * token, so analytics cannot be used to reconstruct a browser identifier.
+ */
+export function setVisitorCookie(res: Response, token: string): void {
+  res.cookie(VISITOR_COOKIE_NAME, token, {
+    ...baseCookieOptions(),
+    httpOnly: true,
+    maxAge: VISITOR_COOKIE_TTL_MS,
+  });
 }

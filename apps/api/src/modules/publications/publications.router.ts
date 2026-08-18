@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { randomBytes } from "node:crypto";
 import { z } from "zod";
 import {
   createCommentSchema,
@@ -8,11 +9,18 @@ import {
 } from "@noteschain/validation";
 import { asyncHandler, paginated, ok, requireParam } from "../../lib/http.js";
 import { requireAuth } from "../../middleware/auth.js";
+import { VISITOR_COOKIE_NAME } from "../../config/security.js";
+import { setVisitorCookie } from "../auth/cookies.js";
 import { commentRateLimit, viewRateLimit } from "../../middleware/rateLimit.js";
-import { getPublicationById, getPublicationRevisions, listPublicPublications } from "./publications.service.js";
+import {
+  getPublicationById,
+  getPublicationRevisions,
+  listMyPublicationAnalytics,
+  listPublicPublications,
+} from "./publications.service.js";
 import { verifyPublication } from "./verify.service.js";
 import { createReport } from "./reports.service.js";
-import { recordView } from "./views.service.js";
+import { hashVisitorToken, recordView } from "./views.service.js";
 import { createComment, listTopLevelComments, setCommentsEnabled } from "../comments/comments.service.js";
 
 export const publicationsRouter = Router();
@@ -31,6 +39,21 @@ const listQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(50).optional().default(20),
   tag: z.string().trim().toLowerCase().max(24).optional(),
 });
+
+const myAnalyticsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).max(1000).optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).optional().default(25),
+});
+
+publicationsRouter.get(
+  "/mine/analytics",
+  requireAuth,
+  asyncHandler(async (req, res) => {
+    const query = myAnalyticsQuerySchema.parse(req.query);
+    const { items, total } = await listMyPublicationAnalytics(req.auth!.userId, query);
+    return paginated(res, items, { ...query, total });
+  }),
+);
 
 publicationsRouter.get(
   "/",
@@ -71,8 +94,19 @@ publicationsRouter.post(
   asyncHandler(async (req, res) => {
     const input = recordPublicationViewSchema.parse(req.body);
     const referrerHost = parseReferrerHost(req.get("referer"));
-    await recordView(requireParam(req, "id"), input, referrerHost);
-    return ok(res, { recorded: true }, 202);
+    let visitorToken = req.cookies?.[VISITOR_COOKIE_NAME] as string | undefined;
+    if (!visitorToken) {
+      visitorToken = randomBytes(32).toString("base64url");
+      setVisitorCookie(res, visitorToken);
+    }
+    const result = await recordView(
+      requireParam(req, "id"),
+      input,
+      hashVisitorToken(visitorToken),
+      req.auth?.userId,
+      referrerHost,
+    );
+    return ok(res, result, 202);
   }),
 );
 

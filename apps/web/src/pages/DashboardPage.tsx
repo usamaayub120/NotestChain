@@ -31,6 +31,10 @@ export function DashboardPage() {
           <h2 className="text-lg">Your drafts</h2>
           <p className="mt-1 text-sm text-muted-foreground">Pick up where you left off.</p>
         </Link>
+        <Link to="/published-notes" className="rounded-md border border-border bg-surface p-4 hover:bg-muted">
+          <h2 className="text-lg">Published notes</h2>
+          <p className="mt-1 text-sm text-muted-foreground">See unique readers for every note you have published.</p>
+        </Link>
         <Link to="/identities" className="rounded-md border border-border bg-surface p-4 hover:bg-muted">
           <h2 className="text-lg">Identities</h2>
           <p className="mt-1 text-sm text-muted-foreground">Manage your name and pseudonyms.</p>

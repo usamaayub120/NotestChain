@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiFetchPaginated } from "@/lib/api";
 
 export interface SubmissionSummary {
   id: string;
@@ -34,10 +34,15 @@ export interface SubmissionDetail {
   possibleDuplicates: Array<{ id: string; draftId: string; submittedByUserId: string; createdAt: string; status: string }>;
 }
 
-export function usePendingSubmissions() {
+export function usePendingSubmissions(page = 1, pageSize = 25, from?: string, to?: string) {
   return useQuery({
-    queryKey: ["moderation", "submissions"],
-    queryFn: () => apiFetch<SubmissionSummary[]>("/moderation/submissions"),
+    queryKey: ["moderation", "submissions", page, pageSize, from, to],
+    queryFn: () => {
+      const params = new URLSearchParams({ page: String(page), pageSize: String(pageSize) });
+      if (from) params.set("from", from);
+      if (to) params.set("to", to);
+      return apiFetchPaginated<SubmissionSummary>(`/moderation/submissions?${params}`);
+    },
   });
 }
 

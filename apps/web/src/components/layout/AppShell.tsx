@@ -6,6 +6,8 @@ import { useStartNewDraft } from "@/hooks/useStartNewDraft";
 import { MobileTopBar } from "./MobileTopBar";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { Footer } from "./Footer";
+import { AdminPortalShell } from "@/components/admin/AdminPortalShell";
+import { AppUpdateBanner } from "@/components/AppUpdateBanner";
 
 const DESKTOP_NAV_ITEMS = [
   { to: "/", label: "Home" },
@@ -82,11 +84,12 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <div className="flex flex-1 flex-col pb-20 md:pb-0">
-        <main className="flex-1">{children}</main>
+        <main className="flex-1">{inAdmin ? <AdminPortalShell>{children}</AdminPortalShell> : children}</main>
         {showFooter && <Footer />}
       </div>
 
       <MobileBottomNav user={user} />
+      <AppUpdateBanner />
     </div>
   );
 }

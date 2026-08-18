@@ -137,3 +137,35 @@ export async function getPublicationRevisions(id: string) {
     revisions: revisions.map((pub) => toPublicationDTO(pub)),
   };
 }
+
+export interface MyPublicationAnalyticsOptions {
+  page: number;
+  pageSize: number;
+}
+
+/** Private author-only analytics; never use this projection in public reads. */
+export async function listMyPublicationAnalytics(userId: string, options: MyPublicationAnalyticsOptions) {
+  const where = { privateAuthorUserId: userId, status: "PUBLISHED" as const };
+  const [publications, total] = await Promise.all([
+    prisma.publication.findMany({
+      where,
+      orderBy: [{ publishedAt: "desc" }, { createdAt: "desc" }],
+      skip: (options.page - 1) * options.pageSize,
+      take: options.pageSize,
+      select: {
+        id: true,
+        title: true,
+        status: true,
+        publishedAt: true,
+        createdAt: true,
+        _count: { select: { views: { where: { visitorHash: { not: null } } } } },
+      },
+    }),
+    prisma.publication.count({ where }),
+  ]);
+
+  return {
+    items: publications.map(({ _count, ...publication }) => ({ ...publication, uniqueReaders: _count.views })),
+    total,
+  };
+}

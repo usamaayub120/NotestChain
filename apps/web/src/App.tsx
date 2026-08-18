@@ -8,6 +8,7 @@ import { RegisterPage } from "@/pages/RegisterPage";
 import { ForgotPasswordPage } from "@/pages/ForgotPasswordPage";
 import { ResetPasswordPage } from "@/pages/ResetPasswordPage";
 import { DashboardPage } from "@/pages/DashboardPage";
+import { PublishedNotesPage } from "@/pages/PublishedNotesPage";
 import { ExplorePage } from "@/pages/ExplorePage";
 import { SearchPage } from "@/pages/SearchPage";
 import { TagPage } from "@/pages/TagPage";
@@ -52,6 +53,10 @@ export function App() {
               <DashboardPage />
             </RequireAuth>
           }
+        />
+        <Route
+          path="/published-notes"
+          element={<RequireAuth><PublishedNotesPage /></RequireAuth>}
         />
         <Route
           path="/drafts"

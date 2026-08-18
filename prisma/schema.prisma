@@ -535,8 +535,9 @@ model CommentReport {
 // Deliberately no userId/ipAddress/full referrer URL — just enough to
 // answer "which platform did this come from," matching the privacy
 // posture of the rest of the app (IP is logged on Session/AuditLog for
-// security-relevant events only, not page views). This is a raw pageview
-// count with no dedup, not a unique-visitor count.
+// security-relevant events only, not page views). visitorHash is a
+// SHA-256 hash of an opaque first-party cookie, never an IP, account id, or
+// browser fingerprint. Legacy raw pageviews predate this field and stay null.
 model PublicationView {
   id            String      @id @default(uuid())
   publicationId String
@@ -545,8 +546,10 @@ model PublicationView {
   utmMedium     String?
   utmCampaign   String?
   referrerHost  String?
+  visitorHash   String?
   createdAt     DateTime    @default(now())
 
+  @@unique([publicationId, visitorHash])
   @@index([publicationId, createdAt])
   @@index([utmSource])
   @@index([createdAt])

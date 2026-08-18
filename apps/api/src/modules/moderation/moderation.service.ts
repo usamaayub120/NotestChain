@@ -14,14 +14,34 @@ const ACTION_TO_EVENT: Record<ModerationAction, DraftEvent> = {
   [ModerationAction.REQUEST_CHANGES]: "REQUEST_CHANGES",
 };
 
-export async function listPendingSubmissions() {
-  return prisma.submission.findMany({
-    where: { status: DraftStatus.PENDING_REVIEW },
-    orderBy: { createdAt: "asc" },
-    include: {
-      submittedBy: { select: { id: true, email: true, status: true, createdAt: true } },
-    },
-  });
+export interface PendingSubmissionsQuery {
+  page: number;
+  pageSize: number;
+  from?: Date;
+  to?: Date;
+}
+
+export async function listPendingSubmissions(query: PendingSubmissionsQuery) {
+  const inclusiveTo = query.to ? new Date(query.to.getFullYear(), query.to.getMonth(), query.to.getDate() + 1) : undefined;
+  const where: Prisma.SubmissionWhereInput = {
+    status: DraftStatus.PENDING_REVIEW,
+    ...(query.from || inclusiveTo
+      ? { createdAt: { ...(query.from ? { gte: query.from } : {}), ...(inclusiveTo ? { lt: inclusiveTo } : {}) } }
+      : {}),
+  };
+  const [items, total] = await Promise.all([
+    prisma.submission.findMany({
+      where,
+      orderBy: { createdAt: "asc" },
+      skip: (query.page - 1) * query.pageSize,
+      take: query.pageSize,
+      include: {
+        submittedBy: { select: { id: true, email: true, status: true, createdAt: true } },
+      },
+    }),
+    prisma.submission.count({ where }),
+  ]);
+  return { items, total };
 }
 
 export async function getSubmissionDetail(submissionId: string) {

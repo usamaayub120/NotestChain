@@ -1,6 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, apiFetchPaginated } from "@/lib/api";
 
+export interface AdminQuery { page: number; pageSize: number; from?: string; to?: string; }
+function queryString(query: AdminQuery, extra: Record<string, string | undefined> = {}) {
+  const params = new URLSearchParams({ page: String(query.page), pageSize: String(query.pageSize) });
+  if (query.from) params.set("from", query.from);
+  if (query.to) params.set("to", query.to);
+  Object.entries(extra).forEach(([key, value]) => { if (value) params.set(key, value); });
+  return params.toString();
+}
+
 export interface AdminReport {
   id: string;
   publicationId: string;
@@ -15,10 +24,10 @@ export interface AdminReport {
   reporter: { id: string; email: string } | null;
 }
 
-export function useReports(status?: "OPEN" | "RESOLVED") {
+export function useReports(status: "OPEN" | "RESOLVED", query: AdminQuery) {
   return useQuery({
-    queryKey: ["admin", "reports", status ?? "OPEN"],
-    queryFn: () => apiFetch<AdminReport[]>(`/admin/reports${status ? `?status=${status}` : "?status=OPEN"}`),
+    queryKey: ["admin", "reports", status, query],
+    queryFn: () => apiFetchPaginated<AdminReport>(`/admin/reports?${queryString(query, { status })}`),
   });
 }
 
@@ -50,11 +59,10 @@ export interface AdminCommentReport {
   reporter: { id: string; email: string } | null;
 }
 
-export function useCommentReports(status?: "OPEN" | "RESOLVED") {
+export function useCommentReports(status: "OPEN" | "RESOLVED", query: AdminQuery) {
   return useQuery({
-    queryKey: ["admin", "comment-reports", status ?? "OPEN"],
-    queryFn: () =>
-      apiFetch<AdminCommentReport[]>(`/admin/comment-reports${status ? `?status=${status}` : "?status=OPEN"}`),
+    queryKey: ["admin", "comment-reports", status, query],
+    queryFn: () => apiFetchPaginated<AdminCommentReport>(`/admin/comment-reports?${queryString(query, { status })}`),
   });
 }
 
@@ -95,10 +103,10 @@ export interface AuditLogEntry {
   actor: { id: string; email: string } | null;
 }
 
-export function useAuditLog(page: number) {
+export function useAuditLog(query: AdminQuery) {
   return useQuery({
-    queryKey: ["admin", "audit-log", page],
-    queryFn: () => apiFetchPaginated<AuditLogEntry>(`/admin/audit-log?page=${page}`),
+    queryKey: ["admin", "audit-log", query],
+    queryFn: () => apiFetchPaginated<AuditLogEntry>(`/admin/audit-log?${queryString(query)}`),
   });
 }
 
@@ -121,24 +129,26 @@ export interface BlockchainJob {
   } | null;
 }
 
-export function useBlockchainJobs(page: number, status?: BlockchainJob["status"]) {
+export function useBlockchainJobs(query: AdminQuery, status?: BlockchainJob["status"]) {
   return useQuery({
-    queryKey: ["admin", "blockchain-jobs", page, status],
-    queryFn: () =>
-      apiFetchPaginated<BlockchainJob>(`/admin/blockchain/jobs?page=${page}${status ? `&status=${status}` : ""}`),
+    queryKey: ["admin", "blockchain-jobs", query, status],
+    queryFn: () => apiFetchPaginated<BlockchainJob>(`/admin/blockchain/jobs?${queryString(query, { status })}`),
   });
 }
 
 export interface ViewsBreakdown {
   total: number;
   bySource: { utmSource: string; count: number }[];
-  mostViewed: { publication: { id: string; title: string; isPlatformVisible: boolean } | null; views: number }[];
+  mostViewed: {
+    items: { publication: { id: string; title: string; isPlatformVisible: boolean } | null; uniqueReaders: number }[];
+    total: number;
+  };
 }
 
-export function useViewsBreakdown(days = 30) {
+export function useViewsBreakdown(query: AdminQuery) {
   return useQuery({
-    queryKey: ["admin", "views", days],
-    queryFn: () => apiFetch<ViewsBreakdown>(`/admin/views?days=${days}`),
+    queryKey: ["admin", "views", query],
+    queryFn: () => apiFetch<ViewsBreakdown>(`/admin/views?${queryString(query)}`),
   });
 }
 

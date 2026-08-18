@@ -6,97 +6,12 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EmptyState } from "@/components/EmptyState";
 import { CardSkeletonList } from "@/components/CardSkeleton";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
-import { MutationError } from "@/components/admin/MutationError";
+import { AdminDateControls, AdminPagination, applyDatePreset, type AdminDatePreset, type AdminListState } from "@/components/admin/AdminTableControls";
 
-const STATUS_FILTERS = ["ALL", "PENDING", "PROCESSING", "PROCESSED", "FAILED"] as const;
-type StatusFilter = (typeof STATUS_FILTERS)[number];
-
-function JobRow({ job }: { job: BlockchainJob }) {
-  const retry = useRetryBlockchainJob();
-
-  return (
-    <li className="rounded-md border border-border bg-surface p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <Link to={`/p/${job.publicationId}`} className="font-medium text-primary underline">
-            {job.publication?.title ?? job.publicationId}
-          </Link>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {job.kind} · attempt {job.attempts}/{job.maxAttempts} · updated {new Date(job.updatedAt).toLocaleString()}
-          </p>
-        </div>
-        <span className="shrink-0 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">{job.status}</span>
-      </div>
-
-      {job.publication?.chainRecord?.chainStatus && (
-        <p className="mt-2 text-xs text-muted-foreground">chain status: {job.publication.chainRecord.chainStatus}</p>
-      )}
-      {job.lastError && <p className="mt-2 whitespace-pre-wrap text-xs text-destructive">{job.lastError}</p>}
-
-      {job.status === "FAILED" && (
-        <Button
-          variant="outline"
-          className="mt-3"
-          disabled={retry.isPending}
-          onClick={() => retry.mutate({ id: job.id })}
-        >
-          {retry.isPending ? "Retrying…" : "Retry"}
-        </Button>
-      )}
-      <MutationError error={retry.isError ? retry.error : null} />
-    </li>
-  );
-}
-
+const statuses = ["ALL", "PENDING", "PROCESSING", "PROCESSED", "FAILED"] as const;
+function Retry({ job }: { job: BlockchainJob }) { const retry = useRetryBlockchainJob(); return job.status === "FAILED" ? <Button size="sm" variant="outline" disabled={retry.isPending} onClick={() => retry.mutate({ id: job.id })}>{retry.isPending ? "Retrying…" : "Retry"}</Button> : <span className="text-muted-foreground">—</span>; }
 export function BlockchainJobsPage() {
-  const [status, setStatus] = useState<StatusFilter>("ALL");
-  const [page, setPage] = useState(1);
-  const { data, isLoading } = useBlockchainJobs(page, status === "ALL" ? undefined : status);
-
-  const totalPages = data ? Math.max(1, Math.ceil(data.meta.total / data.meta.pageSize)) : 1;
-
-  return (
-    <div className="mx-auto max-w-2xl px-4 py-6">
-      <AdminPageHeader
-        title="Blockchain jobs"
-        description="The publish queue — reconciliation runs automatically every few minutes and flags mismatches to the audit log."
-      />
-
-      <Tabs
-        value={status}
-        onValueChange={(v) => {
-          setStatus(v as StatusFilter);
-          setPage(1);
-        }}
-        className="mt-4"
-      >
-        <TabsList>
-          {STATUS_FILTERS.map((s) => (
-            <TabsTrigger key={s} value={s}>
-              {s}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
-      {isLoading && <div className="mt-6"><CardSkeletonList /></div>}
-      {!isLoading && data?.data.length === 0 && <EmptyState title="No jobs" description="Nothing matches this filter." />}
-
-      <ul className="mt-6 space-y-3">{data?.data.map((job) => <JobRow key={job.id} job={job} />)}</ul>
-
-      {data && data.meta.total > data.meta.pageSize && (
-        <div className="mt-6 flex items-center justify-between">
-          <Button variant="outline" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
-            Previous
-          </Button>
-          <span className="text-sm text-muted-foreground">
-            Page {page} of {totalPages}
-          </span>
-          <Button variant="outline" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
-            Next
-          </Button>
-        </div>
-      )}
-    </div>
-  );
+  const [status, setStatus] = useState<(typeof statuses)[number]>("ALL"); const [preset, setPreset] = useState<AdminDatePreset>("all"); const [state, setState] = useState<AdminListState>({ page: 1, pageSize: 25 }); const { data, isLoading } = useBlockchainJobs(state, status === "ALL" ? undefined : status);
+  const onChange = (next: Partial<AdminListState>) => setState((current) => ({ ...current, ...next })); const onPreset = (next: AdminDatePreset) => { setPreset(next); setState((current) => ({ ...current, ...applyDatePreset(next), page: 1 })); };
+  return <div className="px-4 py-6 md:px-8"><AdminPageHeader title="Blockchain jobs" description="The publishing queue and manual recovery controls." /><div className="mt-5 flex flex-wrap gap-3"><Tabs value={status} onValueChange={(value) => { setStatus(value as typeof status); setState((current) => ({ ...current, page: 1 })); }}><TabsList>{statuses.map((item) => <TabsTrigger key={item} value={item}>{item}</TabsTrigger>)}</TabsList></Tabs></div><div className="mt-4"><AdminDateControls preset={preset} state={state} onPresetChange={onPreset} onChange={onChange} /></div>{isLoading && <div className="mt-6"><CardSkeletonList /></div>}{!isLoading && data?.data.length === 0 && <EmptyState title="No jobs" description="Nothing matches this filter." />}{data && data.data.length > 0 && <><div className="mt-6 overflow-x-auto rounded-md border border-border bg-surface"><table className="w-full min-w-[60rem] text-sm"><thead className="border-b border-border bg-muted/50 text-left text-xs uppercase tracking-wide text-muted-foreground"><tr><th className="w-14 px-4 py-3">#</th><th className="px-4 py-3">Publication</th><th className="px-4 py-3">Status</th><th className="px-4 py-3">Attempts</th><th className="px-4 py-3">Last updated</th><th className="px-4 py-3 text-right">Action</th></tr></thead><tbody>{data.data.map((job, index) => <tr key={job.id} className="border-b border-border last:border-0"><td className="px-4 py-3 text-muted-foreground">{(state.page - 1) * state.pageSize + index + 1}</td><td className="px-4 py-3">{job.publication ? <Link className="font-medium text-primary underline" to={`/p/${job.publicationId}`}>{job.publication.title}</Link> : job.publicationId}</td><td className="px-4 py-3"><span className="rounded-full bg-muted px-2 py-0.5 text-xs">{job.status}</span></td><td className="px-4 py-3 text-muted-foreground">{job.attempts}/{job.maxAttempts}</td><td className="px-4 py-3 text-muted-foreground">{new Date(job.updatedAt).toLocaleString()}</td><td className="px-4 py-3 text-right"><Retry job={job} /></td></tr>)}</tbody></table></div><AdminPagination state={state} total={data.meta.total} onChange={onChange} /></>}</div>;
 }

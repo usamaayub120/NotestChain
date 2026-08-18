@@ -1,30 +1,41 @@
 import { registerSW } from "virtual:pwa-register";
 
-// Long-lived tabs (someone leaves NotesChain open in a background tab for
-// hours) wouldn't otherwise notice a new deploy until their next full
-// navigation — this polls for one directly so the update lands without
-// that.
 const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
+let updateAvailable = false;
+let updateWorker: ((reloadPage?: boolean) => Promise<void>) | undefined;
+const listeners = new Set<() => void>();
+
+function notify() { listeners.forEach((listener) => listener()); }
+
+export function subscribeToAppUpdate(listener: () => void) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+export function getAppUpdateAvailable() { return updateAvailable; }
+
+export async function applyAppUpdate() {
+  // Only purge NotesChain-managed Cache Storage entries. Browser HTTP cache
+  // and other sites' storage remain untouched, while stale API responses
+  // cannot survive the deliberate application update.
+  if ("caches" in window) {
+    const names = await caches.keys();
+    await Promise.all(names.filter((name) => name.includes("workbox") || name.includes("public-api-cache")).map((name) => caches.delete(name)));
+  }
+  await updateWorker?.(true);
+}
 
 export function registerServiceWorker() {
   if (!("serviceWorker" in navigator)) return;
-
-  const updateSW = registerSW({
-    // Without this, registration is deferred until the window "load"
-    // event — which, by the time this module runs, has often already
-    // fired (fonts/CSS/other chunks finish first), so the listener never
-    // catches it and the service worker silently never registers at all.
+  updateWorker = registerSW({
     immediate: true,
     onRegisteredSW(_url, registration) {
       if (!registration) return;
-      setInterval(() => {
-        registration.update().catch(() => {});
-      }, UPDATE_CHECK_INTERVAL_MS);
+      setInterval(() => registration.update().catch(() => {}), UPDATE_CHECK_INTERVAL_MS);
     },
     onNeedRefresh() {
-      // Activates the new version and reloads immediately rather than
-      // waiting on user action — see vite.config.ts's registerType comment.
-      updateSW(true);
+      updateAvailable = true;
+      notify();
     },
   });
 }

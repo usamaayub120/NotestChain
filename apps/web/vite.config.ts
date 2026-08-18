@@ -7,13 +7,9 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      // "prompt" leaves a new service worker sitting in "waiting" state
-      // until something calls updateSW(true) — nothing in this app did,
-      // so a new deploy silently never took effect without a hard
-      // refresh. registerSW.ts below drives the update explicitly;
-      // injectRegister is off so vite-plugin-pwa doesn't also inject its
-      // own auto-registration script alongside it.
-      registerType: "autoUpdate",
+      // A new service worker waits until the reader explicitly chooses to
+      // update. registerServiceWorker.ts renders that choice in the app.
+      registerType: "prompt",
       injectRegister: false,
       includeAssets: ["fonts/*.woff2"],
       manifest: {
@@ -29,11 +25,6 @@ export default defineConfig({
         icons: [{ src: "/favicon.svg", sizes: "any", type: "image/svg+xml" }],
       },
       workbox: {
-        // The new service worker activates and takes control of already-
-        // open tabs the moment it's installed, instead of waiting for
-        // every tab to close first — the other half of "no hard refresh
-        // needed," alongside registerSW.ts calling updateSW(true).
-        skipWaiting: true,
         clientsClaim: true,
         // Never cache anything under /api/v1/auth, /api/v1/drafts, /api/v1/bookmarks,
         // /api/v1/admin, or /api/v1/moderation — those carry session-scoped data.

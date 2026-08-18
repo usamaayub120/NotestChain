@@ -23,8 +23,20 @@ adminRouter.use(requireAuth, requireRole(Role.ADMIN));
 
 const paginationQuerySchema = z.object({
   page: z.coerce.number().int().min(1).max(1000).optional().default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
+  pageSize: z.coerce.number().int().min(1).max(100).optional().default(25),
 });
+
+const dateRangeFields = {
+  from: z.coerce.date().optional(),
+  to: z.coerce.date().optional(),
+};
+
+function validateDateRange<T extends { from?: Date; to?: Date }>(schema: z.ZodType<T>) {
+  return schema.refine((query) => !query.from || !query.to || query.from <= query.to, {
+    message: "From date must be before the To date.",
+    path: ["to"],
+  });
+}
 
 adminRouter.post(
   "/publications/:id/delist",
@@ -43,16 +55,18 @@ adminRouter.post(
   }),
 );
 
-const reportsQuerySchema = z.object({
+const reportsQuerySchema = validateDateRange(paginationQuerySchema.extend({ ...dateRangeFields,
   status: z.enum(["OPEN", "RESOLVED"]).optional(),
-});
+}));
 
 adminRouter.get(
   "/reports",
   asyncHandler(async (req, res) => {
     const query = reportsQuerySchema.parse(req.query);
-    const reports = await listReports(query.status);
-    return ok(res, reports);
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 25;
+    const { items, total } = await listReports({ ...query, page, pageSize });
+    return paginated(res, items, { page, pageSize, total });
   }),
 );
 
@@ -65,17 +79,17 @@ adminRouter.post(
   }),
 );
 
-const viewsQuerySchema = z.object({
-  days: z.coerce.number().int().min(1).max(365).optional().default(30),
-});
+const viewsQuerySchema = validateDateRange(paginationQuerySchema.extend(dateRangeFields));
 
 adminRouter.get(
   "/views",
   asyncHandler(async (req, res) => {
     const query = viewsQuerySchema.parse(req.query);
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 25;
     const [breakdown, mostViewed] = await Promise.all([
-      getViewBreakdown(query.days),
-      listMostViewedPublications(query.days),
+      getViewBreakdown(query),
+      listMostViewedPublications({ ...query, page, pageSize }),
     ]);
     return ok(res, { ...breakdown, mostViewed });
   }),
@@ -85,8 +99,10 @@ adminRouter.get(
   "/comment-reports",
   asyncHandler(async (req, res) => {
     const query = reportsQuerySchema.parse(req.query);
-    const reports = await listCommentReports(query.status);
-    return ok(res, reports);
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 25;
+    const { items, total } = await listCommentReports({ ...query, page, pageSize });
+    return paginated(res, items, { page, pageSize, total });
   }),
 );
 
@@ -99,30 +115,34 @@ adminRouter.post(
   }),
 );
 
-const auditLogQuerySchema = paginationQuerySchema.extend({
+const auditLogQuerySchema = validateDateRange(paginationQuerySchema.extend({ ...dateRangeFields,
   action: z.string().trim().max(100).optional(),
   targetType: z.string().trim().max(100).optional(),
-});
+}));
 
 adminRouter.get(
   "/audit-log",
   asyncHandler(async (req, res) => {
     const query = auditLogQuerySchema.parse(req.query);
-    const { items, total } = await listAuditLog(query);
-    return paginated(res, items, { page: query.page, pageSize: query.pageSize, total });
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 25;
+    const { items, total } = await listAuditLog({ ...query, page, pageSize });
+    return paginated(res, items, { page, pageSize, total });
   }),
 );
 
-const blockchainJobsQuerySchema = paginationQuerySchema.extend({
+const blockchainJobsQuerySchema = validateDateRange(paginationQuerySchema.extend({ ...dateRangeFields,
   status: z.enum(["PENDING", "PROCESSING", "PROCESSED", "FAILED"]).optional(),
-});
+}));
 
 adminRouter.get(
   "/blockchain/jobs",
   asyncHandler(async (req, res) => {
     const query = blockchainJobsQuerySchema.parse(req.query);
-    const { items, total } = await listBlockchainJobs(query);
-    return paginated(res, items, { page: query.page, pageSize: query.pageSize, total });
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 25;
+    const { items, total } = await listBlockchainJobs({ ...query, page, pageSize });
+    return paginated(res, items, { page, pageSize, total });
   }),
 );
 

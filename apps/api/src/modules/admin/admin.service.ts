@@ -1,5 +1,5 @@
 import { ChainStatus, OutboxStatus } from "@noteschain/shared";
-import { CommentReportResolution, ReportResolution, ReportStatus } from "@prisma/client";
+import { CommentReportResolution, Prisma, ReportResolution, ReportStatus } from "@prisma/client";
 import type { DelistPublicationInput, ResolveCommentReportInput, ResolveReportInput } from "@noteschain/validation";
 import { prisma } from "../../lib/prisma.js";
 import { Errors } from "../../lib/apiError.js";
@@ -54,15 +54,47 @@ export async function restorePublicationListing(adminUserId: string, publication
   return updated;
 }
 
-export async function listReports(status?: ReportStatus) {
-  return prisma.report.findMany({
-    where: status ? { status } : undefined,
-    orderBy: { createdAt: "desc" },
-    include: {
-      publication: { select: { id: true, title: true, isPlatformVisible: true } },
-      reporter: { select: { id: true, email: true } },
-    },
-  });
+export interface DateRangeQuery {
+  from?: Date;
+  to?: Date;
+}
+
+export interface PaginatedAdminQuery extends DateRangeQuery {
+  page: number;
+  pageSize: number;
+}
+
+function dateWhere(from?: Date, to?: Date): Prisma.DateTimeFilter | undefined {
+  if (!from && !to) return undefined;
+  // Browser date inputs produce midnight at the start of the selected end
+  // date. Include its full calendar day instead of silently dropping it.
+  const inclusiveTo = to ? new Date(to.getFullYear(), to.getMonth(), to.getDate() + 1) : undefined;
+  return { ...(from ? { gte: from } : {}), ...(inclusiveTo ? { lt: inclusiveTo } : {}) };
+}
+
+export interface ReportsQuery extends PaginatedAdminQuery {
+  status?: ReportStatus;
+}
+
+export async function listReports(query: ReportsQuery) {
+  const where: Prisma.ReportWhereInput = {
+    ...(query.status ? { status: query.status } : {}),
+    ...(dateWhere(query.from, query.to) ? { createdAt: dateWhere(query.from, query.to) } : {}),
+  };
+  const [items, total] = await Promise.all([
+    prisma.report.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (query.page - 1) * query.pageSize,
+      take: query.pageSize,
+      include: {
+        publication: { select: { id: true, title: true, isPlatformVisible: true } },
+        reporter: { select: { id: true, email: true } },
+      },
+    }),
+    prisma.report.count({ where }),
+  ]);
+  return { items, total };
 }
 
 /**
@@ -135,15 +167,25 @@ export async function resolveReport(
   return updated;
 }
 
-export async function listCommentReports(status?: ReportStatus) {
-  return prisma.commentReport.findMany({
-    where: status ? { status } : undefined,
-    orderBy: { createdAt: "desc" },
-    include: {
-      comment: { select: { id: true, body: true, isVisible: true, publicationId: true } },
-      reporter: { select: { id: true, email: true } },
-    },
-  });
+export async function listCommentReports(query: ReportsQuery) {
+  const where: Prisma.CommentReportWhereInput = {
+    ...(query.status ? { status: query.status } : {}),
+    ...(dateWhere(query.from, query.to) ? { createdAt: dateWhere(query.from, query.to) } : {}),
+  };
+  const [items, total] = await Promise.all([
+    prisma.commentReport.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (query.page - 1) * query.pageSize,
+      take: query.pageSize,
+      include: {
+        comment: { select: { id: true, body: true, isVisible: true, publicationId: true } },
+        reporter: { select: { id: true, email: true } },
+      },
+    }),
+    prisma.commentReport.count({ where }),
+  ]);
+  return { items, total };
 }
 
 /**
@@ -214,17 +256,20 @@ export async function resolveCommentReport(
   return updated;
 }
 
-export async function getViewBreakdown(days = 30) {
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+export async function getViewBreakdown(query: DateRangeQuery = {}) {
+  const where: Prisma.PublicationViewWhereInput = {
+    visitorHash: { not: null },
+    ...(dateWhere(query.from, query.to) ? { createdAt: dateWhere(query.from, query.to) } : {}),
+  };
 
   const bySource = await prisma.publicationView.groupBy({
     by: ["utmSource"],
-    where: { createdAt: { gte: since } },
+    where,
     _count: { _all: true },
     orderBy: { _count: { utmSource: "desc" } },
   });
 
-  const total = await prisma.publicationView.count({ where: { createdAt: { gte: since } } });
+  const total = await prisma.publicationView.count({ where });
 
   return {
     total,
@@ -232,16 +277,20 @@ export async function getViewBreakdown(days = 30) {
   };
 }
 
-export async function listMostViewedPublications(days = 30, limit = 20) {
-  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+export async function listMostViewedPublications(query: PaginatedAdminQuery) {
+  const viewWhere: Prisma.PublicationViewWhereInput = {
+    visitorHash: { not: null },
+    ...(dateWhere(query.from, query.to) ? { createdAt: dateWhere(query.from, query.to) } : {}),
+  };
 
-  const grouped = await prisma.publicationView.groupBy({
+  const [grouped, total] = await Promise.all([prisma.publicationView.groupBy({
     by: ["publicationId"],
-    where: { createdAt: { gte: since } },
+    where: viewWhere,
     _count: { _all: true },
     orderBy: { _count: { publicationId: "desc" } },
-    take: limit,
-  });
+    skip: (query.page - 1) * query.pageSize,
+    take: query.pageSize,
+  }), prisma.publication.count({ where: { views: { some: viewWhere } } })]);
 
   const publications = await prisma.publication.findMany({
     where: { id: { in: grouped.map((row) => row.publicationId) } },
@@ -249,10 +298,13 @@ export async function listMostViewedPublications(days = 30, limit = 20) {
   });
   const byId = new Map(publications.map((pub) => [pub.id, pub]));
 
-  return grouped.map((row) => ({
-    publication: byId.get(row.publicationId) ?? null,
-    views: row._count._all,
-  }));
+  return {
+    items: grouped.map((row) => ({
+      publication: byId.get(row.publicationId) ?? null,
+      uniqueReaders: row._count._all,
+    })),
+    total,
+  };
 }
 
 export interface AuditLogQuery {
@@ -260,12 +312,15 @@ export interface AuditLogQuery {
   pageSize: number;
   action?: string;
   targetType?: string;
+  from?: Date;
+  to?: Date;
 }
 
 export async function listAuditLog(query: AuditLogQuery) {
   const where = {
     ...(query.action ? { action: query.action } : {}),
     ...(query.targetType ? { targetType: query.targetType } : {}),
+    ...(dateWhere(query.from, query.to) ? { createdAt: dateWhere(query.from, query.to) } : {}),
   };
 
   const [items, total] = await Promise.all([
@@ -286,10 +341,15 @@ export interface BlockchainJobsQuery {
   page: number;
   pageSize: number;
   status?: OutboxStatus;
+  from?: Date;
+  to?: Date;
 }
 
 export async function listBlockchainJobs(query: BlockchainJobsQuery) {
-  const where = query.status ? { status: query.status } : undefined;
+  const where = {
+    ...(query.status ? { status: query.status } : {}),
+    ...(dateWhere(query.from, query.to) ? { updatedAt: dateWhere(query.from, query.to) } : {}),
+  };
 
   const [items, total] = await Promise.all([
     prisma.workerJob.findMany({
