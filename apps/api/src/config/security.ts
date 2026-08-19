@@ -13,6 +13,8 @@ export const SESSION_COOKIE_NAME = "nc_session";
 export const CSRF_COOKIE_NAME = "nc_csrf";
 export const VISITOR_COOKIE_NAME = "nc_visitor";
 export const CSRF_HEADER_NAME = "x-csrf-token";
+/** Random SecureStore value sent by the native app solely for view de-duplication. */
+export const MOBILE_VISITOR_HEADER_NAME = "x-noteschain-visitor";
 
 export const SESSION_IDLE_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 export const SESSION_ABSOLUTE_TTL_MS = 90 * 24 * 60 * 60 * 1000; // 90 days

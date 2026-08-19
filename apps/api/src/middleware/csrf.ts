@@ -12,6 +12,7 @@ const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 export function csrfProtection(req: Request, _res: Response, next: NextFunction) {
   if (SAFE_METHODS.has(req.method)) return next();
   if (!req.auth) return next(); // requireAuth (if applicable) runs separately and rejects first
+  if (req.auth.transport === "MOBILE") return next();
 
   const header = req.get(CSRF_HEADER_NAME);
   if (!header || header !== req.auth.csrfToken) {

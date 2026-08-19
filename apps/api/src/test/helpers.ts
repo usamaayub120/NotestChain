@@ -57,6 +57,7 @@ export async function resetTestDb(): Promise<void> {
     prisma.bookmarkCollection.deleteMany(),
     prisma.publicIdentity.deleteMany(),
     prisma.session.deleteMany(),
+    prisma.idempotencyKey.deleteMany(),
     prisma.user.deleteMany(),
   ]);
 }

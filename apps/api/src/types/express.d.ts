@@ -9,6 +9,7 @@ declare global {
         role: Role;
         sessionId: string;
         csrfToken: string;
+        transport: "WEB" | "MOBILE";
       };
     }
   }

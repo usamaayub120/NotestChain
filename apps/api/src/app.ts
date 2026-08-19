@@ -9,6 +9,7 @@ import { logger } from "./lib/logger.js";
 import { requestContext } from "./middleware/requestContext.js";
 import { attachAuth } from "./middleware/auth.js";
 import { csrfProtection } from "./middleware/csrf.js";
+import { idempotencyProtection } from "./middleware/idempotency.js";
 import { generalRateLimit } from "./middleware/rateLimit.js";
 import { notFoundHandler, errorHandler } from "./middleware/errorHandler.js";
 import { healthRouter } from "./modules/health/health.router.js";
@@ -61,6 +62,7 @@ export function createApp() {
   );
   app.use(generalRateLimit);
   app.use(attachAuth);
+  app.use(idempotencyProtection);
   app.use(csrfProtection);
 
   app.get("/health", (_req, res) => res.status(200).json({ status: "ok" }));

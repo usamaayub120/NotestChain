@@ -29,6 +29,7 @@ import { ViewsPage } from "@/pages/admin/ViewsPage";
 import { ComingSoonPage } from "@/pages/ComingSoonPage";
 import { HowItWorksPage } from "@/pages/HowItWorksPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
+import { MobileCaptchaPage } from "@/pages/MobileCaptchaPage";
 
 export function App() {
   return (
@@ -39,6 +40,7 @@ export function App() {
         <Route path="/register" element={<RegisterPage />} />
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
+        <Route path="/mobile-captcha" element={<MobileCaptchaPage />} />
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />

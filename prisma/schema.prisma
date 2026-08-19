@@ -29,6 +29,13 @@ enum AccountStatus {
   DELETED
 }
 
+/// Browser sessions are cookie-bound; native sessions are opaque bearer
+/// tokens stored in the platform secure keystore.
+enum SessionTransport {
+  WEB
+  MOBILE
+}
+
 enum IdentityType {
   REAL_NAME
   PSEUDONYM
@@ -163,6 +170,7 @@ model User {
   commentReportsFiled    CommentReport[]      @relation("CommentReportedBy")
   commentReportsResolved CommentReport[]      @relation("CommentReportResolvedBy")
   emailJobs              EmailJob[]
+  idempotencyKeys        IdempotencyKey[]
 
   @@index([status])
 }
@@ -173,6 +181,8 @@ model Session {
   user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   tokenHash  String    @unique
   csrfSecret String
+  transport  SessionTransport @default(WEB)
+  deviceName String?
   createdAt  DateTime  @default(now())
   expiresAt  DateTime
   revokedAt  DateTime?
@@ -181,6 +191,25 @@ model Session {
   ipAddress  String?
 
   @@index([userId])
+  @@index([expiresAt])
+}
+
+/// A native offline mutation reserves its key before executing. A completed
+/// response can be replayed safely after an interrupted request; incomplete
+/// reservations expire rather than blocking a writer forever.
+model IdempotencyKey {
+  id         String   @id @default(uuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  key        String
+  method     String
+  path       String
+  response   Json?
+  statusCode Int?
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  @@unique([userId, key])
   @@index([expiresAt])
 }
 

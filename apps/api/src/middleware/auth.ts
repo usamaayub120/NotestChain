@@ -9,11 +9,14 @@ import { validateSession } from "../modules/auth/session.service.js";
 const ROLE_RANK: Record<Role, number> = { USER: 0, MODERATOR: 1, ADMIN: 2 };
 
 async function resolveAuth(req: Request) {
-  const token = req.cookies?.[SESSION_COOKIE_NAME];
+  const authorization = req.get("authorization");
+  const bearerToken = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
+  const token = bearerToken ?? req.cookies?.[SESSION_COOKIE_NAME];
   if (!token) return undefined;
 
   const validated = await validateSession(token);
   if (!validated) return undefined;
+  if (bearerToken ? validated.transport !== "MOBILE" : validated.transport !== "WEB") return undefined;
 
   const user = await prisma.user.findUnique({ where: { id: validated.userId } });
   if (!user || user.status !== "ACTIVE") return undefined;
@@ -23,6 +26,7 @@ async function resolveAuth(req: Request) {
     role: user.role as Role,
     sessionId: validated.sessionId,
     csrfToken: validated.csrfToken,
+    transport: validated.transport,
   };
 }
 

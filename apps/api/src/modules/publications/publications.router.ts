@@ -8,8 +8,9 @@ import {
   updateCommentsEnabledSchema,
 } from "@noteschain/validation";
 import { asyncHandler, paginated, ok, requireParam } from "../../lib/http.js";
+import { Errors } from "../../lib/apiError.js";
 import { requireAuth } from "../../middleware/auth.js";
-import { VISITOR_COOKIE_NAME } from "../../config/security.js";
+import { MOBILE_VISITOR_HEADER_NAME, VISITOR_COOKIE_NAME } from "../../config/security.js";
 import { setVisitorCookie } from "../auth/cookies.js";
 import { commentRateLimit, viewRateLimit } from "../../middleware/rateLimit.js";
 import {
@@ -94,10 +95,14 @@ publicationsRouter.post(
   asyncHandler(async (req, res) => {
     const input = recordPublicationViewSchema.parse(req.body);
     const referrerHost = parseReferrerHost(req.get("referer"));
-    let visitorToken = req.cookies?.[VISITOR_COOKIE_NAME] as string | undefined;
+    const mobileVisitorToken = req.auth?.transport === "MOBILE" ? req.get(MOBILE_VISITOR_HEADER_NAME) : undefined;
+    if (mobileVisitorToken && !/^[A-Za-z0-9_-]{32,128}$/.test(mobileVisitorToken)) {
+      throw Errors.badRequest("Invalid mobile visitor token.");
+    }
+    let visitorToken = mobileVisitorToken ?? (req.cookies?.[VISITOR_COOKIE_NAME] as string | undefined);
     if (!visitorToken) {
       visitorToken = randomBytes(32).toString("base64url");
-      setVisitorCookie(res, visitorToken);
+      if (req.auth?.transport !== "MOBILE") setVisitorCookie(res, visitorToken);
     }
     const result = await recordView(
       requireParam(req, "id"),

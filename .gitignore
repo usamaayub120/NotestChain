@@ -33,6 +33,9 @@ yarn.lock
 npm-debug.log*
 pnpm-debug.log*
 
+# Local Expo bundle checks. These are generated test artifacts, never source.
+apps/mobile/.expo-export*/
+
 # Editors / OS
 .DS_Store
 Thumbs.db
