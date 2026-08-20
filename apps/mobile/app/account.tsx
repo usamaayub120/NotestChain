@@ -14,7 +14,7 @@ export default function AccountScreen() {
   useEffect(() => { api<{ user: { email: string } }>("/auth/me").then((result) => setUser(result.user)).catch(() => setUser(null)); }, []);
   const login = async () => {
     setBusy(true); setError(undefined);
-    try { const result = await api<{ session: { token: string } }>("/auth/mobile/login", { method: "POST", body: JSON.stringify({ email, password, deviceName: "NotesChain mobile" }) }); await setToken(result.session.token); router.replace("/drafts"); }
+    try { const result = await api<{ session: { token: string } }>("/auth/mobile/login", { method: "POST", body: JSON.stringify({ email, password, deviceName: "NotesChain mobile" }) }); await setToken(result.session.token); router.push("/drafts"); }
     catch (err) { setError(err instanceof Error ? err.message : "Could not sign in."); }
     finally { setBusy(false); }
   };
