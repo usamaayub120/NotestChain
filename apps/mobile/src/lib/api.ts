@@ -33,6 +33,11 @@ export async function api<T>(path: string, init: RequestInit & { idempotencyKey?
   if (init.visitor) headers.set("X-NotesChain-Visitor", await visitorToken());
   const response = await fetch(`${API_ROOT}${path}`, { ...init, headers });
   const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new MobileApiError(response.status, payload?.error?.message ?? "Request failed.");
+  if (!response.ok) {
+    const message = response.status === 404 && path.startsWith("/auth/mobile/")
+      ? "Mobile sign-in is not available on the server yet. Please try again after the NotesChain update finishes."
+      : payload?.error?.message ?? "Request failed.";
+    throw new MobileApiError(response.status, message);
+  }
   return payload.data as T;
 }

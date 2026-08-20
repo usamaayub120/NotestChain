@@ -1,10 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "expo-router";
-import { FlatList, RefreshControl, Text, View } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
+import { Text, View } from "react-native";
 import { api } from "@/src/lib/api";
 import { cacheRead, cacheWrite } from "@/src/lib/offline";
 import type { Page, Publication } from "@/src/lib/models";
-import { Loading, Subtitle, Title, styles } from "@/src/components/ui";
+import { EmptyNotes, PublicationCard } from "@/src/components/publication";
+import { Action, ErrorText, Eyebrow, Loading, Screen, Subtitle, Title, colors, styles } from "@/src/components/ui";
 
 export default function ExploreScreen() {
   const query = useQuery({ queryKey: ["explore"], queryFn: async () => {
@@ -12,8 +13,9 @@ export default function ExploreScreen() {
     catch { return cacheRead<Page<Publication>>("explore") ?? { data: [], meta: { page: 1, pageSize: 50, total: 0 } }; }
   } });
   if (query.isLoading) return <Loading label="Finding notes…" />;
-  return <FlatList data={query.data?.data ?? []} keyExtractor={(item) => item.id} refreshControl={<RefreshControl refreshing={query.isRefetching} onRefresh={() => query.refetch()} />}
-    ListHeaderComponent={<View style={{ padding: 20, gap: 6 }}><Title>Explore</Title><Subtitle>{query.data?.meta.total ?? 0} published notes</Subtitle></View>}
-    renderItem={({ item }) => <Link href={`/note/${item.id}`} style={{ padding: 20, borderTopWidth: 1, borderColor: "#e7e5e4" }}><Text style={{ fontSize: 18, fontWeight: "600" }}>{item.title}</Text><Text numberOfLines={3} style={styles.subtitle}>{item.excerpt}</Text><Text style={[styles.subtitle, { marginTop: 6 }]}>{item.author ? `by ${item.author.displayName}` : "Anonymous"}</Text></Link>}
-    ListEmptyComponent={<Text style={{ padding: 20 }}>No notes are available yet.</Text>} />;
+  return <Screen><View style={{ gap: 8, paddingTop: 4 }}><View style={styles.row}><Eyebrow>Reading room</Eyebrow><Ionicons name="compass-outline" size={18} color={colors.brand} /></View><Title>Explore thoughts</Title><Subtitle>Recently kept ideas from the NotesChain community.</Subtitle></View>
+    <View style={[styles.row, { justifyContent: "space-between", marginTop: 2 }]}><Text style={{ color: colors.muted, fontSize: 13, fontWeight: "700" }}>{query.data?.meta.total ?? 0} published notes</Text><View style={{ width: 104 }}><Action title={query.isRefetching ? "Refreshing" : "Refresh"} tone="secondary" disabled={query.isRefetching} onPress={() => void query.refetch()} /></View></View>
+    {query.isError && <ErrorText>We could not refresh Explore. Your saved notes are still available below.</ErrorText>}
+    {query.data?.data.length ? query.data.data.map((item) => <PublicationCard key={item.id} publication={item} />) : <EmptyNotes title="Nothing’s been kept yet" detail="Be the first to publish something worth returning to." />}
+  </Screen>;
 }
