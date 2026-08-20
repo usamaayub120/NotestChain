@@ -3,7 +3,7 @@ import { useLocalSearchParams, Link } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import NetInfo from "@react-native-community/netinfo";
 import { Share, Text, View } from "react-native";
-import { api } from "@/src/lib/api";
+import { api, apiPage } from "@/src/lib/api";
 import { requestCaptcha } from "@/src/lib/captcha";
 import { cacheRead, cacheWrite, enqueue } from "@/src/lib/offline";
 import type { Comment, Page, Publication } from "@/src/lib/models";
@@ -13,7 +13,7 @@ const mutationId = () => `mutation-${Date.now()}-${Math.random().toString(16).sl
 export default function NoteScreen() {
   const { id, captchaToken } = useLocalSearchParams<{ id: string; captchaToken?: string }>();
   const query = useQuery({ queryKey: ["note", id], enabled: Boolean(id), queryFn: async () => { try { const note = await api<Publication>(`/publications/${id}`); cacheWrite(`note:${id}`, note); void api(`/publications/${id}/view`, { method: "POST", body: JSON.stringify({}), visitor: true }); return note; } catch { return cacheRead<Publication>(`note:${id}`); } } });
-  const comments = useQuery({ queryKey: ["comments", id], enabled: Boolean(id), queryFn: async () => { try { const page = await api<Page<Comment>>(`/publications/${id}/comments?page=1&pageSize=30`); cacheWrite(`comments:${id}`, page); return page; } catch { return cacheRead<Page<Comment>>(`comments:${id}`) ?? { data: [], meta: { page: 1, pageSize: 30, total: 0 } }; } } });
+  const comments = useQuery({ queryKey: ["comments", id], enabled: Boolean(id), queryFn: async () => { try { const page = await apiPage<Comment>(`/publications/${id}/comments?page=1&pageSize=30`); cacheWrite(`comments:${id}`, page); return page; } catch { return cacheRead<Page<Comment>>(`comments:${id}`) ?? { data: [], meta: { page: 1, pageSize: 30, total: 0 } }; } } });
   const [bookmarked, setBookmarked] = useState(false); const [body, setBody] = useState(""); const [anonymous, setAnonymous] = useState(false); const [name, setName] = useState(""); const [reportReason, setReportReason] = useState(""); const [error, setError] = useState<string>(); const [notice, setNotice] = useState<string>();
   useEffect(() => { api<{ publication: { id: string } }[]>("/bookmarks").then((rows) => setBookmarked(rows.some((row) => row.publication.id === id))).catch(() => undefined); }, [id]);
   if (query.isLoading || !comments.data) return <Loading label="Loading note…" />;

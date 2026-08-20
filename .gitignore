@@ -35,6 +35,7 @@ pnpm-debug.log*
 
 # Local Expo bundle checks. These are generated test artifacts, never source.
 apps/mobile/.expo-export*/
+apps/mobile/.expo/
 apps/mobile/android/
 apps/mobile/ios/
 

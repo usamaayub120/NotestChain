@@ -1,5 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
+import type { Page } from "@/src/lib/models";
 
 const API_ROOT = "https://noteschain.org/api/v1";
 const TOKEN_KEY = "noteschain.mobile.session";
@@ -24,7 +25,10 @@ async function visitorToken() {
   return token;
 }
 
-export async function api<T>(path: string, init: RequestInit & { idempotencyKey?: string; visitor?: boolean } = {}): Promise<T> {
+type MobileRequestInit = RequestInit & { idempotencyKey?: string; visitor?: boolean };
+type ApiEnvelope<T> = { data: T; meta?: Page<never>["meta"] };
+
+async function request<T>(path: string, init: MobileRequestInit = {}): Promise<ApiEnvelope<T>> {
   const token = await getToken();
   const headers = new Headers(init.headers);
   if (token) headers.set("Authorization", `Bearer ${token}`);
@@ -39,5 +43,15 @@ export async function api<T>(path: string, init: RequestInit & { idempotencyKey?
       : payload?.error?.message ?? "Request failed.";
     throw new MobileApiError(response.status, message);
   }
-  return payload.data as T;
+  return payload as ApiEnvelope<T>;
+}
+
+export async function api<T>(path: string, init: MobileRequestInit = {}): Promise<T> {
+  return (await request<T>(path, init)).data;
+}
+
+/** List endpoints keep their pagination envelope; most API calls return only data. */
+export async function apiPage<T>(path: string, init: MobileRequestInit = {}): Promise<Page<T>> {
+  const payload = await request<T[]>(path, init);
+  return { data: Array.isArray(payload.data) ? payload.data : [], meta: payload.meta ?? { page: 1, pageSize: 0, total: 0 } };
 }

@@ -1,14 +1,14 @@
 import { useLocalSearchParams, Link } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { Text, View } from "react-native";
-import { api } from "@/src/lib/api";
-import type { Page, Publication } from "@/src/lib/models";
+import { api, apiPage } from "@/src/lib/api";
+import type { Publication } from "@/src/lib/models";
 import { ErrorText, Loading, Screen, Subtitle, Title, styles } from "@/src/components/ui";
 
 type Profile = { username: string; displayName: string; bio: string; avatarUrl: string | null; publicationCount: number; joinedAt: string; commonTags: string[] };
 export default function ProfileScreen() {
   const { username } = useLocalSearchParams<{ username: string }>();
-  const query = useQuery({ queryKey: ["profile", username], enabled: Boolean(username), queryFn: async () => ({ profile: await api<Profile>(`/profiles/${username}`), notes: await api<Page<Publication>>(`/profiles/${username}/publications?page=1&pageSize=30`) }) });
+  const query = useQuery({ queryKey: ["profile", username], enabled: Boolean(username), queryFn: async () => ({ profile: await api<Profile>(`/profiles/${username}`), notes: await apiPage<Publication>(`/profiles/${username}/publications?page=1&pageSize=30`) }) });
   if (query.isLoading) return <Loading label="Loading profile…" />;
   if (!query.data) return <Screen><ErrorText>This profile could not be found.</ErrorText></Screen>;
   const { profile, notes } = query.data;

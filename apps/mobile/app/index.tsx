@@ -2,15 +2,15 @@ import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { Text, View } from "react-native";
-import { api } from "@/src/lib/api";
+import { apiPage } from "@/src/lib/api";
 import { cacheRead, cacheWrite } from "@/src/lib/offline";
 import type { Page, Publication } from "@/src/lib/models";
 import { EmptyNotes, PublicationCard } from "@/src/components/publication";
 import { Action, Eyebrow, Loading, Screen, Subtitle, Title, colors, styles } from "@/src/components/ui";
 
 async function publications() {
-  try { const result = await api<Page<Publication>>("/publications?page=1&pageSize=20"); cacheWrite("home:1", result); return result.data; }
-  catch { return cacheRead<Page<Publication>>("home:1")?.data ?? []; }
+  try { const result = await apiPage<Publication>("/publications?page=1&pageSize=20"); cacheWrite("home:1", result); return result.data; }
+  catch { const cached = cacheRead<Page<Publication> | Publication[]>("home:1"); return Array.isArray(cached) ? cached : cached?.data ?? []; }
 }
 export default function HomeScreen() {
   const query = useQuery({ queryKey: ["home"], queryFn: publications });
