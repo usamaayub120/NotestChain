@@ -1,4 +1,6 @@
-const { withAppBuildGradle } = require('@expo/config-plugins');
+// `expo/config-plugins` is Expo's supported public entry point. Importing the
+// underlying package directly is not reliable with EAS's pnpm layout.
+const { withAppBuildGradle } = require('expo/config-plugins');
 
 const MARKER = '// NotesChain: normalize Expo autolinking package import.';
 
