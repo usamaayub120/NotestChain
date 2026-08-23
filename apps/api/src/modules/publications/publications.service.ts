@@ -158,6 +158,7 @@ export async function listMyPublicationAnalytics(userId: string, options: MyPubl
         status: true,
         publishedAt: true,
         createdAt: true,
+        impressionCount: true,
         _count: { select: { views: { where: { visitorHash: { not: null } } } } },
       },
     }),

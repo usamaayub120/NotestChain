@@ -27,6 +27,12 @@ const SECTIONS = [
     requires: "ADMIN" as const,
   },
   {
+    to: "/admin/settings",
+    title: "Settings",
+    description: "Search Console, GA4, and default sharing metadata.",
+    requires: "ADMIN" as const,
+  },
+  {
     to: "/admin/audit-log",
     title: "Audit log",
     description: "Every moderation/admin action taken.",

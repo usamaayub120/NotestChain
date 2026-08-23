@@ -8,6 +8,7 @@ export interface MyPublicationAnalytics {
   publishedAt: string | null;
   createdAt: string;
   uniqueReaders: number;
+  impressionCount: number;
 }
 
 export function useMyPublicationAnalytics(page: number, pageSize = 25) {

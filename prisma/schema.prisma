@@ -377,6 +377,12 @@ model Publication {
   previousPublication   Publication?    @relation("PublicationRevisions", fields: [previousPublicationId], references: [id])
   revisions             Publication[]   @relation("PublicationRevisions")
   commentsEnabled       Boolean         @default(true)
+  /// Raw, non-deduplicated pageview count — incremented on every view
+  /// request regardless of visitor. Deliberately separate from the unique-
+  /// reader count derived from PublicationView: "impressions" (how many
+  /// times this loaded) and "unique readers" (how many distinct people)
+  /// answer different questions and are both cheap to keep.
+  impressionCount       Int             @default(0)
   publishedAt           DateTime?
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
@@ -582,6 +588,23 @@ model PublicationView {
   @@index([publicationId, createdAt])
   @@index([utmSource])
   @@index([createdAt])
+}
+
+// ── Site settings ────────────────────────────────────────────────────────
+
+/// Singleton row (id is always 1 — enforced in settings.service.ts's
+/// get-or-create, not in the schema). Admin-editable SEO/analytics config
+/// that needs to change without a redeploy: who changed it and when is
+/// tracked via the existing AuditLog rather than a column here.
+model SiteSettings {
+  id                        Int      @id @default(1)
+  ga4MeasurementId          String?
+  searchConsoleVerification String?
+  defaultMetaDescription    String?
+  defaultOgImageUrl         String?
+  twitterHandle             String?
+  indexingEnabled           Boolean  @default(true)
+  updatedAt                 DateTime @updatedAt
 }
 
 // ── Blockchain outbox / worker ──────────────────────────────────────────

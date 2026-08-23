@@ -294,7 +294,7 @@ export async function listMostViewedPublications(query: PaginatedAdminQuery) {
 
   const publications = await prisma.publication.findMany({
     where: { id: { in: grouped.map((row) => row.publicationId) } },
-    select: { id: true, title: true, isPlatformVisible: true },
+    select: { id: true, title: true, isPlatformVisible: true, impressionCount: true },
   });
   const byId = new Map(publications.map((pub) => [pub.id, pub]));
 

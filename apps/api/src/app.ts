@@ -24,6 +24,7 @@ import { searchRouter } from "./modules/search/search.router.js";
 import { bookmarkCollectionsRouter, bookmarksRouter } from "./modules/bookmarks/bookmarks.router.js";
 import { commentsRouter } from "./modules/comments/comments.router.js";
 import { adminRouter } from "./modules/admin/admin.router.js";
+import { seoRouter } from "./modules/seo/seo.router.js";
 
 export function createApp() {
   const app = express();
@@ -36,10 +37,17 @@ export function createApp() {
       contentSecurityPolicy: {
         directives: {
           defaultSrc: ["'self'"],
-          scriptSrc: ["'self'"],
+          // Statically allowlisted, not conditioned on whether GA4 is
+          // currently configured in SiteSettings — harmless either way,
+          // since gtag.js is only ever requested when an admin sets a
+          // Measurement ID (apps/api/src/modules/seo/seo.service.ts).
+          // Covers the SEO-router-rendered pages and /api/*; the plain
+          // static app routes (dashboard, login, ...) have no CSP today
+          // either way, unchanged by this.
+          scriptSrc: ["'self'", "https://www.googletagmanager.com"],
           styleSrc: ["'self'", "'unsafe-inline'"],
           imgSrc: ["'self'", "data:", "https:"],
-          connectSrc: ["'self'"],
+          connectSrc: ["'self'", "https://www.google-analytics.com", "https://*.google-analytics.com", "https://*.analytics.google.com"],
           objectSrc: ["'none'"],
           frameAncestors: ["'none'"],
           baseUri: ["'self'"],
@@ -64,6 +72,14 @@ export function createApp() {
   app.use(attachAuth);
   app.use(idempotencyProtection);
   app.use(csrfProtection);
+
+  // Public, crawlable/shareable HTML routes — server-rendered <head> tags
+  // for search/social crawlers (apps/api/src/modules/seo). Nginx proxies
+  // exactly these paths here instead of serving the static SPA shell
+  // directly; every other route (dashboard, login, admin, ...) is
+  // untouched. Mounted before the JSON API routes below since it owns a
+  // disjoint set of paths (no /api prefix) and is unaffected by their order.
+  app.use(seoRouter);
 
   app.get("/health", (_req, res) => res.status(200).json({ status: "ok" }));
   app.use("/api/v1", healthRouter);

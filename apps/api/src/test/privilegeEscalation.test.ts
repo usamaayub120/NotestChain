@@ -9,7 +9,7 @@ import { promoteRole, registerAndLogin, resetTestDb, type TestSession } from "./
 const app = createApp();
 const randomId = () => randomUUID();
 
-const ADMIN_ROUTES: Array<{ method: "get" | "post"; path: string; body?: Record<string, unknown> }> = [
+const ADMIN_ROUTES: Array<{ method: "get" | "post" | "patch"; path: string; body?: Record<string, unknown> }> = [
   { method: "post", path: `/api/v1/admin/publications/${randomId()}/delist`, body: { reason: "test" } },
   { method: "post", path: `/api/v1/admin/publications/${randomId()}/restore-listing` },
   { method: "get", path: "/api/v1/admin/reports" },
@@ -17,6 +17,8 @@ const ADMIN_ROUTES: Array<{ method: "get" | "post"; path: string; body?: Record<
   { method: "get", path: "/api/v1/admin/audit-log" },
   { method: "get", path: "/api/v1/admin/blockchain/jobs" },
   { method: "post", path: `/api/v1/admin/blockchain/jobs/${randomId()}/retry` },
+  { method: "get", path: "/api/v1/admin/settings" },
+  { method: "patch", path: "/api/v1/admin/settings", body: { indexingEnabled: true } },
 ];
 
 const MODERATOR_ROUTES: Array<{ method: "get" | "post"; path: string; body?: Record<string, unknown> }> = [
@@ -30,7 +32,7 @@ const MODERATOR_ROUTES: Array<{ method: "get" | "post"; path: string; body?: Rec
 async function call(
   agent: TestSession["agent"] | null,
   csrfToken: string | undefined,
-  route: { method: "get" | "post"; path: string; body?: Record<string, unknown> },
+  route: { method: "get" | "post" | "patch"; path: string; body?: Record<string, unknown> },
 ) {
   const client = agent ?? request(app);
   const req = client[route.method](route.path);

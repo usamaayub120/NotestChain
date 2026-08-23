@@ -30,6 +30,15 @@ const envSchema = z.object({
 
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 
+  // Where the SEO layer (apps/api/src/modules/seo) reads the built web
+  // index.html from, to inject per-route <head> tags before Nginx would
+  // otherwise serve it verbatim — see infra/nginx/nginx.conf's proxy_pass
+  // blocks for /, /p/, /@, /tags/, /explore, /how-it-works, /robots.txt and
+  // /sitemap.xml. Matches Nginx's own `root` in the Docker runtime image
+  // (both processes run in the same container); override for local dev
+  // after running `pnpm --filter @noteschain/web build`.
+  WEB_DIST_DIR: z.string().default("/usr/share/nginx/html"),
+
   // Optional everywhere, including production — verifyCaptcha() bypasses
   // the check when unset and logs a warning each time. Deliberately not a
   // hard production requirement like SESSION_SECRET: unlike that secret,

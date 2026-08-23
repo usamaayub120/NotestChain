@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { UpdateSiteSettingsInput } from "@noteschain/validation";
 import { apiFetch, apiFetchPaginated } from "@/lib/api";
 
 export interface AdminQuery { page: number; pageSize: number; from?: string; to?: string; }
@@ -140,7 +141,10 @@ export interface ViewsBreakdown {
   total: number;
   bySource: { utmSource: string; count: number }[];
   mostViewed: {
-    items: { publication: { id: string; title: string; isPlatformVisible: boolean } | null; uniqueReaders: number }[];
+    items: {
+      publication: { id: string; title: string; isPlatformVisible: boolean; impressionCount: number } | null;
+      uniqueReaders: number;
+    }[];
     total: number;
   };
 }
@@ -157,5 +161,29 @@ export function useRetryBlockchainJob() {
   return useMutation({
     mutationFn: ({ id }: { id: string }) => apiFetch(`/admin/blockchain/jobs/${id}/retry`, { method: "POST" }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "blockchain-jobs"] }),
+  });
+}
+
+export interface SiteSettings {
+  ga4MeasurementId: string | null;
+  searchConsoleVerification: string | null;
+  defaultMetaDescription: string | null;
+  defaultOgImageUrl: string | null;
+  twitterHandle: string | null;
+  indexingEnabled: boolean;
+}
+
+export function useSiteSettings() {
+  return useQuery({
+    queryKey: ["admin", "settings"],
+    queryFn: () => apiFetch<SiteSettings>("/admin/settings"),
+  });
+}
+
+export function useUpdateSiteSettings() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: UpdateSiteSettingsInput) => apiFetch<SiteSettings>("/admin/settings", { method: "PATCH", body: input }),
+    onSuccess: (settings) => queryClient.setQueryData(["admin", "settings"], settings),
   });
 }

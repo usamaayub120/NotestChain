@@ -26,6 +26,7 @@ import { ReportsQueuePage } from "@/pages/admin/ReportsQueuePage";
 import { AuditLogPage } from "@/pages/admin/AuditLogPage";
 import { BlockchainJobsPage } from "@/pages/admin/BlockchainJobsPage";
 import { ViewsPage } from "@/pages/admin/ViewsPage";
+import { SeoSettingsPage } from "@/pages/admin/SeoSettingsPage";
 import { ComingSoonPage } from "@/pages/ComingSoonPage";
 import { HowItWorksPage } from "@/pages/HowItWorksPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
@@ -162,6 +163,14 @@ export function App() {
           element={
             <RequireRole role="ADMIN">
               <ViewsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/settings"
+          element={
+            <RequireRole role="ADMIN">
+              <SeoSettingsPage />
             </RequireRole>
           }
         />

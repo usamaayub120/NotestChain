@@ -1,7 +1,12 @@
 import { Router } from "express";
 import { z } from "zod";
 import { Role } from "@noteschain/shared";
-import { delistPublicationSchema, resolveCommentReportSchema, resolveReportSchema } from "@noteschain/validation";
+import {
+  delistPublicationSchema,
+  resolveCommentReportSchema,
+  resolveReportSchema,
+  updateSiteSettingsSchema,
+} from "@noteschain/validation";
 import { asyncHandler, ok, paginated, requireParam } from "../../lib/http.js";
 import { requireAuth, requireRole } from "../../middleware/auth.js";
 import {
@@ -17,6 +22,7 @@ import {
   restorePublicationListing,
   retryBlockchainJob,
 } from "./admin.service.js";
+import { getSiteSettings, updateSiteSettings } from "./settings.service.js";
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole(Role.ADMIN));
@@ -151,5 +157,22 @@ adminRouter.post(
   asyncHandler(async (req, res) => {
     const job = await retryBlockchainJob(req.auth!.userId, requireParam(req, "id"), req.ip);
     return ok(res, job);
+  }),
+);
+
+adminRouter.get(
+  "/settings",
+  asyncHandler(async (_req, res) => {
+    const settings = await getSiteSettings();
+    return ok(res, settings);
+  }),
+);
+
+adminRouter.patch(
+  "/settings",
+  asyncHandler(async (req, res) => {
+    const input = updateSiteSettingsSchema.parse(req.body);
+    const settings = await updateSiteSettings(req.auth!.userId, input, req.ip);
+    return ok(res, settings);
   }),
 );

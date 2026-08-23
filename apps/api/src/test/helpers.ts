@@ -2,6 +2,7 @@ import request from "supertest";
 import type { Express } from "express";
 import type { Role } from "@noteschain/shared";
 import { prisma } from "../lib/prisma.js";
+import { resetSiteSettingsCacheForTests } from "../modules/admin/settings.service.js";
 
 export interface TestSession {
   agent: ReturnType<typeof request.agent>;
@@ -44,6 +45,7 @@ export async function resetTestDb(): Promise<void> {
     prisma.emailJob.deleteMany(),
     prisma.passwordResetToken.deleteMany(),
     prisma.auditLog.deleteMany(),
+    prisma.siteSettings.deleteMany(),
     prisma.report.deleteMany(),
     prisma.workerJob.deleteMany(),
     prisma.outboxEvent.deleteMany(),
@@ -60,4 +62,5 @@ export async function resetTestDb(): Promise<void> {
     prisma.idempotencyKey.deleteMany(),
     prisma.user.deleteMany(),
   ]);
+  resetSiteSettingsCacheForTests();
 }

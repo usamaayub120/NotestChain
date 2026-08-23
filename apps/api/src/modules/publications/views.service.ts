@@ -24,17 +24,25 @@ export async function recordView(
     return { recorded: false, reason: "author" as const };
   }
 
-  const result = await prisma.publicationView.createMany({
-    data: {
-      publicationId,
-      utmSource: input.utmSource,
-      utmMedium: input.utmMedium,
-      utmCampaign: input.utmCampaign,
-      referrerHost,
-      visitorHash,
-    },
-    skipDuplicates: true,
-  });
+  const [result] = await prisma.$transaction([
+    prisma.publicationView.createMany({
+      data: {
+        publicationId,
+        utmSource: input.utmSource,
+        utmMedium: input.utmMedium,
+        utmCampaign: input.utmCampaign,
+        referrerHost,
+        visitorHash,
+      },
+      skipDuplicates: true,
+    }),
+    // Raw impressions, deliberately not deduplicated — see the
+    // impressionCount doc comment on Publication in schema.prisma.
+    prisma.publication.update({
+      where: { id: publicationId },
+      data: { impressionCount: { increment: 1 } },
+    }),
+  ]);
 
   return { recorded: result.count === 1, reason: result.count === 1 ? undefined : ("duplicate" as const) };
 }
