@@ -44,6 +44,15 @@ export function useLogout() {
   });
 }
 
+export function useDeleteAccount() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { password: string }) =>
+      apiFetch<{ success: boolean }>("/auth/account", { method: "DELETE", body: input }),
+    onSuccess: () => queryClient.setQueryData(["auth", "me"], null),
+  });
+}
+
 export function useForgotPassword() {
   return useMutation({
     mutationFn: (input: { email: string }) =>

@@ -1,6 +1,12 @@
 import { Router } from "express";
 import { z } from "zod";
-import { forgotPasswordSchema, loginSchema, registerSchema, resetPasswordSchema } from "@noteschain/validation";
+import {
+  deleteAccountSchema,
+  forgotPasswordSchema,
+  loginSchema,
+  registerSchema,
+  resetPasswordSchema,
+} from "@noteschain/validation";
 import { asyncHandler, ok } from "../../lib/http.js";
 import { Errors } from "../../lib/apiError.js";
 import { prisma } from "../../lib/prisma.js";
@@ -8,8 +14,8 @@ import { verifyCaptcha } from "../../lib/captcha.js";
 import { authRateLimit } from "../../middleware/rateLimit.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { recordAudit } from "../../lib/audit.js";
-import { AuthError, authenticateUser, registerUser, toPublicUser } from "./auth.service.js";
-import { createSession, refreshSession, revokeSession } from "./session.service.js";
+import { AuthError, authenticateUser, deleteOwnAccount, registerUser, toPublicUser } from "./auth.service.js";
+import { createSession, refreshSession, revokeAllSessionsForUser, revokeSession } from "./session.service.js";
 import { requestPasswordReset, resetPassword } from "./passwordReset.service.js";
 import { clearSessionCookies, setSessionCookies } from "./cookies.js";
 
@@ -173,5 +179,32 @@ authRouter.get(
   asyncHandler(async (req, res) => {
     const user = await prisma.user.findUniqueOrThrow({ where: { id: req.auth!.userId } });
     return ok(res, { user: toPublicUser(user) });
+  }),
+);
+
+/**
+ * Self-service, irreversible. Requires the current password so a stolen or
+ * idle session can't be used to close the account out from under someone —
+ * same reason /login is rate-limited, this is too.
+ */
+authRouter.delete(
+  "/account",
+  requireAuth,
+  authRateLimit,
+  asyncHandler(async (req, res) => {
+    const input = deleteAccountSchema.parse(req.body);
+    const userId = req.auth!.userId;
+    try {
+      await deleteOwnAccount(userId, input.password);
+    } catch (err) {
+      if (err instanceof AuthError) {
+        await recordAudit({ actorUserId: userId, action: "ACCOUNT_SELF_DELETE_FAILURE", ipAddress: req.ip });
+      }
+      throw err;
+    }
+    await revokeAllSessionsForUser(userId);
+    await recordAudit({ actorUserId: userId, action: "ACCOUNT_SELF_DELETED", ipAddress: req.ip });
+    clearSessionCookies(res);
+    return ok(res, { success: true });
   }),
 );

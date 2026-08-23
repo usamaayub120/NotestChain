@@ -39,6 +39,21 @@ export function Footer() {
           </nav>
         </div>
 
+        <div className="mt-6 flex flex-wrap items-baseline justify-between gap-4 border-t border-canopy-foreground/10 pt-6">
+          <p className="text-xs text-canopy-foreground/60">© {brand.legalEntity}</p>
+          <nav aria-label="Legal" className="flex gap-4 text-xs text-canopy-foreground/60">
+            <Link to="/privacy" className="hover:text-canopy-foreground">
+              Privacy policy
+            </Link>
+            <Link to="/terms" className="hover:text-canopy-foreground">
+              Terms of service
+            </Link>
+            <Link to="/delete-account" className="hover:text-canopy-foreground">
+              Delete your data
+            </Link>
+          </nav>
+        </div>
+
         <p className="mt-8 hidden max-w-sm font-sans text-sm italic text-canopy-foreground/60 sm:block">
           {thought}
         </p>

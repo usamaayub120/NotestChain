@@ -116,10 +116,15 @@ Before the first Google Play release:
 
 1. The owner completes Play Console account registration, payment, identity,
    terms, and any required Data Safety declarations. An agent must pause for
-   payment, legal agreement, or identity-verification confirmation.
+   payment, legal agreement, or identity-verification confirmation. Register
+   the **Developer name as "FreeSoul"** — that's the legal/operating entity
+   named throughout the app's Privacy Policy and Terms of Service (see
+   `packages/shared/src/brand.ts`'s `legalEntity`), not the `usamaayub00` EAS
+   account username.
 2. Configure the EAS project, Android signing, store listing, screenshots,
-   support contact, privacy-policy URL, content rating, and versioning. Do not
-   commit credentials, keystores, service-account JSON, or EAS tokens.
+   support contact (`support@noteschain.org`), privacy-policy URL
+   (`https://noteschain.org/privacy` — live), content rating, and versioning.
+   Do not commit credentials, keystores, service-account JSON, or EAS tokens.
 3. Add the real Android signing-certificate fingerprint to
    `https://noteschain.org/.well-known/assetlinks.json` before claiming Android
    App Links are verified. Add the corresponding Apple association file before
@@ -141,6 +146,42 @@ Before the first Google Play release:
 6. Use internal/closed testing and the Play pre-launch report before a public
    rollout. EAS/Play publication is an explicit external release action; do
    not make it without the owner's direction.
+
+### Legal pages and account deletion (already implemented)
+
+`/privacy`, `/terms`, and `/delete-account` exist on `apps/web` (linked from
+its footer and from `apps/mobile`'s Settings screen), registration on both
+clients requires accepting them (`acceptedTerms` on `registerSchema`), and
+`DELETE /api/v1/auth/account` (`deleteOwnAccount` in
+`apps/api/src/modules/auth/auth.service.ts`) gives users real self-service
+account/data deletion — Google Play requires both an in-app path and a
+public web page for this, not just a contact email, for any app that
+supports account creation. It's a soft delete (flips `AccountStatus` to
+`DELETED`, scrubs the account's email/password/comment name, prunes
+never-published drafts) rather than a hard row delete: `Publication` and
+`Comment` hold required, `ON DELETE RESTRICT` foreign keys to `User`, so the
+database itself refuses to fully delete anyone who ever published or
+commented — already-published content and its byline stay exactly as
+published, which is this product's core permanence promise, not a
+compliance gap. The Privacy Policy states this plainly as the one exception
+to "delete my data."
+
+For the Play Console **Data Safety** form, the inventory to transcribe:
+
+| Data | Collected | Shared with | Purpose |
+| --- | --- | --- | --- |
+| Email address | Yes | Email delivery provider (for delivery only) | Account, password reset |
+| Password | Yes, hashed (Argon2id), never shared | — | Account authentication |
+| Name (real name or pseudonym) + optional bio | Yes, only if the user sets up a public identity | Public (if published under it) | Attribution on published notes |
+| Draft/note content | Yes | Public, only once published | The product itself |
+| Device identifier (random, per-device) | Yes | — (one-way hashed server-side) | De-duplicating unique-reader counts, not advertising |
+| IP address | Yes, in server logs only | — | Security/abuse prevention |
+| Content published to the public Solana blockchain | Yes (title, excerpt, content hash — not the raw body for v2) | Public, permanently | Independent, third-party-verifiable proof a note existed at a given time |
+
+No location, contacts, photos/camera, or financial data are collected. No
+advertising or third-party data sale. Cloudflare Turnstile (bot-check at
+registration/comments) is the other third party besides the email provider
+and the Solana network itself.
 
 ## Safety and source-of-truth notes
 

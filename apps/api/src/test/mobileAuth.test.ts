@@ -10,7 +10,7 @@ describe("mobile bearer sessions", () => {
 
   it("issues a MOBILE session that authenticates bearer requests without CSRF", async () => {
     const registration = await request(app).post("/api/v1/auth/mobile/register").send({
-      email: "native@example.test", password: "a-strong-test-password", captchaToken: "test-bypass-token", deviceName: "Pixel",
+      email: "native@example.test", password: "a-strong-test-password", captchaToken: "test-bypass-token", acceptedTerms: true, deviceName: "Pixel",
     });
     expect(registration.status).toBe(201);
     const token = registration.body.data.session.token;
@@ -27,7 +27,7 @@ describe("mobile bearer sessions", () => {
   });
 
   it("does not accept a browser session as a bearer token", async () => {
-    const registration = await request(app).post("/api/v1/auth/register").send({ email: "web@example.test", password: "a-strong-test-password", captchaToken: "test-bypass-token" });
+    const registration = await request(app).post("/api/v1/auth/register").send({ email: "web@example.test", password: "a-strong-test-password", captchaToken: "test-bypass-token", acceptedTerms: true });
     const setCookie = registration.headers["set-cookie"];
     const cookies = Array.isArray(setCookie) ? setCookie : setCookie ? [setCookie] : [];
     const cookie = cookies.find((value) => value.startsWith("nc_session="));

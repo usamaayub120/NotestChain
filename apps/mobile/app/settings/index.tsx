@@ -1,9 +1,10 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import * as Linking from "expo-linking";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Action, Card, Divider, Eyebrow, Notice, Screen, Subtitle, Title, styles as uiStyles } from "@/src/components/ui";
 import { fontScaleLabels, type FontScalePreset, type ThemeMode, useTheme } from "@/src/lib/theme";
-import { appEnv } from "@/src/lib/config";
+import { appEnv, webOrigin } from "@/src/lib/config";
 
 const fontScaleOrder: FontScalePreset[] = ["small", "default", "large", "xlarge"];
 
@@ -26,7 +27,12 @@ export default function SettingsScreen() {
     <Divider />
     <View style={local.heading}><Eyebrow>Security</Eyebrow><Title>App lock</Title><Subtitle>Require a PIN or fingerprint to open NotesChain on this device.</Subtitle></View>
     <Action title="Set up app lock" tone="secondary" icon={<Ionicons name="lock-closed-outline" size={18} color={colors.ink} />} onPress={() => router.push("/settings/app-lock")} />
-    <Divider /><Action title="Replay the introduction" tone="secondary" icon={<Ionicons name="information-circle-outline" size={18} color={colors.ink} />} onPress={() => router.push("/onboarding")} /></Screen>;
+    <Divider /><Action title="Replay the introduction" tone="secondary" icon={<Ionicons name="information-circle-outline" size={18} color={colors.ink} />} onPress={() => router.push("/onboarding")} />
+    <Divider />
+    <View style={local.heading}><Eyebrow>Legal</Eyebrow><Title>Your account</Title></View>
+    <Action title="Privacy policy" tone="secondary" icon={<Ionicons name="document-text-outline" size={18} color={colors.ink} />} onPress={() => Linking.openURL(`${webOrigin}/privacy`)} />
+    <Action title="Terms of service" tone="secondary" icon={<Ionicons name="document-text-outline" size={18} color={colors.ink} />} onPress={() => Linking.openURL(`${webOrigin}/terms`)} />
+    <Action title="Delete account" tone="danger" icon={<Ionicons name="trash-outline" size={18} color="#fff" />} onPress={() => router.push("/settings/delete-account")} /></Screen>;
 }
 
 const local = StyleSheet.create({

@@ -7,6 +7,9 @@ export const registerSchema = z.object({
   email: z.string().trim().toLowerCase().email().max(254),
   password: z.string().min(10).max(256),
   captchaToken: z.string().min(1),
+  acceptedTerms: z.literal(true, {
+    errorMap: () => ({ message: "You must accept the Terms of Service and Privacy Policy." }),
+  }),
 });
 export type RegisterInput = z.infer<typeof registerSchema>;
 
@@ -27,3 +30,8 @@ export const resetPasswordSchema = z.object({
   password: z.string().min(10).max(256),
 });
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
+
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1),
+});
+export type DeleteAccountInput = z.infer<typeof deleteAccountSchema>;

@@ -16,6 +16,7 @@ export function RegisterPage() {
   const navigate = useNavigate();
   const register = useRegister();
   const [hasCaptchaToken, setHasCaptchaToken] = useState(false);
+  const [acceptedTerms, setAcceptedTerms] = useState(false);
   const form = useForm<RegisterInput>({
     resolver: zodResolver(registerSchema),
     defaultValues: { email: "", password: "", captchaToken: "" },
@@ -75,13 +76,38 @@ export function RegisterPage() {
               }}
             />
 
+            <label className="flex items-start gap-2 text-sm text-muted-foreground">
+              <input
+                type="checkbox"
+                checked={acceptedTerms}
+                onChange={(e) => {
+                  setAcceptedTerms(e.target.checked);
+                  form.setValue("acceptedTerms", e.target.checked as true);
+                }}
+                className="mt-1 h-4 w-4"
+              />
+              I agree to the{" "}
+              <Link to="/terms" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                Terms of Service
+              </Link>{" "}
+              and{" "}
+              <Link to="/privacy" target="_blank" rel="noopener noreferrer" className="text-primary underline">
+                Privacy Policy
+              </Link>
+              .
+            </label>
+
             {form.formState.errors.root && (
               <p role="alert" className="text-sm font-medium text-destructive">
                 {form.formState.errors.root.message}
               </p>
             )}
 
-            <Button type="submit" className="w-full" disabled={register.isPending || !hasCaptchaToken}>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={register.isPending || !hasCaptchaToken || !acceptedTerms}
+            >
               {register.isPending ? "Creating account…" : "Create account"}
             </Button>
           </form>

@@ -28,9 +28,12 @@ import { BlockchainJobsPage } from "@/pages/admin/BlockchainJobsPage";
 import { ViewsPage } from "@/pages/admin/ViewsPage";
 import { SeoSettingsPage } from "@/pages/admin/SeoSettingsPage";
 import { WalletBalancesPage } from "@/pages/admin/WalletBalancesPage";
-import { ComingSoonPage } from "@/pages/ComingSoonPage";
 import { HowItWorksPage } from "@/pages/HowItWorksPage";
 import { VerifyNotePage } from "@/pages/VerifyNotePage";
+import { PrivacyPolicyPage } from "@/pages/PrivacyPolicyPage";
+import { TermsOfServicePage } from "@/pages/TermsOfServicePage";
+import { DeleteAccountPage } from "@/pages/DeleteAccountPage";
+import { SettingsPage } from "@/pages/SettingsPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { MobileCaptchaPage } from "@/pages/MobileCaptchaPage";
 
@@ -48,6 +51,9 @@ export function App() {
         <Route path="/search" element={<SearchPage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
         <Route path="/verify" element={<VerifyNotePage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
+        <Route path="/terms" element={<TermsOfServicePage />} />
+        <Route path="/delete-account" element={<DeleteAccountPage />} />
         <Route path="/tags/:tag" element={<TagPage />} />
         <Route path="/p/:id" element={<PublicationReaderPage />} />
         <Route path="/:handle" element={<ProfileHandleRoute />} />
@@ -108,7 +114,7 @@ export function App() {
           path="/settings"
           element={
             <RequireAuth>
-              <ComingSoonPage title="Settings" description="Account and session management." />
+              <SettingsPage />
             </RequireAuth>
           }
         />
