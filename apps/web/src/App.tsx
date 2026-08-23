@@ -27,8 +27,10 @@ import { AuditLogPage } from "@/pages/admin/AuditLogPage";
 import { BlockchainJobsPage } from "@/pages/admin/BlockchainJobsPage";
 import { ViewsPage } from "@/pages/admin/ViewsPage";
 import { SeoSettingsPage } from "@/pages/admin/SeoSettingsPage";
+import { WalletBalancesPage } from "@/pages/admin/WalletBalancesPage";
 import { ComingSoonPage } from "@/pages/ComingSoonPage";
 import { HowItWorksPage } from "@/pages/HowItWorksPage";
+import { VerifyNotePage } from "@/pages/VerifyNotePage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { MobileCaptchaPage } from "@/pages/MobileCaptchaPage";
 
@@ -45,6 +47,7 @@ export function App() {
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />
+        <Route path="/verify" element={<VerifyNotePage />} />
         <Route path="/tags/:tag" element={<TagPage />} />
         <Route path="/p/:id" element={<PublicationReaderPage />} />
         <Route path="/:handle" element={<ProfileHandleRoute />} />
@@ -155,6 +158,14 @@ export function App() {
           element={
             <RequireRole role="ADMIN">
               <BlockchainJobsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/wallets"
+          element={
+            <RequireRole role="ADMIN">
+              <WalletBalancesPage />
             </RequireRole>
           }
         />

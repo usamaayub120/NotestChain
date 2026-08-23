@@ -54,6 +54,14 @@ export const accountWelcomeDataSchema = z.object({
 });
 export type AccountWelcomeData = z.infer<typeof accountWelcomeDataSchema>;
 
+export const walletBalanceLowDataSchema = z.object({
+  walletLabel: z.string().min(1),
+  balanceSol: z.number(),
+  thresholdSol: z.number(),
+  walletsUrl: httpUrl,
+});
+export type WalletBalanceLowData = z.infer<typeof walletBalanceLowDataSchema>;
+
 export const commentReceivedDataSchema = z.object({
   publicationTitle: z.string().min(1),
   publicationUrl: httpUrl,

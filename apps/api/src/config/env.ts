@@ -28,6 +28,19 @@ const envSchema = z.object({
   SOLANA_COMMITMENT: z.enum(["processed", "confirmed", "finalized"]).default("confirmed"),
   PUBLIC_EXPLORER_BASE_URL: z.string().url().default("https://explorer.solana.com"),
 
+  // Public keys only — never secrets. The API must never load either
+  // keypair's secret half (see getReadOnlySolanaClient's throwaway wallet
+  // above); these exist purely so the admin wallet-balances page can show
+  // *which* accounts matter and query their balances via a plain
+  // getBalance(pubkey) read. SOLANA_PUBLISHER_PUBLIC_KEY has no default
+  // since it's deployment-specific and only derivable from the real
+  // keypair; SOLANA_UPGRADE_AUTHORITY_PUBLIC_KEY defaults to this
+  // deployment's known value.
+  SOLANA_PUBLISHER_PUBLIC_KEY: z.string().optional(),
+  SOLANA_UPGRADE_AUTHORITY_PUBLIC_KEY: z.string().default("BCYqFNE6WQQM6pq8td6qwNxu8N1k39amAbfiuaiHmvmH"),
+  SOLANA_PUBLISHER_LOW_BALANCE_SOL: z.coerce.number().positive().default(0.05),
+  SOLANA_UPGRADE_AUTHORITY_LOW_BALANCE_SOL: z.coerce.number().positive().default(1),
+
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 
   // Where the SEO layer (apps/api/src/modules/seo) reads the built web

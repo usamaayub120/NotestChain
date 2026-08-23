@@ -22,6 +22,7 @@ export const EmailKind = {
   PASSWORD_RESET_REQUESTED: "PASSWORD_RESET_REQUESTED",
   ACCOUNT_WELCOME: "ACCOUNT_WELCOME",
   COMMENT_RECEIVED: "COMMENT_RECEIVED",
+  WALLET_BALANCE_LOW: "WALLET_BALANCE_LOW",
 } as const;
 
 export type EmailKind = (typeof EmailKind)[keyof typeof EmailKind];

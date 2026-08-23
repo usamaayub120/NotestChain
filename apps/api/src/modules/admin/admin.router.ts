@@ -23,6 +23,7 @@ import {
   retryBlockchainJob,
 } from "./admin.service.js";
 import { getSiteSettings, updateSiteSettings } from "./settings.service.js";
+import { listWalletBalances } from "./walletBalances.service.js";
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole(Role.ADMIN));
@@ -157,6 +158,14 @@ adminRouter.post(
   asyncHandler(async (req, res) => {
     const job = await retryBlockchainJob(req.auth!.userId, requireParam(req, "id"), req.ip);
     return ok(res, job);
+  }),
+);
+
+adminRouter.get(
+  "/wallets/balances",
+  asyncHandler(async (_req, res) => {
+    const wallets = await listWalletBalances();
+    return ok(res, { wallets });
   }),
 );
 

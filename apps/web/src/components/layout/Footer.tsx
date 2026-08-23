@@ -33,6 +33,9 @@ export function Footer() {
             <Link to="/how-it-works" className="hover:text-canopy-foreground">
               How it works
             </Link>
+            <Link to="/verify" className="hover:text-canopy-foreground">
+              Verify a note
+            </Link>
           </nav>
         </div>
 

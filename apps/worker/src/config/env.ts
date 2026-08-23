@@ -14,6 +14,15 @@ const envSchema = z.object({
   SOLANA_PUBLISHER_KEYPAIR_PATH: z.string().optional(),
   SOLANA_PUBLISHER_KEYPAIR_JSON: z.string().optional(),
 
+  // Public key only. Unlike the publisher (whose pubkey the worker already
+  // derives from its own loaded keypair — see solanaClient.ts), nothing in
+  // this app ever loads the upgrade-authority keypair; it lives only on the
+  // ops VPS. This is just enough to check its balance and warn when it's
+  // low. Defaults to this deployment's known value.
+  SOLANA_UPGRADE_AUTHORITY_PUBLIC_KEY: z.string().default("BCYqFNE6WQQM6pq8td6qwNxu8N1k39amAbfiuaiHmvmH"),
+  SOLANA_PUBLISHER_LOW_BALANCE_SOL: z.coerce.number().positive().default(0.05),
+  SOLANA_UPGRADE_AUTHORITY_LOW_BALANCE_SOL: z.coerce.number().positive().default(1),
+
   // Also read by the API for building the same links, but only the worker
   // actually fetches from it (constructing the explorer URL for the
   // chain-finalized email at the point the worker itself finalizes a
@@ -23,6 +32,7 @@ const envSchema = z.object({
   WORKER_POLL_INTERVAL_MS: z.coerce.number().int().positive().default(4000),
   WORKER_MAX_ATTEMPTS: z.coerce.number().int().positive().default(8),
   WORKER_RECONCILE_INTERVAL_MS: z.coerce.number().int().positive().default(300_000),
+  WORKER_BALANCE_CHECK_INTERVAL_MS: z.coerce.number().int().positive().default(1_800_000),
 
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 

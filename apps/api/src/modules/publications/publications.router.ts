@@ -20,6 +20,7 @@ import {
   listPublicPublications,
 } from "./publications.service.js";
 import { verifyPublication } from "./verify.service.js";
+import { resolveProof } from "./lookup.service.js";
 import { createReport } from "./reports.service.js";
 import { hashVisitorToken, recordView } from "./views.service.js";
 import { createComment, listTopLevelComments, setCommentsEnabled } from "../comments/comments.service.js";
@@ -62,6 +63,20 @@ publicationsRouter.get(
     const query = listQuerySchema.parse(req.query);
     const { items, total } = await listPublicPublications(query);
     return paginated(res, items, { page: query.page, pageSize: query.pageSize, total });
+  }),
+);
+
+const lookupQuerySchema = z.object({ q: z.string().trim().min(1).max(500) });
+
+// Registered before "/:id" — a literal path must come before the dynamic
+// catch-all, matching this file's existing ordering (see "/mine/analytics"
+// above /:id) or Express would treat "lookup" as an :id value instead.
+publicationsRouter.get(
+  "/lookup",
+  asyncHandler(async (req, res) => {
+    const { q } = lookupQuerySchema.parse(req.query);
+    const result = await resolveProof(q, req.auth?.userId);
+    return ok(res, result);
   }),
 );
 

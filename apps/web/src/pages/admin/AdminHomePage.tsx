@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useAuth";
+import { useWalletBalances } from "@/hooks/useAdmin";
 
 const SECTIONS = [
   {
@@ -18,6 +19,12 @@ const SECTIONS = [
     to: "/admin/blockchain",
     title: "Blockchain jobs",
     description: "Publish job queue, retries, reconciliation.",
+    requires: "ADMIN" as const,
+  },
+  {
+    to: "/admin/wallets",
+    title: "Solana wallets",
+    description: "Which on-chain accounts need a balance, and why.",
     requires: "ADMIN" as const,
   },
   {
@@ -45,10 +52,25 @@ export function AdminHomePage() {
   // A MODERATOR only sees Moderation queue — the other four are ADMIN-only
   // and would otherwise be dead-end links that resolve to a blocked page.
   const visibleSections = SECTIONS.filter((s) => s.requires !== "ADMIN" || user?.role === "ADMIN");
+  // Wallet status is cheap and worth surfacing right away — an admin
+  // shouldn't have to already know to check the wallets page to learn
+  // publishing is about to stall.
+  const { data: walletData } = useWalletBalances();
+  const lowWallets = (walletData?.wallets ?? []).filter((w) => w.status === "low");
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <h1 className="text-2xl">Admin</h1>
+
+      {lowWallets.length > 0 && (
+        <Link
+          to="/admin/wallets"
+          role="alert"
+          className="mt-4 block rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive hover:bg-destructive/15"
+        >
+          ⚠ {lowWallets.map((w) => w.label).join(", ")} running low — view wallets
+        </Link>
+      )}
 
       <div className="mt-8 grid gap-4 sm:grid-cols-2">
         {visibleSections.map((section) => (

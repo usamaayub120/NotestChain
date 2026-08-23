@@ -36,6 +36,12 @@ const FIXTURES: Record<string, Record<string, unknown>> = {
     commenterName: "Someone",
     commentBody: "This resonated.",
   },
+  [EmailKind.WALLET_BALANCE_LOW]: {
+    walletLabel: "Publisher wallet",
+    balanceSol: 0.02,
+    thresholdSol: 0.05,
+    walletsUrl: "https://notes.example/admin/wallets",
+  },
 };
 
 describe("every EmailKind has a fixture and a registry entry", () => {

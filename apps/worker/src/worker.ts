@@ -5,11 +5,13 @@ import { beatHeartbeat } from "./heartbeat.js";
 import { claimAndProcessEmailJobs } from "./email/emailProcessor.js";
 import { claimAndProcessOutbox } from "./publishing/outboxProcessor.js";
 import { runReconciliation } from "./reconciliation/reconcile.js";
+import { checkWalletBalances } from "./monitoring/checkWalletBalances.js";
 
 logger.info({ cluster: env.SOLANA_CLUSTER, programId: env.SOLANA_PROGRAM_ID }, "NotesChain worker starting");
 
 let stopping = false;
 let lastReconciledAt = 0;
+let lastBalanceCheckAt = 0;
 
 async function tick(): Promise<void> {
   await beatHeartbeat({ cluster: env.SOLANA_CLUSTER });
@@ -22,6 +24,15 @@ async function tick(): Promise<void> {
       await runReconciliation();
     } catch (err) {
       logger.error({ err }, "Reconciliation sweep failed");
+    }
+  }
+
+  if (Date.now() - lastBalanceCheckAt >= env.WORKER_BALANCE_CHECK_INTERVAL_MS) {
+    lastBalanceCheckAt = Date.now();
+    try {
+      await checkWalletBalances();
+    } catch (err) {
+      logger.error({ err }, "Wallet balance check failed");
     }
   }
 }

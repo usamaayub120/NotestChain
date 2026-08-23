@@ -65,6 +65,34 @@ export function usePublication(id: string | undefined) {
   });
 }
 
+export interface OnChainOnlyResult {
+  publicationId: string;
+  pda: string;
+  schemaVersion: 1 | 2;
+  title: string;
+  authorDisplaySnapshot: string;
+  publishedAt: number;
+  content: string | null;
+  excerpt: string | null;
+  contentHash: string;
+  explorerUrl: string;
+}
+
+export type ProofLookupResult =
+  | { kind: "publication"; publication: Publication }
+  | { kind: "onchain_only"; account: OnChainOnlyResult }
+  | { kind: "not_found" };
+
+/** Enabled only once a query has actually been submitted — see VerifyNotePage. */
+export function useProofLookup(query: string, enabled: boolean) {
+  return useQuery({
+    queryKey: ["publications", "lookup", query],
+    queryFn: () => apiFetch<ProofLookupResult>(`/publications/lookup?q=${encodeURIComponent(query)}`),
+    enabled,
+    retry: false,
+  });
+}
+
 export function usePublicationRevisions(id: string | undefined) {
   return useQuery({
     queryKey: ["publications", id, "revisions"],

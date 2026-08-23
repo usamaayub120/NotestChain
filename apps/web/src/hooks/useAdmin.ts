@@ -180,6 +180,24 @@ export function useSiteSettings() {
   });
 }
 
+export interface WalletBalance {
+  key: "publisher" | "upgradeAuthority";
+  label: string;
+  pubkey: string | null;
+  purpose: string;
+  balanceSol: number | null;
+  thresholdSol: number;
+  status: "ok" | "low" | "unknown" | "not_configured";
+  explorerUrl: string | null;
+}
+
+export function useWalletBalances() {
+  return useQuery({
+    queryKey: ["admin", "wallet-balances"],
+    queryFn: () => apiFetch<{ wallets: WalletBalance[] }>("/admin/wallets/balances"),
+  });
+}
+
 export function useUpdateSiteSettings() {
   const queryClient = useQueryClient();
   return useMutation({
