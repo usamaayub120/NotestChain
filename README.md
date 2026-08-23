@@ -5,10 +5,10 @@
 A public writing platform: private drafts, moderated publishing, and a
 final, permanent, publicly-verifiable record on Solana. See
 `ARCHITECTURE.md` for how it's built and why, `IMPLEMENTATION_PLAN.md` for
-the phased build order, `DESIGN_SYSTEM.md` / `UI_IMPLEMENTATION_PLAN.md` /
-`MOBILE_APP_STRATEGY.md` for the frontend, `RUNBOOK.md` for Solana
-deployment/authority management, and `BACKUP_RECOVERY.md` for what to back
-up and how to recover.
+the phased build order, `DESIGN_SYSTEM.md` / `UI_IMPLEMENTATION_PLAN.md` for
+the web frontend and `apps/mobile/README.md` for the mobile app, `RUNBOOK.md`
+for Solana deployment/authority management, and `BACKUP_RECOVERY.md` for what
+to back up and how to recover.
 
 **Status:** Phases 1–5 are code-complete and verified (through the real
 browser UI and, where a live validator isn't required, real devnet RPC

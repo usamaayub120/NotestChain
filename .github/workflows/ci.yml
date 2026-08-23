@@ -75,6 +75,33 @@ jobs:
       - name: Web unit/component tests
         run: pnpm --filter @noteschain/web test
 
+  mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm --filter @noteschain/mobile lint
+
+      # .expo/ (including the generated typed-route types tsconfig.json
+      # references) is gitignored, so this is the only place typed routes
+      # get checked — it also proves the JS bundle actually resolves.
+      - name: Export bundle
+        run: pnpm --filter @noteschain/mobile exec expo export --platform android --output-dir "$RUNNER_TEMP/expo-export"
+
+      - name: Typecheck
+        run: pnpm --filter @noteschain/mobile typecheck
+
   docker:
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'

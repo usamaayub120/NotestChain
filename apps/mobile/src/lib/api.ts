@@ -1,8 +1,9 @@
 import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
 import type { Page } from "@/src/lib/models";
+import { apiRoot } from "@/src/lib/config";
 
-const API_ROOT = "https://noteschain.org/api/v1";
+const API_ROOT = apiRoot;
 const TOKEN_KEY = "noteschain.mobile.session";
 const VISITOR_KEY = "noteschain.mobile.visitor";
 

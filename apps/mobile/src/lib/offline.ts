@@ -47,5 +47,16 @@ export function queued(): QueuedMutation[] {
 export function removeQueued(id: string) { if (initialiseOfflineStore()) db.runSync("DELETE FROM mutations WHERE id = ?", id); }
 export function preserveRecovery(draftId: string, body: unknown) {
   if (!initialiseOfflineStore()) return;
-  db.runSync("INSERT INTO recoveries (id, draftId, body, createdAt) VALUES (?, ?, ?, ?)", `${draftId}-${Date.now()}`, draftId, JSON.stringify(body), Date.now());
+  const id = `${draftId}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  db.runSync("INSERT INTO recoveries (id, draftId, body, createdAt) VALUES (?, ?, ?, ?)", id, draftId, JSON.stringify(body), Date.now());
+  // Retention cap — this table has no other eviction, so unbounded backgrounding would grow it forever.
+  db.runSync("DELETE FROM recoveries WHERE draftId = ? AND id NOT IN (SELECT id FROM recoveries WHERE draftId = ? ORDER BY createdAt DESC LIMIT 3)", draftId, draftId);
+}
+export function recoveriesFor(draftId: string): { id: string; body: unknown; createdAt: number }[] {
+  if (!initialiseOfflineStore()) return [];
+  return db.getAllSync<{ id: string; draftId: string; body: string; createdAt: number }>("SELECT * FROM recoveries WHERE draftId = ? ORDER BY createdAt DESC", draftId)
+    .map((row) => ({ id: row.id, body: JSON.parse(row.body), createdAt: row.createdAt }));
+}
+export function clearRecoveries(draftId: string) {
+  if (initialiseOfflineStore()) db.runSync("DELETE FROM recoveries WHERE draftId = ?", draftId);
 }

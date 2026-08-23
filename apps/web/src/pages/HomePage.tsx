@@ -102,6 +102,9 @@ export function HomePage() {
           <Link to="/how-it-works" className="inline-block text-sm text-primary underline">
             See exactly how a thought gets kept
           </Link>
+          <Link to="/verify" className="block text-sm text-primary underline">
+            Verify a note against the blockchain record
+          </Link>
         </div>
       </RevealSection>
 

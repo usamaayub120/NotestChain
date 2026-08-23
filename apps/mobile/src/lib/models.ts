@@ -25,3 +25,14 @@ export type Comment = {
   displayName: string | null; author?: { displayName: string; username: string } | null;
   replyCount?: number;
 };
+
+export type OnChainOnlyResult = {
+  publicationId: string; pda: string; schemaVersion: 1 | 2;
+  title: string; authorDisplaySnapshot: string; publishedAt: number;
+  content: string | null; excerpt: string | null; contentHash: string; explorerUrl: string;
+};
+
+export type ProofLookupResult =
+  | { kind: "publication"; publication: Publication }
+  | { kind: "onchain_only"; account: OnChainOnlyResult }
+  | { kind: "not_found" };

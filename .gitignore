@@ -28,6 +28,10 @@ yarn.lock
 # to have the same MCP servers configured.
 .mcp.json
 
+# Local agent-tool session cache (e.g. pasted/uploaded attachments) — not
+# project content, shouldn't land in history.
+.codex-remote-attachments/
+
 # Logs
 *.log
 npm-debug.log*

@@ -39,6 +39,19 @@ export default tseslint.config(
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
     },
   },
+  // Mobile app (Expo / React Native)
+  {
+    files: ["apps/mobile/**/*.{ts,tsx}"],
+    languageOptions: {
+      globals: { ...globals.browser, __DEV__: "readonly" },
+    },
+    plugins: {
+      "react-hooks": reactHooks,
+    },
+    rules: {
+      ...reactHooks.configs.recommended.rules,
+    },
+  },
   {
     files: ["**/*.config.{js,ts,mjs}", "**/vite.config.ts"],
     languageOptions: { globals: globals.node },

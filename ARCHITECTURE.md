@@ -282,8 +282,67 @@ breakdown and `infra/` for Nginx/Supervisor config.
 ## 9. What is intentionally NOT built (see spec §25)
 
 DAO governance, token rewards, NFTs, wallet login, ZK proofs, on-chain
-comments/likes/bookmarks, follower feeds, ML recommendations, native mobile
-apps, multi-chain support. The data model and module boundaries are kept
-loose enough that most of these are additive later (e.g. a `Reaction` model
-and router could be added without touching `Publication` or the chain
-program).
+comments/likes/bookmarks, follower feeds, ML recommendations, multi-chain
+support. The data model and module boundaries are kept loose enough that
+most of these are additive later (e.g. a `Reaction` model and router could
+be added without touching `Publication` or the chain program).
+
+## 10. Client topology
+
+Two independent frontends share the one Express API — there is no
+Capacitor/WebView wrapper (an earlier plan for that, in the now-retired
+`MOBILE_APP_STRATEGY.md`, was superseded):
+
+- `apps/web` — the React SPA served by Nginx (§1), cookie-based sessions.
+- `apps/mobile` — an Expo / React Native app with its own UI, hitting the
+  same API over `/api/v1` but authenticating with opaque bearer tokens
+  (`/auth/mobile/*` endpoints, a `MOBILE` session transport) rather than
+  cookies, since a native app has no browser cookie jar to rely on. See
+  `apps/mobile/README.md` for its architecture (offline queue, theming,
+  environments, release process).
+
+Admin/moderation stays web-only by design — mobile has no equivalent surface.
+
+## 11. SEO & analytics
+
+`apps/web` is a client-only SPA (§1) — no SSR framework. Rather than migrate
+to one (a change touching nearly every page) or accept that crawlers see a
+blank shell, `apps/api/src/modules/seo` does targeted "dynamic rendering"
+for exactly the public, crawlable/shareable routes: `/`, `/explore`,
+`/how-it-works`, `/tags/:tag`, `/p/:id`, `/@:handle`, `/robots.txt`,
+`/sitemap.xml`. Nginx `proxy_pass`es only those paths to the API instead of
+`try_files`-ing the static `index.html`; the API rewrites the `<head>` block
+between the `SEO:START`/`SEO:END` markers in that same file (read once from
+`WEB_DIST_DIR`, cached in memory) and returns it otherwise untouched, so the
+SPA still boots and hydrates exactly as it does today. Every other route
+(dashboard, drafts, admin, settings, login) is unaffected — already
+`Disallow`'d in `robots.txt`, no reason to pay for server rendering there.
+
+Two things this has to get right:
+- **Anonymity.** `Publication` supports anonymous/pseudonymous authorship
+  (§4's identity model). `seo.service.ts` only ever consumes the already-
+  redacted DTO from `toPublicationDTO`/`getPublicationById` — it never
+  queries `Publication`/`PublicIdentity` directly — so an anonymous note's
+  author can't leak into `og:` tags or JSON-LD the way it can't leak into
+  the normal public API response either.
+- **Admin-editable without a redeploy.** GA4's Measurement ID, Search
+  Console's verification code, the default OG image/description/Twitter
+  handle, and a sitewide indexing on/off toggle live in a `SiteSettings`
+  singleton row (admin UI at `/admin/settings`), read through a small
+  in-memory cache in `settings.service.ts` invalidated on every write —
+  the SEO router would otherwise hit Postgres on every public page load.
+
+Impressions vs. unique readers: `PublicationView` (added earlier, see the
+model's own doc comment) counts unique readers via a hashed first-party
+visitor cookie — deliberately deduplicated, and deliberately never an IP or
+account id. `Publication.impressionCount` is the raw, non-deduplicated
+counterpart, incremented on every `POST /publications/:id/view` alongside
+the existing dedup'd insert. Neither replaces the other; "how many times did
+this load" and "how many distinct people read it" are different questions.
+
+Google Search Console's own "Impressions" metric (how often a page shows up
+in *search results*, as opposed to how often it's actually opened) isn't
+pulled into the app at all — that would mean either OAuth or a service-
+account key, both real setup cost for a metric already visible for free in
+Search Console itself once a property is verified via the settings page's
+verification-code field.

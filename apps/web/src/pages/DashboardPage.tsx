@@ -47,6 +47,10 @@ export function DashboardPage() {
           <h2 className="text-lg">How it works</h2>
           <p className="mt-1 text-sm text-muted-foreground">What happens between writing and keeping.</p>
         </Link>
+        <Link to="/verify" className="rounded-md border border-border bg-surface p-4 hover:bg-muted">
+          <h2 className="text-lg">Verify a note</h2>
+          <p className="mt-1 text-sm text-muted-foreground">Check any note's URL, signature, or address against the chain.</p>
+        </Link>
         {primaryIdentity ? (
           <Link to={`/@${primaryIdentity.username}`} className="rounded-md border border-border bg-surface p-4 hover:bg-muted">
             <h2 className="text-lg">Your public profile</h2>
