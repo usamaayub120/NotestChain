@@ -1,0 +1,77 @@
+name: Anchor build
+
+# Builds the on-chain program (programs/decentralized_notes) in a clean,
+# disposable environment and uploads the compiled .so + generated IDL as a
+# workflow artifact. Deliberately build-only — no deploy step, no signing
+# key touches this workflow. Deploying the artifact to devnet/mainnet stays
+# a manual, deliberate step (see RUNBOOK.md), same philosophy as ci.yml's
+# Docker image job never deploying anywhere on its own.
+#
+# Toolchain versions below mirror the one combination that has actually
+# built this program successfully (see IMPLEMENTATION_PLAN.md's "Toolchain
+# environment log"): Solana CLI 4.1.1 bundles a platform-tools release new
+# enough to compile dependencies that declare a 2024 edition; the older
+# Solana CLI 2.1.0 tried previously defaulted to a too-old platform-tools
+# and failed on exactly that. Don't downgrade the Solana CLI version here
+# without re-checking that log.
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "programs/decentralized_notes/**"
+      - ".github/workflows/anchor-build.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    defaults:
+      run:
+        working-directory: programs/decentralized_notes
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain
+        run: |
+          rustup update stable
+          rustup default stable
+
+      - name: Cache cargo registry and anchor-cli install
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/bin
+            programs/decentralized_notes/target
+          key: anchor-build-${{ runner.os }}-${{ hashFiles('programs/decentralized_notes/Cargo.lock') }}
+
+      - name: Install Solana CLI 4.1.1
+        run: |
+          sh -c "$(curl -sSfL https://release.anza.xyz/v4.1.1/install)"
+          echo "$HOME/.local/share/solana/install/active_release/bin" >> "$GITHUB_PATH"
+
+      - name: Install anchor-cli 0.31.1
+        run: |
+          if ! command -v anchor >/dev/null || [ "$(anchor --version)" != "anchor-cli 0.31.1" ]; then
+            cargo install anchor-cli --version 0.31.1 --locked
+          fi
+
+      - name: anchor build
+        run: anchor build
+
+      - name: Show generated instruction list (sanity check)
+        run: |
+          node -e "
+            const idl = require('./target/idl/decentralized_notes.json');
+            console.log('Instructions:', idl.instructions.map(i => i.name).join(', '));
+          "
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: decentralized_notes-program
+          path: |
+            programs/decentralized_notes/target/deploy/decentralized_notes.so
+            programs/decentralized_notes/target/idl/decentralized_notes.json
+            programs/decentralized_notes/target/types/decentralized_notes.ts
+          retention-days: 30
