@@ -58,7 +58,11 @@ export default (_ctx: ConfigContext): ExpoConfig => ({
     "expo-router",
     "expo-secure-store",
     "expo-sqlite",
-    ["expo-build-properties", { android: { kotlinVersion: "1.9.25" } }],
+    // Expo SDK 52's default template still targets API 34; Play Console now
+    // requires 35 for any new release (raised after this SDK's templates
+    // were set, so it has to be overridden explicitly rather than relying
+    // on the generated android/build.gradle's own default).
+    ["expo-build-properties", { android: { kotlinVersion: "1.9.25", targetSdkVersion: 35 } }],
     "./plugins/withExpoAutolinkingPackageFix",
   ],
   experiments: {
