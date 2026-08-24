@@ -1,0 +1,69 @@
+name: EAS Android Release Build
+
+# Manual only. Building and submitting a production Android release is a
+# deliberate, owner-directed release action (see AGENTS.md's "Native release
+# procedure") -- it must never fire automatically on a push or PR.
+#
+# Runs the Android build on GitHub's Linux runner via `eas build --local`,
+# which needs a Unix host and can't run on the Windows dev machine this repo
+# is normally worked from. Requires an EXPO_TOKEN repository secret (an
+# access token from https://expo.dev/accounts/<account>/settings/access-tokens,
+# scoped to this Expo account) with permission to build and submit for the
+# noteschain project.
+on:
+  workflow_dispatch:
+
+jobs:
+  build-and-submit:
+    runs-on: ubuntu-latest
+    env:
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # apps/mobile imports packages/{shared,validation} via their built
+      # dist/ output (see each package's package.json "main"), same as
+      # apps/api/apps/web in ci.yml.
+      - name: Build workspace packages
+        run: pnpm run build:packages
+
+      - name: EAS build (local, production profile, Android)
+        working-directory: apps/mobile
+        run: |
+          npx eas-cli build \
+            --local \
+            --platform android \
+            --profile production \
+            --non-interactive \
+            --output "${{ runner.temp }}/noteschain-production.aab"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: noteschain-production-aab
+          path: ${{ runner.temp }}/noteschain-production.aab
+
+      # eas.json's submit.production.android.track is "internal" -- this
+      # pushes to Play Console's internal testing track, not a public rollout.
+      - name: Submit to Play Console (internal testing track)
+        working-directory: apps/mobile
+        run: |
+          npx eas-cli submit \
+            --platform android \
+            --profile production \
+            --path "${{ runner.temp }}/noteschain-production.aab" \
+            --non-interactive

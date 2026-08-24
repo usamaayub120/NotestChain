@@ -12,5 +12,5 @@
       "android": { "buildType": "app-bundle" }
     }
   },
-  "submit": { "production": {} }
+  "submit": { "production": { "android": { "track": "internal" } } }
 }
