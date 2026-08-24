@@ -17,6 +17,9 @@ programs/**/.anchor/
 programs/**/test-ledger/
 *.keypair.json
 run/secrets/
+# Written transiently by .github/workflows/eas-android-release.yml from the
+# GOOGLE_SERVICE_ACCOUNT_KEY secret -- never meant to exist on disk outside CI.
+apps/mobile/google-service-account.json
 .cargo-build-tmp/
 
 # Wrong package manager — this repo is pnpm-only (pnpm-lock.yaml is the

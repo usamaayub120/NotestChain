@@ -12,5 +12,12 @@
       "android": { "buildType": "app-bundle" }
     }
   },
-  "submit": { "production": { "android": { "track": "internal" } } }
+  "submit": {
+    "production": {
+      "android": {
+        "track": "internal",
+        "serviceAccountKeyPath": "./google-service-account.json"
+      }
+    }
+  }
 }
