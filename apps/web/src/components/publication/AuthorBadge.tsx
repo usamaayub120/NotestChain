@@ -3,7 +3,7 @@ import type { PublicationAuthor } from "@/hooks/usePublications";
 import { useProfile } from "@/hooks/useProfile";
 import { FollowButton } from "./FollowButton";
 
-const KIND_LABEL = { primary: "Keeper profile", pen: "Pen name" } as const;
+const KIND_LABEL = { primary: "Primary profile", pen: "Pen name" } as const;
 
 export function AuthorBadge({
   author,

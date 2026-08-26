@@ -9,7 +9,7 @@ import { useMyFollowing } from "@/hooks/useFollows";
 
 /**
  * The signed-in home screen: Following is the default once you follow
- * anyone, Latest otherwise — a brand-new Keeper is never staring at an empty
+ * anyone, Latest otherwise — a new reader is never staring at an empty
  * tab. Marketing HomePage.tsx renders this in place of its own content once
  * a session exists; Explore stays the separate, tab-free discovery surface.
  */
@@ -42,8 +42,8 @@ function FollowingTab({ hasFollows }: { hasFollows: boolean }) {
   if (!hasFollows) {
     return (
       <EmptyState
-        title="Follow a few Keepers"
-        description="Their notes will show up here. In the meantime, Explore has recent thoughts from everyone."
+        title="Follow a few authors"
+        description="Their notes will show up here. In the meantime, Explore has recent notes from everyone."
       />
     );
   }
@@ -72,7 +72,7 @@ function LatestTab() {
       {isLoading && <CardSkeletonList />}
       {isError && <ErrorState onRetry={() => refetch()} />}
       {!isLoading && !isError && data?.data.length === 0 && (
-        <EmptyState title="Nothing's been kept yet" description="Be the first to publish something." />
+        <EmptyState title="No notes published yet" description="Be the first to publish a note." />
       )}
       <div className="space-y-3">
         {data?.data.map((pub) => (

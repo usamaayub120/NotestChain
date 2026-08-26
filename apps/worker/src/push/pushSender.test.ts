@@ -59,6 +59,19 @@ describe("sendPushToUser", () => {
       tokens: ["fcm-token-1", "fcm-token-2"],
       notification: { title: RENDERED.title, body: RENDERED.body },
       data: { deepLink: RENDERED.deepLink },
+      android: {
+        notification: {
+          channelId: "noteschain-alerts-v1",
+          sound: "noteschain_calm_signal.wav",
+        },
+      },
+      apns: {
+        payload: {
+          aps: {
+            sound: "noteschain_calm_signal.wav",
+          },
+        },
+      },
     });
     expect(result).toEqual({ delivered: 2, pruned: 0 });
     expect(mockPrisma.pushToken.deleteMany).not.toHaveBeenCalled();

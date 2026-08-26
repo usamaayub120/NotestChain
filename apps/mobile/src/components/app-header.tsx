@@ -67,13 +67,14 @@ export function HeaderAddButton() {
       <Pressable
         ref={buttonRef}
         accessibilityRole="button"
-        accessibilityLabel="Create"
-        accessibilityHint="Start something new"
+        accessibilityLabel="Write a note"
+        accessibilityHint="Open writing options"
         accessibilityState={{ expanded: anchor !== null }}
         onPress={open}
         style={({ pressed }) => [local.addButton, pressed && local.pressed]}
       >
-        <Ionicons name="add" size={26} color={colors.ink} />
+        <Ionicons name="add" size={20} color={colors.ink} />
+        <Text style={[local.addLabel, { color: colors.ink, fontSize: 14 * fontScale }]}>Write</Text>
       </Pressable>
 
       <Modal visible={anchor !== null} transparent animationType="fade" onRequestClose={close}>
@@ -115,9 +116,8 @@ export function HeaderAddButton() {
 const local = StyleSheet.create({
   brand: { flexDirection: "row", alignItems: "center", gap: 8 },
   wordmark: { fontWeight: "700", letterSpacing: -0.2 },
-  // 44x44 minimum touch target, per DESIGN_SYSTEM.md §14, even though the
-  // glyph inside is 26px.
-  addButton: { width: 44, height: 44, alignItems: "center", justifyContent: "center", borderRadius: 22 },
+  addButton: { minWidth: 68, minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 2, borderRadius: 24, paddingHorizontal: 6 },
+  addLabel: { fontWeight: "700" },
   pressed: { opacity: 0.6 },
   disabled: { opacity: 0.5 },
   menu: { position: "absolute", minWidth: 208, borderWidth: 1, borderRadius: 14, paddingVertical: 6, shadowOpacity: 0.16, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 12 },

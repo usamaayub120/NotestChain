@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { router } from "expo-router";
-import { View } from "react-native";
-import { Action, Screen, Subtitle, Title } from "@/src/components/ui";
+import { Text, View } from "react-native";
+import { Action, Eyebrow, Screen, Subtitle, Title } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
 import { markOnboardingSeen } from "@/src/lib/first-run";
 
@@ -12,16 +12,16 @@ import { markOnboardingSeen } from "@/src/lib/first-run";
  */
 const steps = [
   {
-    title: "Private until you decide",
-    body: "Drafts live here privately and autosave as you write. Nothing you write is visible to anyone else until you choose to submit it.",
+    title: "Write privately",
+    body: "Drafts are private and save automatically. You choose when to submit a note for review.",
   },
   {
-    title: "A moderator reviews before anything is kept",
-    body: "Submitting sends your draft for review. Approval does not publish anything by itself — only you do, with one more confirmation afterward.",
+    title: "Review comes before publishing",
+    body: "Submitting sends your note to moderation. Approval does not publish it. You confirm publication separately.",
   },
   {
-    title: "Kept means kept",
-    body: "Confirming publication writes your note to a public blockchain. It cannot be edited or deleted after that, and it may stay publicly accessible even if it's later hidden from the site. A pen name keeps your name off the page — it doesn't keep it from us.",
+    title: "Publishing is permanent",
+    body: "Publishing writes a public record to the blockchain. It cannot be edited or deleted. A pen name is public-facing; NotesChain can still associate it with your account.",
   },
 ];
 
@@ -32,9 +32,11 @@ export default function OnboardingScreen() {
   const finish = () => { void markOnboardingSeen(); router.replace("/"); };
   return <Screen insetTop clearsTabBar={false}>
     <View style={{ flex: 1, justifyContent: "center", gap: 20 }}>
+      <Eyebrow>How publishing works</Eyebrow>
       <View accessibilityRole="progressbar" accessibilityValue={{ min: 1, max: steps.length, now: step + 1 }} style={{ flexDirection: "row", gap: 6, justifyContent: "center" }}>
         {steps.map((_, i) => <View key={i} style={{ width: i === step ? 20 : 8, height: 8, borderRadius: 4, backgroundColor: i === step ? colors.brand : colors.border }} />)}
       </View>
+      <Text style={{ color: colors.muted, fontSize: 14, fontWeight: "700", textAlign: "center" }}>Step {step + 1} of {steps.length}</Text>
       <Title>{steps[step].title}</Title>
       <Subtitle>{steps[step].body}</Subtitle>
       <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useQuery } from "@tanstack/react-query";
 import { Link, router } from "expo-router";
-import { Text, View } from "react-native";
+import { Pressable, Text, View } from "react-native";
 import { api, apiPage, getToken } from "@/src/lib/api";
 import { cacheRead, cacheWrite } from "@/src/lib/offline";
 import type { Page, Publication } from "@/src/lib/models";
@@ -56,24 +56,17 @@ export default function HomeScreen() {
     <Screen refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
       <View style={{ gap: 10 }}>
         <Title>Thoughts worth keeping.</Title>
-        <Subtitle>Read ideas with a record you can verify, whenever you need them.</Subtitle>
+        <Subtitle>Read notes with a record you can verify, whenever you need them.</Subtitle>
       </View>
 
-      <View style={styles.row}>
-        <View style={{ flex: 1 }}>
-          <Action title="Explore thoughts" onPress={() => router.push("/explore")} icon={<Ionicons name="compass-outline" size={19} color="#fff" />} />
-        </View>
-        <View style={{ width: 112 }}>
-          <Action title="Search" tone="secondary" icon={<Ionicons name="search-outline" size={18} color={colors.ink} />} onPress={() => router.push("/search")} />
-        </View>
-      </View>
+      <Action title="Explore notes" onPress={() => router.push("/explore")} icon={<Ionicons name="compass-outline" size={19} color="#fff" />} />
 
-      <Link href="/verify" style={{ color: colors.brand, fontWeight: "700", fontSize: 14 }}>Verify a note against the blockchain record →</Link>
+      <Link href="/verify" asChild><Pressable accessibilityRole="link" accessibilityLabel="Verify a note" accessibilityHint="Check a note against its public record"><Text style={{ color: colors.brand, fontWeight: "700", fontSize: 15 }}>Verify a note →</Text></Pressable></Link>
 
       <View style={{ gap: 2, marginTop: 10 }}>
-        <Eyebrow>{tab === "following" ? "Following" : "Recently kept"}</Eyebrow>
+        <Eyebrow>{tab === "following" ? "Following" : "Recent notes"}</Eyebrow>
         <Text style={{ color: colors.ink, fontFamily: "serif", fontSize: 24, fontWeight: "700" }}>
-          {tab === "following" ? "Notes from Keepers you follow" : "Latest notes"}
+          {tab === "following" ? "Notes from authors you follow" : "Latest notes"}
         </Text>
       </View>
 
@@ -101,7 +94,7 @@ export default function HomeScreen() {
       ) : query.data?.length ? (
         query.data.map((item) => <PublicationCard key={item.id} publication={item} />)
       ) : tab === "following" ? (
-        <EmptyNotes title="Nothing new yet" detail="Follow a few Keepers to see their notes here." />
+        <EmptyNotes title="Nothing new yet" detail="Follow a few authors to see their notes here." />
       ) : (
         <EmptyNotes title="No notes cached yet" detail="Connect to NotesChain to begin reading." />
       )}

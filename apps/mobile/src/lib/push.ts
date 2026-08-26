@@ -6,6 +6,8 @@ import { api, getToken } from "@/src/lib/api";
 
 const LAST_REGISTERED_KEY = "noteschain.push.lastRegisteredToken";
 const DIAGNOSTIC_KEY = "noteschain.push.lastAttempt";
+const NOTIFICATION_CHANNEL_ID = "noteschain-alerts-v1";
+const NOTIFICATION_SOUND = "noteschain_calm_signal.wav";
 
 /**
  * Notifications alert, play a sound, and update no badge while the app is
@@ -102,9 +104,14 @@ async function getNativeDeviceToken(): Promise<string | null> {
     // Required before Android 8+ will deliver anything, independent of the
     // permission prompt below.
     try {
-      await Notifications.setNotificationChannelAsync("default", {
-        name: "NotesChain",
+      // Android locks a channel's sound after it has been created. This is a
+      // versioned ID so existing installations move from the old default
+      // channel to this calm, app-specific signal after the native update.
+      await Notifications.setNotificationChannelAsync(NOTIFICATION_CHANNEL_ID, {
+        name: "NotesChain alerts",
+        description: "Comments, moderation decisions, published notes, and new followers.",
         importance: Notifications.AndroidImportance.DEFAULT,
+        sound: NOTIFICATION_SOUND,
       });
     } catch (e) {
       await recordDiagnostic({

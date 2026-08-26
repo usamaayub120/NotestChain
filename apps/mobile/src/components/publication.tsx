@@ -13,12 +13,13 @@ export function PublicationCard({ publication }: { publication: Publication }) {
   return <Link href={`/note/${publication.id}`} asChild><Pressable
     accessibilityRole="link"
     accessibilityLabel={`${title}, by ${byline}, ${date}`}
+    accessibilityHint="Opens this note"
     style={({ pressed }) => [local.card, { borderColor: colors.border, backgroundColor: colors.surface, shadowColor: colors.ink }, pressed && local.pressed]}
   >
     <View style={local.meta}><Text style={[local.byline, { color: colors.canopy, fontSize: 13 * fontScale }]}>{byline}</Text><Text style={[local.dot, { color: colors.muted }]}>•</Text><Text style={[local.date, { color: colors.muted, fontSize: 13 * fontScale }]}>{date}</Text></View>
     <Text style={[local.title, { color: colors.ink, fontSize: 22 * fontScale }]}>{title}</Text>
     <Text numberOfLines={3} style={[styles.subtitle, { color: colors.muted, fontSize: 15 * fontScale }]}>{publication.excerpt}</Text>
-    <View style={local.footer}><View style={local.tags}>{publication.tags.slice(0, 2).map((tag) => <Text key={tag} style={[local.tag, { color: colors.muted, fontSize: 13 * fontScale }]}>#{tag}</Text>)}</View><Ionicons name="arrow-forward" size={17} color={colors.brand} importantForAccessibility="no" /></View>
+    <View style={local.footer}><View style={local.tags}>{publication.tags.slice(0, 2).map((tag) => <Text key={tag} style={[local.tag, { color: colors.muted, fontSize: 13 * fontScale }]}>#{tag}</Text>)}</View><View style={local.readNote}><Text style={[local.readNoteLabel, { color: colors.brand, fontSize: 13 * fontScale }]}>Read note</Text><Ionicons name="arrow-forward" size={17} color={colors.brand} importantForAccessibility="no" /></View></View>
   </Pressable></Link>;
 }
 
@@ -40,6 +41,6 @@ export function EmptyNotes({ title, detail }: { title: string; detail: string })
 const local = StyleSheet.create({
   card: { marginBottom: 12, borderWidth: 1, borderRadius: 16, padding: 16, gap: 7, shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1 },
   pressed: { opacity: 0.78 }, meta: { flexDirection: "row", gap: 6, alignItems: "center" }, byline: { fontWeight: "700", fontSize: 13 }, dot: {}, date: { fontSize: 13 },
-  title: { fontFamily: "serif", fontSize: 22, fontWeight: "700", lineHeight: 27 }, footer: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 2 }, tags: { flexDirection: "row", gap: 6, flex: 1 }, tag: { fontSize: 13 },
+  title: { fontFamily: "serif", fontSize: 22, fontWeight: "700", lineHeight: 27 }, footer: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 2 }, tags: { flexDirection: "row", gap: 6, flex: 1 }, tag: { fontSize: 13 }, readNote: { flexDirection: "row", alignItems: "center", gap: 3 }, readNoteLabel: { fontWeight: "700" },
   empty: { alignItems: "center", borderWidth: 1, borderStyle: "dashed", borderRadius: 16, padding: 28, gap: 8 }, emptyTitle: { fontSize: 17, fontWeight: "700" }, emptyDetail: { textAlign: "center" },
 });

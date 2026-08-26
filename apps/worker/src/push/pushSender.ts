@@ -16,6 +16,8 @@ const UNREGISTERED_ERROR_CODES = new Set([
   "messaging/registration-token-not-registered",
   "messaging/invalid-registration-token",
 ]);
+const ANDROID_NOTIFICATION_CHANNEL_ID = "noteschain-alerts-v1";
+const NOTIFICATION_SOUND = "noteschain_calm_signal.wav";
 
 export interface SendResult {
   /** How many devices actually received it — 0 with no error is a normal outcome (nobody has the app installed). */
@@ -48,6 +50,19 @@ export async function sendPushToUser(userId: string, rendered: RenderedPush): Pr
     tokens: tokens.map((t) => t.token),
     notification: { title: rendered.title, body: rendered.body },
     data: { deepLink: rendered.deepLink },
+    android: {
+      notification: {
+        channelId: ANDROID_NOTIFICATION_CHANNEL_ID,
+        sound: NOTIFICATION_SOUND,
+      },
+    },
+    apns: {
+      payload: {
+        aps: {
+          sound: NOTIFICATION_SOUND,
+        },
+      },
+    },
   });
 
   const staleIds: string[] = [];

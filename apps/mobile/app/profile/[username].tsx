@@ -34,7 +34,7 @@ export default function ProfileScreen() {
           <Text style={{ color: colors.ink, fontSize: 28 }}>{profile.displayName.slice(0, 1).toUpperCase()}</Text>
         </View>
         <Title>{profile.displayName}</Title>
-        <Subtitle>@{profile.username} · {profile.isPrimary ? "Keeper profile" : "Pen name"}</Subtitle>
+        <Subtitle>@{profile.username} · {profile.isPrimary ? "Primary profile" : "Pen name"}</Subtitle>
         {profile.bio ? <Text style={{ color: colors.ink, textAlign: "center" }}>{profile.bio}</Text> : null}
         {(profile.location || profile.pronouns) && (
           <Subtitle>{[profile.location, profile.pronouns].filter(Boolean).join(" · ")}</Subtitle>

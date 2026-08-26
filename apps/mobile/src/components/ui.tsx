@@ -9,7 +9,7 @@ import { useTheme } from "@/src/lib/theme";
  * mobile-navigation.tsx so the bar and the scroll padding that clears it can
  * never drift apart.
  */
-export const TAB_BAR_HEIGHT = 60;
+export const TAB_BAR_HEIGHT = 68;
 /** Floor for the bottom inset on devices that report none (older Androids). */
 export const MIN_BOTTOM_INSET = 12;
 /** Base gutter on every screen, mirrored in styles.screen below. */

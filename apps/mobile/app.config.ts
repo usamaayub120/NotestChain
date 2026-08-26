@@ -77,7 +77,15 @@ export default (_ctx: ConfigContext): ExpoConfig => ({
     "expo-router",
     "expo-secure-store",
     "expo-sqlite",
-    "expo-notifications",
+    [
+      "expo-notifications",
+      {
+        // This short, custom signal is bundled into both native clients. It
+        // must be included at build time; an OTA update cannot add it.
+        sounds: ["./assets/sounds/noteschain_calm_signal.wav"],
+        defaultChannel: "noteschain-alerts-v1",
+      },
+    ],
     // Expo SDK 52's default template still targets API 34; Play Console now
     // requires 35 for any new release (raised after this SDK's templates
     // were set, so it has to be overridden explicitly rather than relying

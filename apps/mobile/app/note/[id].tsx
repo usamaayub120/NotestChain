@@ -180,7 +180,7 @@ export default function NoteScreen() {
           <Link href={`/profile/${note.author.username}`} style={{ flexShrink: 1 }}>
             <Text style={{ color: colors.brand, fontWeight: "700", fontSize: 16 * fontScale }}>{note.author.displayName}</Text>
             <Text style={{ color: colors.muted, fontSize: 13 * fontScale }}>
-              {"\n"}@{note.author.username} · {note.author.isPrimary ? "Keeper profile" : "Pen name"}
+              {"\n"}@{note.author.username} · {note.author.isPrimary ? "Primary profile" : "Pen name"}
             </Text>
           </Link>
           <FollowButton username={note.author.username} />

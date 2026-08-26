@@ -240,7 +240,19 @@ ssh -i <private_key_path from ssh-config.toml> <username>@<host>
   `FIREBASE_SERVICE_ACCOUNT_PATH=/run/secrets/firebase-service-account.json`
   in the compose file. Not present on the box until this feature's first
   deploy adds it — until then the worker just logs a startup warning and
-  queues pushes it can't yet send (see `.env.example`).
+  queues pushes it can't yet send (see `.env.example`). After creating or
+  replacing it, grant read access to the container's unprivileged
+  `noteschain` group without exposing the key to every process on the host:
+
+  ```sh
+  worker_gid=$(docker exec noteschain id -g noteschain)
+  sudo chown root:"$worker_gid" /home/codexops/noteschain/secrets/firebase-service-account.json
+  sudo chmod 640 /home/codexops/noteschain/secrets/firebase-service-account.json
+  ```
+
+  Never print or copy the key while doing this. A `0600` file owned by the
+  host operator cannot be read by the worker and leaves push jobs retrying
+  with `EACCES`.
 - `/home/codexops/noteschain/.env` — a **stale, unused** leftover from
   before this was moved to docker-compose. Nothing reads it. Don't edit it
   expecting an effect; if it's ever in the way, confirm it's still unused

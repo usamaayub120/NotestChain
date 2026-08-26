@@ -12,7 +12,8 @@ export type AppColors = {
 
 export const lightColors: AppColors = {
   ink: "#201e1b", muted: "#6f695d", border: "#ddd5c4", paper: "#f6f1e8", surface: "#ffffff", elevated: "#fbf8f2",
-  brand: "#e1502f", canopy: "#1f3327", glow: "#f0c48b", danger: "#c4361f", soft: "#ede7db", success: "#3f6b4c",
+  // Meets WCAG AA against both the paper background and white button text.
+  brand: "#b9422b", canopy: "#1f3327", glow: "#f0c48b", danger: "#c4361f", soft: "#ede7db", success: "#3f6b4c",
   notice: "#fff5de", noticeBorder: "#edd6a7", noticeText: "#765016", iconSoft: "#fce1d9", placeholder: "#78716c",
 };
 

@@ -17,15 +17,15 @@ const GALLERY_THOUGHTS = KEPT_THOUGHTS.slice(0, 4);
 const FEATURES = [
   {
     title: "Drafts stay yours",
-    body: "Everything you write starts private — autosaved, versioned, and never public until you choose to submit it.",
+    body: "Every note starts private — autosaved, versioned, and never public until you choose to submit it.",
   },
   {
     title: "Publish your way",
-    body: "Under your own name, or a pen name nobody can trace back to you. You decide whether it's easy to find or just reachable by link.",
+    body: "Under your own name or a pen name. You decide whether a note is easy to find or reachable only by link.",
   },
   {
     title: "A public record, once you're sure",
-    body: "After a quick moderation check, approved thoughts are permanently kept on Solana — verifiable by anyone, forever.",
+    body: "After moderation, you choose whether to publish an approved note permanently on Solana — verifiable by anyone, forever.",
   },
 ];
 
@@ -68,7 +68,7 @@ export function HomePage() {
             <WritingMark className="mt-1 hidden h-16 w-14 shrink-0 text-verified md:block" />
           </div>
           <p className="mt-4 max-w-reading text-body text-muted-foreground md:text-lg">
-            Write privately. Publish intentionally. Keep meaningful thoughts verifiable.
+            Write privately. Publish intentionally. Keep meaningful notes verifiable.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
@@ -76,7 +76,7 @@ export function HomePage() {
               <Link to="/register">Start writing</Link>
             </Button>
             <Button asChild size="lg" variant="outline">
-              <Link to="/explore">Explore thoughts</Link>
+              <Link to="/explore">Explore notes</Link>
             </Button>
           </div>
         </div>
@@ -84,7 +84,7 @@ export function HomePage() {
 
       <RevealSection className="border-t border-border">
         <div className="mx-auto max-w-2xl px-4 py-14">
-          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">A few kept thoughts</h2>
+          <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">A few recent notes</h2>
           <div className="mt-5 grid gap-4 sm:grid-cols-2">
             {GALLERY_THOUGHTS.map((thought) => (
               <KeptThoughtCard key={thought} text={thought} />
@@ -96,7 +96,7 @@ export function HomePage() {
       <RevealSection className="border-t border-border bg-surface-elevated">
         <div className="mx-auto max-w-2xl px-4 py-16 text-center">
           <p className="font-display text-2xl leading-snug md:text-4xl">
-            Most of what you think today will be gone by next year.
+            Most of what you write today will be gone by next year.
             <br />A few things shouldn't be.
           </p>
           <p className="mt-4 text-muted-foreground">That's the whole idea.</p>
@@ -112,10 +112,10 @@ export function HomePage() {
             </div>
           ))}
           <Link to="/how-it-works" className="inline-block text-sm text-primary underline">
-            See exactly how a thought gets kept
+            See exactly how a note is published
           </Link>
           <Link to="/verify" className="block text-sm text-primary underline">
-            Verify a note against the blockchain record
+            Verify a note’s public record
           </Link>
         </div>
       </RevealSection>

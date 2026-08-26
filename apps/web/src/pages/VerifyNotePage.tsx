@@ -16,30 +16,33 @@ export function VerifyNotePage() {
 
   return (
     <div className="mx-auto max-w-reading px-4 py-8">
-      <h1 className="font-display text-3xl">Verify a note</h1>
+      <h1 className="font-display text-3xl">Check a note’s public record</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Paste a note's URL, a transaction signature, or its on-chain address, and we'll look it up and show it.
-        Nothing here is encrypted — a note's content either lives on-chain directly, or its hash does, and this
-        page verifies against that, it doesn't decrypt anything.
+        Paste a note URL, transaction signature, or record address. We’ll match it to the public record.
       </p>
 
       <form
-        className="mt-6 flex gap-2"
+        className="mt-6 flex items-end gap-2"
         onSubmit={(e) => {
           e.preventDefault();
           setSubmitted(input.trim());
         }}
       >
-        <Input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Note URL, signature, or address"
-          aria-label="Proof"
-        />
+        <div className="flex-1">
+          <label htmlFor="proof-input" className="mb-1 block text-sm font-medium">What do you want to verify?</label>
+          <Input
+            id="proof-input"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder="Note URL, signature, or address"
+            aria-describedby="proof-help"
+          />
+        </div>
         <Button type="submit" disabled={!input.trim()}>
           <Search size={16} /> Look up
         </Button>
       </form>
+      <p id="proof-help" className="mt-3 text-sm text-muted-foreground">You can paste a note link, a transaction signature, or a public record address.</p>
 
       {isFetching && (
         <div className="mt-8">

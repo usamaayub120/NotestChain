@@ -9,14 +9,14 @@ export function ExplorePage() {
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-6">
-      <h1 className="text-2xl">Explore</h1>
-      <p className="mt-1 text-sm text-muted-foreground">Recently kept thoughts.</p>
+      <h1 className="text-2xl">Explore notes</h1>
+      <p className="mt-1 text-sm text-muted-foreground">Recent notes from the NotesChain community.</p>
 
       <div className="mt-6">
         {isLoading && <CardSkeletonList />}
         {isError && <ErrorState onRetry={() => refetch()} />}
         {!isLoading && !isError && data?.data.length === 0 && (
-          <EmptyState title="Nothing's been kept yet" description="Be the first to publish something." />
+          <EmptyState title="No notes published yet" description="Be the first to publish a note." />
         )}
         <div className="space-y-3">
           {data?.data.map((pub) => (

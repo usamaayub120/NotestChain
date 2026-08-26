@@ -7,7 +7,7 @@ export const brand = {
   name: "NotesChain",
   tagline: "Thoughts worth keeping.",
   description:
-    "A public writing platform for publishing permanent, verifiable thoughts.",
+    "A public writing platform for publishing permanent, verifiable notes.",
   /** The operating entity behind NotesChain — used on legal pages and store listings. */
   legalEntity: "FreeSoul",
   supportEmail: "support@noteschain.org",

@@ -5,7 +5,7 @@ import { Linking, Text, View } from "react-native";
 import { api } from "@/src/lib/api";
 import type { ProofLookupResult } from "@/src/lib/models";
 import { PublicationCard } from "@/src/components/publication";
-import { Action, Card, Eyebrow, ErrorText, Field, Loading, Screen, Subtitle, Title, styles } from "@/src/components/ui";
+import { Action, Card, Eyebrow, ErrorText, Field, Loading, Notice, Screen, Subtitle, Title, styles } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
 
 export default function VerifyScreen() {
@@ -31,28 +31,33 @@ export default function VerifyScreen() {
           <Eyebrow>Verify</Eyebrow>
           <Ionicons name="shield-checkmark-outline" size={18} color={colors.brand} />
         </View>
-        <Title>Verify a note</Title>
+        <Title>Check a note’s public record</Title>
         <Subtitle>
-          Paste a note's URL, a transaction signature, or its on-chain address, and we'll look it up and show it.
-          Nothing here is encrypted — this checks against the on-chain record, it doesn't decrypt anything.
+          Paste a note URL, transaction signature, or record address. We’ll match it to the public record.
         </Subtitle>
       </View>
 
-      <Field
-        autoCapitalize="none"
-        autoCorrect={false}
-        placeholder="Note URL, signature, or address"
-        value={input}
-        onChangeText={setInput}
-        onSubmitEditing={() => setSubmitted(input.trim())}
-        returnKeyType="search"
-      />
+      <View style={{ gap: 7 }}>
+        <Text style={{ color: colors.ink, fontSize: 14, fontWeight: "700" }}>What do you want to verify?</Text>
+        <Field
+          accessibilityLabel="Note URL, transaction signature, or record address"
+          accessibilityHint="Paste a note link, transaction signature, or public record address"
+          autoCapitalize="none"
+          autoCorrect={false}
+          placeholder="Note URL, signature, or address"
+          value={input}
+          onChangeText={setInput}
+          onSubmitEditing={() => setSubmitted(input.trim())}
+          returnKeyType="search"
+        />
+      </View>
       <Action
         title="Look up"
         disabled={!input.trim()}
         icon={<Ionicons name="search" size={18} color="#fff" />}
         onPress={() => setSubmitted(input.trim())}
       />
+      {!submitted && <Notice>You can paste a note link, a transaction signature, or a public record address.</Notice>}
 
       {query.isFetching && <Loading label="Looking that up…" />}
 

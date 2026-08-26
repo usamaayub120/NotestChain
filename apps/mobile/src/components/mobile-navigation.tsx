@@ -27,6 +27,6 @@ export function MobileNavigation() {
 }
 
 const local = StyleSheet.create({
-  bar: { position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 6, paddingTop: 7, flexDirection: "row", alignItems: "stretch", borderTopWidth: 1, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: -3 }, elevation: 10 },
-  item: { width: "25%", minWidth: 0, alignItems: "center", justifyContent: "center", gap: 3, borderRadius: 10 }, pressed: { opacity: 0.72 }, label: { fontSize: 10, fontWeight: "700", lineHeight: 13, textAlign: "center" },
+  bar: { position: "absolute", bottom: 0, left: 0, right: 0, paddingHorizontal: 6, paddingTop: 8, flexDirection: "row", alignItems: "stretch", borderTopWidth: 1, shadowOpacity: 0.08, shadowRadius: 12, shadowOffset: { width: 0, height: -3 }, elevation: 10 },
+  item: { width: "25%", minWidth: 0, minHeight: 48, alignItems: "center", justifyContent: "center", gap: 3, borderRadius: 10 }, pressed: { opacity: 0.72 }, label: { fontSize: 12, fontWeight: "700", lineHeight: 15, textAlign: "center" },
 });

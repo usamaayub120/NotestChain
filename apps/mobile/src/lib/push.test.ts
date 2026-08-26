@@ -45,6 +45,7 @@ import { TEST_ONLY_KEYS, describePushDiagnostic, getPushDiagnostic, syncPushRegi
 const mockedGetPermissions = Notifications.getPermissionsAsync as jest.Mock;
 const mockedRequestPermissions = Notifications.requestPermissionsAsync as jest.Mock;
 const mockedGetDeviceToken = Notifications.getDevicePushTokenAsync as jest.Mock;
+const mockedSetChannel = Notifications.setNotificationChannelAsync as jest.Mock;
 const mockedSetItem = SecureStore.setItemAsync as jest.Mock;
 const mockedDeleteItem = SecureStore.deleteItemAsync as jest.Mock;
 const mockedApi = api as jest.Mock;
@@ -90,6 +91,17 @@ describe("syncPushRegistration", () => {
 
     expect(mockedRequestPermissions).toHaveBeenCalled();
     expect(mockedApi).toHaveBeenCalledWith("/push/tokens", { method: "POST", body: JSON.stringify({ token: "fcm-token-1", platform: "ANDROID" }) });
+  });
+
+  it("creates the versioned Android alert channel with NotesChain's custom sound", async () => {
+    await syncPushRegistration();
+
+    expect(mockedSetChannel).toHaveBeenCalledWith("noteschain-alerts-v1", {
+      name: "NotesChain alerts",
+      description: "Comments, moderation decisions, published notes, and new followers.",
+      importance: Notifications.AndroidImportance.DEFAULT,
+      sound: "noteschain_calm_signal.wav",
+    });
   });
 
   it("does not register when permission is denied", async () => {

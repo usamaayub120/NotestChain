@@ -40,7 +40,7 @@ export function SearchPage() {
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder={scope === "people" ? "Search Keepers and pen names…" : "Search titles, thoughts, tags…"}
+            placeholder={scope === "people" ? "Search authors and pen names…" : "Search note titles and tags…"}
             className="pl-9"
             aria-label="Search"
           />
@@ -126,7 +126,7 @@ function NotesResults({
         {isLoading && <CardSkeletonList />}
         {isError && <ErrorState onRetry={() => refetch()} />}
         {!isLoading && !isError && !params.get("q") && !tag && (
-          <EmptyState title="Search notes" description="Try a keyword, a tag, or an author's username." />
+          <EmptyState title="Search notes" description="Start with a title, a phrase you remember, a tag, or an author’s username." />
         )}
         {!isLoading && !isError && (params.get("q") || tag) && data?.data.length === 0 && (
           <EmptyState title="No results" description="Try a different keyword or check the spelling." />
@@ -148,7 +148,7 @@ function PeopleResults({ q }: { q: string }) {
   const { data, isLoading, isError, refetch } = useSearchPeople(q);
 
   if (!q.trim()) {
-    return <EmptyState title="Search for a Keeper" description="Search by username or display name." />;
+    return <EmptyState title="Search for an author" description="Search by username or display name." />;
   }
   if (isLoading) return <CardSkeletonList />;
   if (isError) return <ErrorState onRetry={() => refetch()} />;
@@ -174,7 +174,7 @@ function PeopleResults({ q }: { q: string }) {
             <span className="min-w-0 flex-1">
               <span className="block truncate font-medium text-foreground">{person.displayName}</span>
               <span className="block text-xs text-muted-foreground">
-                @{person.username} · {person.isPrimary ? "Keeper profile" : "Pen name"} · {person.publicationCount} kept
+                @{person.username} · {person.isPrimary ? "Primary profile" : "Pen name"} · {person.publicationCount} notes
               </span>
             </span>
           </Link>

@@ -101,7 +101,7 @@ function AppNavigator() {
     <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
     <Stack.Screen name="explore" options={ROOT_SCREEN} />
     <Stack.Screen name="search" options={ROOT_SCREEN} />
-    <Stack.Screen name="verify" options={{ title: "Verify a note" }} />
+    <Stack.Screen name="verify" options={{ title: "Verify" }} />
     <Stack.Screen name="account" options={{ ...ROOT_SCREEN, headerRight: () => null }} />
     <Stack.Screen name="drafts" options={{ title: "Your drafts" }} />
     <Stack.Screen name="draft/new" options={{ title: "New draft" }} />

@@ -28,7 +28,7 @@ export function ProfilePage({ usernameOverride }: { usernameOverride?: string } 
         </span>
         <h1 className="mt-3 font-display text-2xl">{profile.displayName}</h1>
         <p className="text-muted-foreground">
-          @{profile.username} · {profile.isPrimary ? "Keeper profile" : "Pen name"}
+          @{profile.username} · {profile.isPrimary ? "Primary profile" : "Pen name"}
         </p>
         {profile.bio && <p className="mt-2 max-w-sm text-sm">{profile.bio}</p>}
         {(profile.location || profile.pronouns || profile.gender || profile.birthDate) && (
@@ -45,7 +45,7 @@ export function ProfilePage({ usernameOverride }: { usernameOverride?: string } 
           </p>
         )}
         <p className="mt-2 text-sm text-muted-foreground">
-          {profile.publicationCount} kept · {profile.followerCount === null ? "New" : `${profile.followerCount.toLocaleString()} followers`} · joined{" "}
+          {profile.publicationCount} notes · {profile.followerCount === null ? "New" : `${profile.followerCount.toLocaleString()} followers`} · joined{" "}
           {new Date(profile.joinedAt).toLocaleDateString(undefined, { month: "short", year: "numeric" })}
         </p>
         <div className="mt-3">
