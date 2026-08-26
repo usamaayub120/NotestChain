@@ -3,7 +3,7 @@ import { Link, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { api, setToken } from "@/src/lib/api";
-import { unregisterPushToken } from "@/src/lib/push";
+import { syncPushRegistration, unregisterPushToken } from "@/src/lib/push";
 import { Action, Card, ErrorText, Eyebrow, Field, Loading, Screen, Subtitle, Title } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
 
@@ -18,7 +18,7 @@ export default function AccountScreen() {
   useEffect(() => { api<{ user: { email: string } }>("/auth/me").then((result) => setUser(result.user)).catch(() => setUser(null)); }, []);
   const login = async () => {
     setBusy(true); setError(undefined);
-    try { const result = await api<{ session: { token: string } }>("/auth/mobile/login", { method: "POST", body: JSON.stringify({ email, password, deviceName: "NotesChain mobile" }) }); await setToken(result.session.token); setUser({ email }); setPassword(""); }
+    try { const result = await api<{ session: { token: string } }>("/auth/mobile/login", { method: "POST", body: JSON.stringify({ email, password, deviceName: "NotesChain mobile" }) }); await setToken(result.session.token); setUser({ email }); setPassword(""); void syncPushRegistration(); }
     catch (err) { setError(err instanceof Error ? err.message : "Could not sign in."); }
     finally { setBusy(false); }
   };

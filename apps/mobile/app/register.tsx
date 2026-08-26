@@ -4,6 +4,7 @@ import * as Linking from "expo-linking";
 import { Switch, Text, View } from "react-native";
 import { api, setToken } from "@/src/lib/api";
 import { requestCaptcha } from "@/src/lib/captcha";
+import { syncPushRegistration } from "@/src/lib/push";
 import { Action, ErrorText, Field, Notice, Screen, Subtitle, Title } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
 import { webOrigin } from "@/src/lib/config";
@@ -44,6 +45,7 @@ export default function RegisterScreen() {
         }),
       });
       await setToken(result.session.token);
+      void syncPushRegistration();
       router.replace("/account");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not create account.");
