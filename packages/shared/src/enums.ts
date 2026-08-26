@@ -21,6 +21,19 @@ export const IdentityMode = {
 } as const;
 export type IdentityMode = (typeof IdentityMode)[keyof typeof IdentityMode];
 
+/**
+ * What a *new* byline picker should offer. ANONYMOUS is deliberately absent:
+ * every Keeper has a profile now, so there is always a non-anonymous choice.
+ * The enum value itself, IDENTITY_MODE_CODE's entry for it, and every code
+ * path that renders an already-published anonymous note all stay forever —
+ * see apps/worker/src/publishing/publishToChain.ts and AGENTS.md. This
+ * constant governs what clients show, not what the API accepts; the server
+ * keeps honoring ANONYMOUS on submit until ALLOW_ANONYMOUS_POSTING is turned
+ * off (apps/api/src/config/env.ts), so an already-installed mobile binary
+ * doesn't break the day this ships.
+ */
+export const SELECTABLE_IDENTITY_MODES = [IdentityMode.NAMED, IdentityMode.PSEUDONYMOUS] as const;
+
 export const Discoverability = { PUBLIC: "PUBLIC", UNLISTED: "UNLISTED" } as const;
 export type Discoverability = (typeof Discoverability)[keyof typeof Discoverability];
 

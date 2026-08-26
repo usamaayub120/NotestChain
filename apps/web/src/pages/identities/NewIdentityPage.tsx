@@ -3,10 +3,10 @@ import type { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useNavigate } from "react-router-dom";
 import { createIdentitySchema, type CreateIdentityInput } from "@noteschain/validation";
-import { IdentityType } from "@noteschain/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useCreateIdentity } from "@/hooks/useIdentities";
 import { ApiClientError } from "@/lib/api";
@@ -16,12 +16,15 @@ import { ApiClientError } from "@/lib/api";
 // stricter CreateIdentityInput output type the API expects.
 type IdentityFormValues = z.input<typeof createIdentitySchema>;
 
+// Every pen name created here IS a pen name — a REAL_NAME byline only ever
+// exists as the Keeper profile made at registration, and the API ignores
+// `type` on this route regardless of what's sent (identities.service.ts).
 export function NewIdentityPage() {
   const navigate = useNavigate();
   const createIdentity = useCreateIdentity();
   const form = useForm<IdentityFormValues, unknown, CreateIdentityInput>({
     resolver: zodResolver(createIdentitySchema),
-    defaultValues: { type: IdentityType.PSEUDONYM, username: "", displayName: "", bio: "", isVisible: true },
+    defaultValues: { username: "", displayName: "", bio: "", isVisible: true, showBirthDate: false, showGender: false },
   });
 
   async function onSubmit(values: CreateIdentityInput) {
@@ -29,6 +32,10 @@ export function NewIdentityPage() {
       await createIdentity.mutateAsync(values);
       navigate("/identities");
     } catch (err) {
+      if (err instanceof ApiClientError && err.status === 409) {
+        form.setError("username", { message: err.message });
+        return;
+      }
       const message = err instanceof ApiClientError ? err.message : "Something went wrong.";
       form.setError("root", { message });
     }
@@ -36,35 +43,13 @@ export function NewIdentityPage() {
 
   return (
     <div className="mx-auto max-w-md px-4 py-6">
-      <h1 className="text-2xl">New identity</h1>
+      <h1 className="text-2xl">New pen name</h1>
+      <p className="mt-1 text-sm text-muted-foreground">
+        Readers never see that this belongs to the same account as any of your other bylines.
+      </p>
 
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="mt-6 space-y-4" noValidate>
-          <FormField
-            control={form.control}
-            name="type"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Type</FormLabel>
-                <FormControl>
-                  <div className="grid grid-cols-2 gap-2">
-                    {[IdentityType.REAL_NAME, IdentityType.PSEUDONYM].map((type) => (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => field.onChange(type)}
-                        className={`rounded-md border px-3 py-2 text-sm ${field.value === type ? "border-primary bg-primary/10" : "border-border bg-surface"}`}
-                      >
-                        {type === IdentityType.REAL_NAME ? "Real name" : "Pseudonym"}
-                      </button>
-                    ))}
-                  </div>
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
           <FormField
             control={form.control}
             name="username"
@@ -72,7 +57,7 @@ export function NewIdentityPage() {
               <FormItem>
                 <FormLabel>Username</FormLabel>
                 <FormControl>
-                  <Input placeholder="lowercase-with-dashes" {...field} />
+                  <Input placeholder="lowercase-with-dashes" {...field} onChange={(e) => field.onChange(e.target.value.toLowerCase())} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -107,6 +92,114 @@ export function NewIdentityPage() {
             )}
           />
 
+          <FormField
+            control={form.control}
+            name="avatarUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Avatar URL</FormLabel>
+                <FormControl>
+                  <Input placeholder="Optional — a link to an image" {...field} value={field.value ?? ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="location"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Location</FormLabel>
+                <FormControl>
+                  <Input placeholder="Optional" {...field} value={field.value ?? ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="pronouns"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Pronouns</FormLabel>
+                <FormControl>
+                  <Input placeholder="Optional" {...field} value={field.value ?? ""} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="space-y-3 rounded-md border border-border p-4">
+            <p className="text-sm font-medium">Personal details</p>
+            <p className="text-xs text-muted-foreground">
+              Both are optional and stay off this pen name's profile until you turn them on here.
+            </p>
+
+            <FormField
+              control={form.control}
+              name="birthDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Birth date</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      name={field.name}
+                      ref={field.ref}
+                      onBlur={field.onBlur}
+                      value={field.value ? field.value.toISOString().slice(0, 10) : ""}
+                      onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : null)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="showBirthDate"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between gap-3 space-y-0">
+                  <FormLabel className="font-normal">Show birth date on profile</FormLabel>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="gender"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Gender</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Optional" {...field} value={field.value ?? ""} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="showGender"
+              render={({ field }) => (
+                <FormItem className="flex items-center justify-between gap-3 space-y-0">
+                  <FormLabel className="font-normal">Show gender on profile</FormLabel>
+                  <FormControl>
+                    <Switch checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          </div>
+
           {form.formState.errors.root && (
             <p role="alert" className="text-sm font-medium text-destructive">
               {form.formState.errors.root.message}
@@ -114,7 +207,7 @@ export function NewIdentityPage() {
           )}
 
           <Button type="submit" className="w-full" disabled={createIdentity.isPending}>
-            {createIdentity.isPending ? "Creating…" : "Create identity"}
+            {createIdentity.isPending ? "Creating…" : "Create pen name"}
           </Button>
         </form>
       </Form>

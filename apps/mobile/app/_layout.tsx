@@ -1,12 +1,15 @@
-import { Stack } from "expo-router";
+import { Stack, router } from "expo-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { AppState, Pressable, Text, View } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
+import * as Notifications from "expo-notifications";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { initialiseOfflineStore } from "@/src/lib/offline";
 import { syncQueuedMutations } from "@/src/lib/sync";
+import { syncPushRegistration } from "@/src/lib/push";
 import { MobileNavigation } from "@/src/components/mobile-navigation";
+import { HeaderAddButton, HeaderBrand } from "@/src/components/app-header";
 import { AppLockGate } from "@/src/components/app-lock-gate";
 import { hasPinSet } from "@/src/lib/app-lock";
 import { ThemeProvider, useTheme } from "@/src/lib/theme";
@@ -54,20 +57,52 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
+  useEffect(() => {
+    // Same event, same reasoning as the app-lock re-check above: a fresh
+    // sign-in doesn't remount this layout, so registration has to happen on
+    // every foreground transition, not just once at cold start. The upsert
+    // on the server means a redundant call here is harmless.
+    void syncPushRegistration();
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") void syncPushRegistration();
+    });
+    return () => sub.remove();
+  }, []);
+
+  useEffect(() => {
+    // A push notification tapped from the tray (app backgrounded or killed)
+    // opens the screen its payload points at — see packages/push's
+    // RenderedPush.deepLink, an expo-router path resolved the same way a
+    // noteschain:// deep link is.
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const deepLink = response.notification.request.content.data?.deepLink;
+      if (typeof deepLink === "string") router.push(deepLink as never);
+    });
+    return () => sub.remove();
+  }, []);
+
   return <SafeAreaProvider><QueryClientProvider client={client}><ThemeProvider>
     {pinSet === null ? null : locked ? <AppLockGate onUnlock={() => setLocked(false)} /> : <AppNavigator />}
   </ThemeProvider></QueryClientProvider></SafeAreaProvider>;
 }
 
+/**
+ * The four bottom-tab destinations show the brand lockup rather than a screen
+ * title — the tab bar already names them, and this is the "logo + app name on
+ * the left" top bar. Every other screen keeps the stack's back button and its
+ * own title in that slot.
+ */
+const ROOT_SCREEN = { headerTitle: "", headerLeft: () => <HeaderBrand /> } as const;
+
 function AppNavigator() {
   const { colors } = useTheme();
-  return <View style={{ flex: 1, backgroundColor: colors.paper }}><Stack screenOptions={{ headerBackTitle: "Back", headerTintColor: colors.brand, headerStyle: { backgroundColor: colors.paper }, headerTitleStyle: { color: colors.ink, fontWeight: "700" }, headerShadowVisible: false, contentStyle: { backgroundColor: colors.paper } }}>
-    <Stack.Screen name="index" options={{ headerShown: false }} />
+  return <View style={{ flex: 1, backgroundColor: colors.paper }}><Stack screenOptions={{ headerBackTitle: "Back", headerTintColor: colors.brand, headerStyle: { backgroundColor: colors.paper }, headerTitleStyle: { color: colors.ink, fontWeight: "700" }, headerShadowVisible: false, contentStyle: { backgroundColor: colors.paper }, headerRight: () => <HeaderAddButton /> }}>
+    <Stack.Screen name="index" options={ROOT_SCREEN} />
     <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
-    <Stack.Screen name="explore" options={{ title: "Explore" }} />
-    <Stack.Screen name="search" options={{ title: "Search" }} />
+    <Stack.Screen name="explore" options={ROOT_SCREEN} />
+    <Stack.Screen name="search" options={ROOT_SCREEN} />
     <Stack.Screen name="verify" options={{ title: "Verify a note" }} />
-    <Stack.Screen name="account" options={{ title: "Account" }} />
+    <Stack.Screen name="account" options={{ ...ROOT_SCREEN, headerRight: () => null }} />
     <Stack.Screen name="drafts" options={{ title: "Your drafts" }} />
     <Stack.Screen name="draft/new" options={{ title: "New draft" }} />
     <Stack.Screen name="draft/[id]" options={{ title: "Edit draft" }} />
@@ -75,12 +110,14 @@ function AppNavigator() {
     <Stack.Screen name="profile/[username]" options={{ title: "Profile" }} />
     <Stack.Screen name="analytics" options={{ title: "Published notes" }} />
     <Stack.Screen name="bookmarks" options={{ title: "Saved notes" }} />
-    <Stack.Screen name="identities/index" options={{ title: "Public identities" }} />
-    <Stack.Screen name="identities/new" options={{ title: "New identity" }} />
+    <Stack.Screen name="identities/index" options={{ title: "Your bylines" }} />
+    <Stack.Screen name="identities/new" options={{ title: "New pen name" }} />
+    <Stack.Screen name="identities/[id]" options={{ title: "Edit" }} />
     <Stack.Screen name="register" options={{ title: "Create account" }} />
     <Stack.Screen name="forgot-password" options={{ title: "Reset password" }} />
     <Stack.Screen name="reset-password" options={{ title: "Choose password" }} />
     <Stack.Screen name="settings/index" options={{ title: "Settings" }} />
     <Stack.Screen name="settings/app-lock" options={{ title: "App lock" }} />
+    <Stack.Screen name="settings/delete-account" options={{ title: "Delete account" }} />
   </Stack><MobileNavigation /></View>;
 }

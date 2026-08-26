@@ -1,13 +1,43 @@
 import type { PropsWithChildren, ReactNode } from "react";
 import { useEffect, useRef } from "react";
 import { AccessibilityInfo, ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/src/lib/theme";
 
-export function Screen({ children, refreshing, onRefresh }: PropsWithChildren<{ refreshing?: boolean; onRefresh?: () => void }>) {
+/**
+ * Height of the bottom tab bar above its own safe-area padding. Shared with
+ * mobile-navigation.tsx so the bar and the scroll padding that clears it can
+ * never drift apart.
+ */
+export const TAB_BAR_HEIGHT = 60;
+/** Floor for the bottom inset on devices that report none (older Androids). */
+export const MIN_BOTTOM_INSET = 12;
+/** Base gutter on every screen, mirrored in styles.screen below. */
+const SCREEN_PADDING = 20;
+
+/**
+ * The one layout every screen renders through. It owns the display cutout —
+ * the region a status bar, notch or punch-hole camera occupies — so no screen
+ * has to think about it.
+ *
+ * The bottom inset is always applied. `insetTop` is only needed on the screens
+ * that render without a stack header (onboarding), since the header clears the
+ * top cutout for everything else. `clearsTabBar` adds room for the floating
+ * bottom bar, which hides itself outside the four root routes.
+ */
+export function Screen({ children, refreshing, onRefresh, insetTop = false, clearsTabBar = true }: PropsWithChildren<{
+  refreshing?: boolean;
+  onRefresh?: () => void;
+  insetTop?: boolean;
+  clearsTabBar?: boolean;
+}>) {
   const { colors } = useTheme();
+  const insets = useSafeAreaInsets();
+  const padTop = SCREEN_PADDING + (insetTop ? insets.top : 0);
+  const padBottom = SCREEN_PADDING + Math.max(insets.bottom, MIN_BOTTOM_INSET) + (clearsTabBar ? TAB_BAR_HEIGHT : 0);
   return <ScrollView
     style={{ backgroundColor: colors.paper }}
-    contentContainerStyle={[styles.screen, { backgroundColor: colors.paper }]}
+    contentContainerStyle={[styles.screen, { backgroundColor: colors.paper, paddingTop: padTop, paddingBottom: padBottom }]}
     keyboardShouldPersistTaps="handled"
     refreshControl={onRefresh ? <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} tintColor={colors.brand} colors={[colors.brand]} /> : undefined}
   >{children}</ScrollView>;
@@ -35,6 +65,29 @@ export function Action({ title, onPress, disabled, tone = "primary", icon, acces
     style={({ pressed }) => [styles.button, { backgroundColor: background, borderColor: tone === "secondary" ? colors.border : background, opacity: disabled ? 0.45 : pressed ? 0.82 : 1 }]}
   ><View style={styles.buttonInner}>{icon}{<Text style={[styles.buttonText, { color: foreground, fontSize: 16 * fontScale }]}>{title}</Text>}</View></Pressable>;
 }
+/**
+ * Icon-only control. The label does not disappear when the text does — it
+ * moves to accessibilityLabel, which is required for exactly that reason.
+ * Hit area is a fixed 44x44 (DESIGN_SYSTEM.md §14) regardless of glyph size.
+ */
+export function IconButton({ icon, accessibilityLabel, onPress, disabled, tone = "secondary", accessibilityRole = "button", accessibilityState, accessibilityHint }: {
+  icon: ReactNode; accessibilityLabel: string; onPress: () => void; disabled?: boolean;
+  tone?: "plain" | "secondary" | "primary";
+  accessibilityRole?: "button" | "switch"; accessibilityState?: { checked?: boolean }; accessibilityHint?: string;
+}) {
+  const { colors } = useTheme();
+  const background = tone === "primary" ? colors.brand : tone === "secondary" ? colors.soft : "transparent";
+  const border = tone === "plain" ? "transparent" : tone === "primary" ? colors.brand : colors.border;
+  return <Pressable
+    accessibilityRole={accessibilityRole}
+    accessibilityLabel={accessibilityLabel}
+    accessibilityHint={accessibilityHint}
+    accessibilityState={{ disabled, ...accessibilityState }}
+    disabled={disabled}
+    onPress={onPress}
+    style={({ pressed }) => [styles.iconButton, { backgroundColor: background, borderColor: border, opacity: disabled ? 0.45 : pressed ? 0.72 : 1 }]}
+  >{icon}</Pressable>;
+}
 export function Loading({ label = "Loading…" }: { label?: string }) { const { colors, fontScale } = useTheme(); return <View style={[styles.center, { backgroundColor: colors.paper }]}><ActivityIndicator color={colors.brand} /><Text style={[styles.subtitle, { color: colors.muted, fontSize: 15 * fontScale }]}>{label}</Text></View>; }
 export function Divider() { const { colors } = useTheme(); return <View style={[styles.divider, { backgroundColor: colors.border }]} />; }
 export function Card({ children, style }: PropsWithChildren<{ style?: React.ComponentProps<typeof View>["style"] }>) { const { colors } = useTheme(); return <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.surface, shadowColor: colors.ink }, style]}>{children}</View>; }
@@ -57,13 +110,14 @@ export function Skeleton({ style }: { style?: React.ComponentProps<typeof View>[
   return <Animated.View importantForAccessibility="no-hide-descendants" style={[{ backgroundColor: colors.soft, borderRadius: 6 }, style, { opacity }]} />;
 }
 export const styles = StyleSheet.create({
-  screen: { padding: 20, paddingBottom: 112, gap: 16, flexGrow: 1 },
+  screen: { padding: SCREEN_PADDING, gap: 16, flexGrow: 1 },
   title: { fontFamily: "serif", fontSize: 31, fontWeight: "700", letterSpacing: -0.5 },
   eyebrow: { fontSize: 12, fontWeight: "700", letterSpacing: 1.25, textTransform: "uppercase" },
   subtitle: { fontSize: 15, lineHeight: 22 }, error: { fontSize: 14, fontWeight: "600", lineHeight: 20 },
   notice: { borderRadius: 12, borderWidth: 1, padding: 14 }, noticeText: { lineHeight: 21 },
   field: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 16, minHeight: 52 },
   button: { minHeight: 52, borderWidth: 1, borderRadius: 12, alignItems: "center", justifyContent: "center", paddingHorizontal: 16 }, buttonInner: { flexDirection: "row", alignItems: "center", gap: 8 }, buttonText: { fontWeight: "700", fontSize: 16 },
+  iconButton: { width: 44, height: 44, borderWidth: 1, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   divider: { height: StyleSheet.hairlineWidth, marginVertical: 6 }, center: { flex: 1, minHeight: 280, padding: 32, alignItems: "center", justifyContent: "center", gap: 12 }, row: { flexDirection: "row", alignItems: "center", gap: 10 },
   card: { borderWidth: 1, borderRadius: 16, padding: 16, gap: 7, shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1 }
 });

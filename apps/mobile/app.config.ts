@@ -1,4 +1,14 @@
+import { existsSync } from "node:fs";
+import path from "node:path";
 import type { ConfigContext, ExpoConfig } from "expo/config";
+
+// Gitignored — present only once someone drops in the real file (see
+// android.googleServicesFile below) or a CI step writes it before a build
+// (.github/workflows/eas-android-release.yml). Referencing a path that
+// doesn't exist makes Expo warn on every command that reads this config, so
+// the key is included only when the file is actually there.
+const googleServicesFilePath = path.join(__dirname, "google-services.json");
+const hasGoogleServicesFile = existsSync(googleServicesFilePath);
 
 type AppEnv = "development" | "preview" | "production";
 const APP_ENV: AppEnv = (process.env.APP_ENV as AppEnv | undefined) ?? "production";
@@ -45,6 +55,15 @@ export default (_ctx: ConfigContext): ExpoConfig => ({
       foregroundImage: "./assets/adaptive-icon.png",
       backgroundColor: "#F6F1E8",
     },
+    // The Firebase Android client config — registers this app with FCM so a
+    // build can receive a push at all. Gitignored, same handling as
+    // google-service-account.json: not committed, dropped in locally by
+    // whoever has it and written from a CI secret before an EAS build (see
+    // .github/workflows/eas-android-release.yml). This is the client-side
+    // registration piece only — sending a push is a separate credential the
+    // worker holds (FIREBASE_SERVICE_ACCOUNT_PATH/_JSON), never this app.
+    // Until the file exists, the key is omitted entirely — see above.
+    ...(hasGoogleServicesFile ? { googleServicesFile: "./google-services.json" } : {}),
     intentFilters: [
       {
         action: "VIEW",
@@ -58,6 +77,7 @@ export default (_ctx: ConfigContext): ExpoConfig => ({
     "expo-router",
     "expo-secure-store",
     "expo-sqlite",
+    "expo-notifications",
     // Expo SDK 52's default template still targets API 34; Play Console now
     // requires 35 for any new release (raised after this SDK's templates
     // were set, so it has to be overridden explicitly rather than relying

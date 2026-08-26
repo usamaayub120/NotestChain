@@ -172,19 +172,22 @@ model User {
   commentReportsResolved CommentReport[]      @relation("CommentReportResolvedBy")
   emailJobs              EmailJob[]
   idempotencyKeys        IdempotencyKey[]
+  following              Follow[]             @relation("Following")
+  pushTokens             PushToken[]
+  pushJobs               PushJob[]
 
   @@index([status])
 }
 
 model Session {
-  id         String    @id @default(uuid())
+  id         String           @id @default(uuid())
   userId     String
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash  String    @unique
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash  String           @unique
   csrfSecret String
   transport  SessionTransport @default(WEB)
   deviceName String?
-  createdAt  DateTime  @default(now())
+  createdAt  DateTime         @default(now())
   expiresAt  DateTime
   revokedAt  DateTime?
   lastUsedAt DateTime?
@@ -233,24 +236,64 @@ model PasswordResetToken {
 
 // ── Identities ───────────────────────────────────────────────────────────
 
+/// A public byline. Exactly one row per user is the Keeper profile
+/// (isPrimary), created at registration; the rest are pen names. Readers
+/// cannot tell that two bylines belong to the same account, and nothing in
+/// any public DTO may expose userId — see the follow/comment rules in
+/// ARCHITECTURE.md.
 model PublicIdentity {
-  id          String       @id @default(uuid())
-  userId      String
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        IdentityType
-  username    String       @unique
-  displayName String
-  bio         String       @default("")
-  avatarUrl   String?
-  links       String[]     @default([])
-  isVisible   Boolean      @default(true)
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  id                String       @id @default(uuid())
+  userId            String
+  user              User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type              IdentityType
+  /// The Keeper profile. Enforced as at-most-one-per-user by a partial unique
+  /// index added by hand in the migration (Prisma cannot express a WHERE on a
+  /// @@unique). Immutable after creation: this row can never be deleted, and
+  /// a pen name can never be promoted into it.
+  isPrimary         Boolean      @default(false)
+  username          String       @unique
+  displayName       String
+  bio               String       @default("")
+  avatarUrl         String?
+  links             String[]     @default([])
+  location          String?
+  pronouns          String?
+  /// Optional, and hidden unless the owner explicitly turns the matching
+  /// show* flag on. Filling a field in is not the same as publishing it.
+  birthDate         DateTime?
+  showBirthDate     Boolean      @default(false)
+  gender            String?
+  showGender        Boolean      @default(false)
+  /// Set the first time a generated username is replaced. Users created by the
+  /// Keeper-profile backfill get one free rename; null means it is still owed.
+  usernameChangedAt DateTime?
+  isVisible         Boolean      @default(true)
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
 
   drafts       Draft[]
   publications Publication[]
+  comments     Comment[]
+  followers    Follow[]      @relation("FollowTarget")
 
   @@index([userId])
+}
+
+/// Follows target a byline, never an account, and the follower is always the
+/// account rather than one of its bylines: "who does this pen name follow"
+/// would otherwise fingerprint its owner. Follower lists are never
+/// enumerable publicly and a following list is visible only to its owner.
+model Follow {
+  id               String         @id @default(uuid())
+  followerUserId   String
+  follower         User           @relation("Following", fields: [followerUserId], references: [id], onDelete: Cascade)
+  targetIdentityId String
+  target           PublicIdentity @relation("FollowTarget", fields: [targetIdentityId], references: [id], onDelete: Cascade)
+  createdAt        DateTime       @default(now())
+
+  @@unique([followerUserId, targetIdentityId])
+  @@index([targetIdentityId])
+  @@index([followerUserId])
 }
 
 // ── Drafts ───────────────────────────────────────────────────────────────
@@ -404,6 +447,8 @@ model Publication {
 
   @@index([discoverability, isPlatformVisible, status])
   @@index([publicIdentityId])
+  // Covers the Following feed: publications for a set of bylines, newest first.
+  @@index([publicIdentityId, createdAt])
   @@index([privateAuthorUserId])
   @@index([createdAt])
   @@index([searchVector], type: Gin)
@@ -527,8 +572,13 @@ model Comment {
   descendants   Comment[] @relation("CommentRoot")
 
   authorUserId              String
-  author                    User    @relation("CommentAuthor", fields: [authorUserId], references: [id])
-  isAnonymous               Boolean @default(false)
+  author                    User            @relation("CommentAuthor", fields: [authorUserId], references: [id])
+  /// The byline this comment was posted under. Null only for comments made
+  /// before bylines existed, which keep rendering from the snapshot below
+  /// (and, for legacy isAnonymous rows, as "Anonymous").
+  publicIdentityId          String?
+  publicIdentity            PublicIdentity? @relation(fields: [publicIdentityId], references: [id], onDelete: Restrict)
+  isAnonymous               Boolean         @default(false)
   // Point-in-time snapshot, not a live join — a later commentDisplayName
   // change doesn't retroactively relabel past comments.
   authorDisplayNameSnapshot String?
@@ -545,6 +595,7 @@ model Comment {
   @@index([publicationId, parentCommentId, createdAt])
   @@index([rootCommentId])
   @@index([authorUserId])
+  @@index([publicIdentityId])
 }
 
 model CommentReport {
@@ -688,6 +739,84 @@ model EmailJob {
 
   @@index([status, nextAttemptAt])
   @@index([toUserId])
+}
+
+// ── Push notifications ──────────────────────────────────────────────────
+
+enum PushPlatform {
+  IOS
+  ANDROID
+}
+
+/// One row per device/app-install, not per user — a Keeper reading on two
+/// phones gets two rows. `token` is the raw native FCM registration token
+/// (from expo-notifications' getDevicePushTokenAsync, not an Expo push
+/// token) so the worker can call Firebase Admin's messaging API directly,
+/// with no Expo push-relay service in between. Unique on token rather than
+/// on (userId, token): a token belongs to a device, and a device can change
+/// which account is signed in — registering an already-known token just
+/// reassigns it (see push.service.ts).
+model PushToken {
+  id        String       @id @default(uuid())
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String       @unique
+  platform  PushPlatform
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([userId])
+}
+
+/// The complete set of pushes NotesChain sends. Deliberately a subset of
+/// EmailKind, not the same enum — WALLET_BALANCE_LOW (admin-only ops) and
+/// PASSWORD_RESET_REQUESTED (security-sensitive, must not depend on a push
+/// channel a device could intercept) stay email-only. NEW_FOLLOWER has no
+/// email equivalent at all — see the Follow privacy rules in
+/// ARCHITECTURE.md §4a for why this is still safe to send: the follower is
+/// always the recipient's own already-public Keeper profile, never a pen
+/// name, so nothing about a follower's other identities is ever revealed
+/// here.
+enum PushKind {
+  COMMENT_RECEIVED
+  PUBLICATION_APPROVED
+  PUBLICATION_REJECTED
+  PUBLICATION_CHANGES_REQUESTED
+  PUBLICATION_CHAIN_FINALIZED
+  NEW_FOLLOWER
+}
+
+enum PushJobStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
+/// The push equivalent of EmailJob — same claim/backoff shape (see
+/// apps/worker/src/push/claimPushJob.ts), same "enqueued in the same
+/// transaction as the business event, rendered at send time" rules. Targets
+/// a userId rather than one token: at send time the worker fans out to
+/// every PushToken currently registered for that user, and a user with zero
+/// registered devices is a normal SENT outcome, not a failure — most
+/// Keepers will never have installed the app at all.
+model PushJob {
+  id            String        @id @default(uuid())
+  kind          PushKind
+  userId        String
+  toUser        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data          Json
+  status        PushJobStatus @default(PENDING)
+  attempts      Int           @default(0)
+  maxAttempts   Int           @default(5)
+  nextAttemptAt DateTime      @default(now())
+  lastError     String?
+  sentAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([userId])
 }
 
 // ── Operational ──────────────────────────────────────────────────────────

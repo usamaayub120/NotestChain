@@ -32,6 +32,9 @@ export function toPublicationDTO(pub: PublicationWithRelations, viewerUserId?: s
           displayName: pub.publicIdentity.displayName,
           avatarUrl: pub.publicIdentity.avatarUrl,
           type: pub.publicIdentity.type,
+          // Lets a client label the byline "Keeper profile" vs. "Pen name"
+          // without a second request.
+          isPrimary: pub.publicIdentity.isPrimary,
         };
 
   const chain = pub.chainRecord;
@@ -75,6 +78,8 @@ export interface ListPublicationsOptions {
   page: number;
   pageSize: number;
   tag?: string;
+  /** Restricts to notes by these bylines — the Following feed's query shape. */
+  publicIdentityIds?: string[];
 }
 
 export async function listPublicPublications(options: ListPublicationsOptions) {
@@ -83,6 +88,7 @@ export async function listPublicPublications(options: ListPublicationsOptions) {
     discoverability: Discoverability.PUBLIC,
     status: { in: [...PUBLICLY_VISIBLE_STATUSES] },
     ...(options.tag ? { tags: { has: options.tag } } : {}),
+    ...(options.publicIdentityIds ? { publicIdentityId: { in: options.publicIdentityIds } } : {}),
   };
 
   const [items, total] = await Promise.all([

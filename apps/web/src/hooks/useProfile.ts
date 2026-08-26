@@ -8,10 +8,25 @@ export interface Profile {
   bio: string;
   avatarUrl: string | null;
   links: string[];
+  location: string | null;
+  pronouns: string | null;
+  /** Present only when the owner has turned its show* flag on. */
+  birthDate: string | null;
+  gender: string | null;
   type: "REAL_NAME" | "PSEUDONYM";
+  /** True for the Keeper's own profile, false for a pen name. */
+  isPrimary: boolean;
   publicationCount: number;
   commonTags: string[];
   joinedAt: string;
+  /**
+   * null below the visibility threshold — render "New", never 0. There is no
+   * endpoint that returns the follower list itself; see the API's
+   * follows.service.ts for why.
+   */
+  followerCount: number | null;
+  /** Only meaningful when signed in; false (not omitted) otherwise. */
+  isFollowing: boolean;
 }
 
 interface Paginated<T> {

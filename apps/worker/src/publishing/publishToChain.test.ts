@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { PublicKey } from "@solana/web3.js";
-import { chainFinalizedEmailJobInput } from "./publishToChain.js";
+import { chainFinalizedEmailJobInput, chainFinalizedPushJobInput } from "./publishToChain.js";
 
 /**
  * Only this pure helper is unit-tested here — the rest of
@@ -44,5 +44,32 @@ describe("chainFinalizedEmailJobInput", () => {
   it("keeps the recipient's email in the toEmail column only, not duplicated into the JSON payload", () => {
     const input = chainFinalizedEmailJobInput(publication, "writer@example.com", pda, null);
     expect(JSON.stringify(input.data)).not.toContain("writer@example.com");
+  });
+});
+
+/** Same reasoning as chainFinalizedEmailJobInput above — the matching push. */
+describe("chainFinalizedPushJobInput", () => {
+  const publication = { id: "pub-1", title: "A short thought", privateAuthorUserId: "user-1" };
+
+  it("builds a payload that satisfies the kind's own schema (buildPushJobData doesn't throw)", () => {
+    const input = chainFinalizedPushJobInput(publication);
+
+    expect(input.kind).toBe("PUBLICATION_CHAIN_FINALIZED");
+    expect(input.userId).toBe("user-1");
+  });
+
+  it("carries the publication id so the app can deep-link to the note on tap", () => {
+    const input = chainFinalizedPushJobInput(publication);
+    const data = input.data as { publicationId: string; publicationTitle: string };
+
+    expect(data.publicationId).toBe(publication.id);
+    expect(data.publicationTitle).toBe(publication.title);
+  });
+
+  it("needs no transaction signature or PDA — unlike the email, the push never shows either", () => {
+    // chainFinalizedPushJobInput takes only `publication`, so this is really
+    // asserting the function signature stays that way: nothing here should
+    // start requiring a pda/signature just because the email version does.
+    expect(chainFinalizedPushJobInput.length).toBe(1);
   });
 });

@@ -8,6 +8,8 @@ export interface TestSession {
   agent: ReturnType<typeof request.agent>;
   userId: string;
   csrfToken: string;
+  /** The Keeper profile created alongside the account. */
+  username: string;
 }
 
 function extractCookieValue(setCookieHeader: string | string[] | undefined, name: string): string {
@@ -21,20 +23,28 @@ function extractCookieValue(setCookieHeader: string | string[] | undefined, name
 let counter = 0;
 
 /** Registers a fresh user via the real HTTP endpoint (exercises the actual auth flow) and returns a cookie-jar-backed agent plus its CSRF token. */
-export async function registerAndLogin(app: Express, password = "a-strong-test-password-1"): Promise<TestSession> {
+export async function registerAndLogin(
+  app: Express,
+  password = "a-strong-test-password-1",
+  keeperProfile?: { username?: string; displayName?: string },
+): Promise<TestSession> {
   counter += 1;
   const email = `test-user-${Date.now()}-${counter}@noteschain.test`;
   const agent = request.agent(app);
 
-  const res = await agent
-    .post("/api/v1/auth/register")
-    .send({ email, password, captchaToken: "test-bypass-token", acceptedTerms: true });
+  const res = await agent.post("/api/v1/auth/register").send({
+    email,
+    password,
+    captchaToken: "test-bypass-token",
+    acceptedTerms: true,
+    ...keeperProfile,
+  });
   if (res.status !== 201) {
     throw new Error(`Register failed: ${res.status} ${JSON.stringify(res.body)}`);
   }
 
   const csrfToken = extractCookieValue(res.headers["set-cookie"], "nc_csrf");
-  return { agent, userId: res.body.data.user.id, csrfToken };
+  return { agent, userId: res.body.data.user.id, csrfToken, username: res.body.data.user.primaryIdentity.username };
 }
 
 export async function promoteRole(userId: string, role: Role): Promise<void> {
@@ -59,6 +69,14 @@ export async function resetTestDb(): Promise<void> {
     prisma.draft.deleteMany(),
     prisma.bookmark.deleteMany(),
     prisma.bookmarkCollection.deleteMany(),
+    // Comment.publicIdentityId is ON DELETE RESTRICT (a comment is public
+    // content — a byline delete must never silently orphan its attribution),
+    // so comments must go before the identities they reference. Follow rows
+    // cascade with their User/PublicIdentity, but are deleted explicitly here
+    // too for clarity.
+    prisma.commentReport.deleteMany(),
+    prisma.comment.deleteMany(),
+    prisma.follow.deleteMany(),
     prisma.publicIdentity.deleteMany(),
     prisma.session.deleteMany(),
     prisma.idempotencyKey.deleteMany(),

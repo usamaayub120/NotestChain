@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { MIN_BOTTOM_INSET, TAB_BAR_HEIGHT } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
 
 const items = [
@@ -16,7 +17,7 @@ export function MobileNavigation() {
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
   if (!items.some((item) => item.href === pathname)) return null;
-  return <View accessibilityRole="tablist" style={[local.bar, { borderColor: colors.border, backgroundColor: colors.paper, shadowColor: colors.ink, paddingBottom: Math.max(insets.bottom, 12), minHeight: 60 + Math.max(insets.bottom, 12) }]}>{items.map((item) => {
+  return <View accessibilityRole="tablist" style={[local.bar, { borderColor: colors.border, backgroundColor: colors.paper, shadowColor: colors.ink, paddingBottom: Math.max(insets.bottom, MIN_BOTTOM_INSET), minHeight: TAB_BAR_HEIGHT + Math.max(insets.bottom, MIN_BOTTOM_INSET) }]}>{items.map((item) => {
     const active = pathname === item.href;
     return <Pressable key={item.href} accessibilityRole="tab" accessibilityLabel={item.label} accessibilityState={{ selected: active }} onPress={() => router.replace(item.href)} style={({ pressed }) => [local.item, pressed && local.pressed]}>
       <Ionicons name={active ? item.activeIcon : item.icon} size={22} color={active ? colors.brand : colors.muted} />

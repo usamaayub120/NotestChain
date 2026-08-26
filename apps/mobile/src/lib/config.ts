@@ -12,3 +12,11 @@ export const appEnv: AppEnv = isAppEnv(extra?.appEnv) ? extra.appEnv : "producti
 export const apiOrigin: string = typeof extra?.apiOrigin === "string" && extra.apiOrigin ? extra.apiOrigin : "https://noteschain.org";
 export const webOrigin: string = typeof extra?.webOrigin === "string" && extra.webOrigin ? extra.webOrigin : "https://noteschain.org";
 export const apiRoot = `${apiOrigin}/api/v1`;
+
+/**
+ * Mirrors `brand.name` in packages/shared/src/brand.ts, which is the source of
+ * truth. The mobile workspace deliberately has no dependency on @noteschain/*
+ * yet (every DTO is hand-declared in src/lib/models.ts); until that changes,
+ * this is the one place the product name is written in the app.
+ */
+export const appName = "NotesChain";

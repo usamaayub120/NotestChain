@@ -23,6 +23,8 @@ import { tagsRouter } from "./modules/tags/tags.router.js";
 import { searchRouter } from "./modules/search/search.router.js";
 import { bookmarkCollectionsRouter, bookmarksRouter } from "./modules/bookmarks/bookmarks.router.js";
 import { commentsRouter } from "./modules/comments/comments.router.js";
+import { followsRouter } from "./modules/follows/follows.router.js";
+import { pushRouter } from "./modules/push/push.router.js";
 import { adminRouter } from "./modules/admin/admin.router.js";
 import { seoRouter } from "./modules/seo/seo.router.js";
 
@@ -98,6 +100,8 @@ export function createApp() {
   app.use("/api/v1/bookmarks", bookmarksRouter);
   app.use("/api/v1/bookmark-collections", bookmarkCollectionsRouter);
   app.use("/api/v1/comments", commentsRouter);
+  app.use("/api/v1/follows", followsRouter);
+  app.use("/api/v1/push", pushRouter);
   app.use("/api/v1/admin", adminRouter);
 
   app.use(notFoundHandler);

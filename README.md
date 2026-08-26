@@ -232,6 +232,15 @@ ssh -i <private_key_path from ssh-config.toml> <username>@<host>
   `/run/secrets/solana-publisher.json`. This path is separate from
   `/opt/noteschain` and predates the compose migration; leave it where it
   is rather than "tidying" it into `/opt`.
+- `/home/codexops/noteschain/secrets/firebase-service-account.json` — the
+  Firebase service account key push notifications send with (see
+  `ARCHITECTURE.md` §6a), mounted the same way as the Solana keypair above:
+  bind-mount read-only into the container at
+  `/run/secrets/firebase-service-account.json` and set
+  `FIREBASE_SERVICE_ACCOUNT_PATH=/run/secrets/firebase-service-account.json`
+  in the compose file. Not present on the box until this feature's first
+  deploy adds it — until then the worker just logs a startup warning and
+  queues pushes it can't yet send (see `.env.example`).
 - `/home/codexops/noteschain/.env` — a **stale, unused** leftover from
   before this was moved to docker-compose. Nothing reads it. Don't edit it
   expecting an effect; if it's ever in the way, confirm it's still unused

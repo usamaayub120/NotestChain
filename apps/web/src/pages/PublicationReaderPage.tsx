@@ -53,7 +53,7 @@ export function PublicationReaderPage() {
       <h1 className="font-display text-3xl">{publication.title}</h1>
 
       <div className="mt-3">
-        <AuthorBadge author={publication.author} timestamp={publication.createdAt} />
+        <AuthorBadge author={publication.author} timestamp={publication.createdAt} size="reader" />
       </div>
 
       <NoteContent

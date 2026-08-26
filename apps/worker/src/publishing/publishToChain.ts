@@ -14,6 +14,7 @@ import {
 } from "@noteschain/blockchain-client";
 import { IDENTITY_MODE_CODE, DISCOVERABILITY_CODE, type IdentityMode, type Discoverability } from "@noteschain/shared";
 import { EmailKind, buildEmailJobData } from "@noteschain/email";
+import { PushKind, buildPushJobData } from "@noteschain/push";
 import { prisma } from "../lib/prisma.js";
 import { logger as rootLogger } from "../lib/logger.js";
 import { env } from "../config/env.js";
@@ -203,6 +204,7 @@ export async function publishPublicationToChain(publicationId: string, jobId: st
     prisma.emailJob.create({
       data: chainFinalizedEmailJobInput(publication, publication.privateAuthor.email, publicationPda, signature),
     }),
+    prisma.pushJob.create({ data: chainFinalizedPushJobInput(publication) }),
   ]);
 
   log.info({ signature, publicationPda: publicationPda.toBase58() }, "Publication finalized on-chain");
@@ -236,6 +238,21 @@ export function chainFinalizedEmailJobInput(
     kind: EmailKind.PUBLICATION_CHAIN_FINALIZED,
     toEmail: authorEmail,
     toUserId: publication.privateAuthorUserId,
+    data: data as Prisma.InputJsonValue,
+  };
+}
+
+/** Same idea as chainFinalizedEmailJobInput, for the matching push — shared by both finalize paths for the same reason. */
+export function chainFinalizedPushJobInput(
+  publication: { id: string; title: string; privateAuthorUserId: string },
+): Prisma.PushJobUncheckedCreateInput {
+  const data = buildPushJobData(PushKind.PUBLICATION_CHAIN_FINALIZED, {
+    publicationId: publication.id,
+    publicationTitle: publication.title,
+  });
+  return {
+    kind: PushKind.PUBLICATION_CHAIN_FINALIZED,
+    userId: publication.privateAuthorUserId,
     data: data as Prisma.InputJsonValue,
   };
 }
@@ -298,6 +315,7 @@ async function tryVerifyExisting(
     prisma.emailJob.create({
       data: chainFinalizedEmailJobInput(publication, publication.privateAuthor.email, pda, knownTransactionSignature),
     }),
+    prisma.pushJob.create({ data: chainFinalizedPushJobInput(publication) }),
   ]);
   log.info({ pda: pda.toBase58() }, "Found already-finalized account — converged");
   return true;

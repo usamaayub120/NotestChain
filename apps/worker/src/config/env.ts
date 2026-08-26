@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { emailEnvShape, isSmtpConfigured } from "@noteschain/email";
+import { pushEnvShape } from "@noteschain/push";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
@@ -37,6 +38,7 @@ const envSchema = z.object({
   LOG_LEVEL: z.enum(["fatal", "error", "warn", "info", "debug", "trace"]).default("info"),
 
   ...emailEnvShape,
+  ...pushEnvShape,
 });
 
 export type WorkerEnv = z.infer<typeof envSchema>;

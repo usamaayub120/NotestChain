@@ -35,3 +35,31 @@ export function useSearchPublications(params: SearchParams) {
     enabled: Boolean(params.q || params.tag || params.author || params.identityMode),
   });
 }
+
+export interface PersonSearchResult {
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  bio: string;
+  /** True for a Keeper's own profile, false for a pen name. */
+  isPrimary: boolean;
+  publicationCount: number;
+}
+
+/**
+ * Keeper/pen-name search, separate from useSearchPublications: it searches
+ * PublicIdentity, not Publication, and never returns anything that could
+ * link two results to the same account (see the API's searchPeople).
+ */
+export function useSearchPeople(q: string) {
+  return useQuery({
+    queryKey: ["search", "people", q],
+    queryFn: async () => {
+      const res = await fetch(`/api/v1/search/people?q=${encodeURIComponent(q)}`, { credentials: "include" });
+      const payload = await res.json();
+      if (!res.ok) throw new Error(payload?.error?.message ?? "Search failed");
+      return payload as Paginated<PersonSearchResult>;
+    },
+    enabled: q.trim().length > 0,
+  });
+}

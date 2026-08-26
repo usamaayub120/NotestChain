@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { Flag, Trash2 } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,7 +25,13 @@ export function CommentItem({
   return (
     <div>
       <div className="flex items-center gap-2 text-sm">
-        <span className="font-medium text-foreground">{comment.isAnonymous ? "Anonymous" : comment.authorDisplayName}</span>
+        {comment.author ? (
+          <Link to={`/@${comment.author.username}`} className="font-medium text-foreground hover:underline">
+            {comment.author.displayName}
+          </Link>
+        ) : (
+          <span className="font-medium text-foreground">{comment.isAnonymous ? "Anonymous" : comment.authorDisplayName}</span>
+        )}
         <span className="text-muted-foreground" aria-hidden="true">
           ·
         </span>

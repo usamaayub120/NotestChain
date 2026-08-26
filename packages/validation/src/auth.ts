@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { LIMITS } from "@noteschain/shared";
+import { usernameSchema } from "./identities.js";
 
 // Deliberately permissive on password composition (length is what matters
 // most for entropy) but requires a minimum that Argon2id + rate limiting
@@ -10,6 +12,13 @@ export const registerSchema = z.object({
   acceptedTerms: z.literal(true, {
     errorMap: () => ({ message: "You must accept the Terms of Service and Privacy Policy." }),
   }),
+  // Every account gets a Keeper profile at registration. These stay optional
+  // on the wire so an already-installed mobile binary, which does not send
+  // them, keeps registering successfully — the server generates a handle from
+  // the email in that case and the owner renames it once. Tighten to required
+  // only after old clients have aged out.
+  username: usernameSchema.optional(),
+  displayName: z.string().trim().min(1).max(LIMITS.DISPLAY_NAME_MAX_LENGTH).optional(),
 });
 export type RegisterInput = z.infer<typeof registerSchema>;
 

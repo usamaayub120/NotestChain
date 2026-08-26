@@ -99,6 +99,11 @@ const draftFieldsSchema = z.object({
   title: titleField,
   content: bodyField,
   tags: z.array(tagSchema).max(LIMITS.MAX_TAGS_PER_PUBLICATION).optional().default([]),
+  // Still accepts ANONYMOUS on the wire — an already-installed mobile binary
+  // may submit it, and the server keeps honoring it until
+  // ALLOW_ANONYMOUS_POSTING is turned off (apps/api/src/config/env.ts). New
+  // pickers should offer only SELECTABLE_IDENTITY_MODES from
+  // @noteschain/shared, which excludes it.
   identityMode: z.enum([IdentityMode.NAMED, IdentityMode.PSEUDONYMOUS, IdentityMode.ANONYMOUS]),
   publicIdentityId: z.string().uuid().optional().nullable(),
   discoverability: z.enum([Discoverability.PUBLIC, Discoverability.UNLISTED]),

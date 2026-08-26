@@ -1,12 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { apiFetch, apiFetchPaginated } from "@/lib/api";
 
+export interface CommentAuthor {
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  /** True for the commenter's own Keeper profile, false for a pen name. */
+  isPrimary: boolean;
+}
+
 export interface CommentDTO {
   id: string;
   parentCommentId: string | null;
   rootCommentId: string | null;
   body: string | null;
   isRemoved: boolean;
+  /** Null for a legacy isAnonymous comment, which still renders as "Anonymous" — see authorDisplayName. */
+  author: CommentAuthor | null;
   authorDisplayName: string | null;
   isAnonymous: boolean;
   isOwn: boolean;
@@ -39,8 +49,8 @@ interface CreateCommentVariables {
   publicationId: string;
   body: string;
   parentCommentId?: string;
-  isAnonymous: boolean;
-  displayName?: string;
+  /** Which of the commenter's own bylines (Keeper profile or a pen name) to post under. */
+  publicIdentityId: string;
   captchaToken: string;
 }
 
@@ -53,9 +63,6 @@ export function useCreateComment() {
       queryClient.invalidateQueries({ queryKey: ["comments", variables.publicationId] });
       if (variables.parentCommentId) {
         queryClient.invalidateQueries({ queryKey: ["comments", "replies"] });
-      }
-      if (!variables.isAnonymous) {
-        queryClient.invalidateQueries({ queryKey: ["auth", "me"] });
       }
     },
   });

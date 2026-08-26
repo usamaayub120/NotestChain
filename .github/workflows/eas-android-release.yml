@@ -6,10 +6,18 @@ name: EAS Android Release Build
 #
 # Runs the Android build on GitHub's Linux runner via `eas build --local`,
 # which needs a Unix host and can't run on the Windows dev machine this repo
-# is normally worked from. Requires two repository secrets:
+# is normally worked from. Requires three repository secrets:
 #   - EXPO_TOKEN: an access token from
 #     https://expo.dev/accounts/<account>/settings/access-tokens, scoped to
 #     this Expo account, with permission to build for the noteschain project.
+#   - GOOGLE_SERVICES_JSON: the full content of the Firebase Android client
+#     config (Firebase Console -> Project Settings -> your Android app ->
+#     google-services.json), which registers the app with FCM for push
+#     notifications. Written to apps/mobile/google-services.json (gitignored)
+#     before the build, per app.config.ts's android.googleServicesFile --
+#     the build fails without it once the file is referenced. Not a secret
+#     credential in the traditional sense (no private key inside), but kept
+#     out of git the same way as the two below, rather than committed.
 #   - GOOGLE_SERVICE_ACCOUNT_KEY: the full JSON key file content for the
 #     Google Cloud service account linked in Play Console's API access
 #     settings. Linking it in Play Console only grants that service account
@@ -49,6 +57,12 @@ jobs:
       - name: Build workspace packages
         run: pnpm run build:packages
 
+      - name: Write Firebase Android client config
+        working-directory: apps/mobile
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: echo "$GOOGLE_SERVICES_JSON" > google-services.json
+
       - name: EAS build (local, production profile, Android)
         working-directory: apps/mobile
         run: |
@@ -85,3 +99,8 @@ jobs:
         if: always()
         working-directory: apps/mobile
         run: rm -f google-service-account.json
+
+      - name: Remove Firebase Android client config
+        if: always()
+        working-directory: apps/mobile
+        run: rm -f google-services.json

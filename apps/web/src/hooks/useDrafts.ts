@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { AutosaveInput, UpdateDraftInput } from "@noteschain/validation";
+import type { IdentityMode } from "@noteschain/shared";
 import { apiFetch } from "@/lib/api";
 
 export interface Draft {
@@ -8,7 +9,7 @@ export interface Draft {
   content: string;
   contentFormat?: "PLAINTEXT" | "MARKDOWN";
   tags: string[];
-  identityMode: "NAMED" | "PSEUDONYMOUS" | "ANONYMOUS";
+  identityMode: IdentityMode;
   publicIdentityId: string | null;
   discoverability: "PUBLIC" | "UNLISTED";
   status:

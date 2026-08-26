@@ -2,6 +2,7 @@ import { Discoverability } from "@noteschain/shared";
 import { prisma } from "../../lib/prisma.js";
 import { Errors } from "../../lib/apiError.js";
 import { PUBLICLY_VISIBLE_STATUSES, toPublicationDTO } from "../publications/publications.service.js";
+import { followerCountFor, isFollowing } from "../follows/follows.service.js";
 
 const COMMON_TAGS_LIMIT = 8;
 
@@ -22,13 +23,34 @@ function publicationWhere(identityId: string) {
   };
 }
 
-export async function getProfile(username: string) {
+/**
+ * The publicly visible half of the opt-in fields — birth date and gender are
+ * stored whenever the owner filled them in, but only leave this function when
+ * their matching show* flag is on. Filling a field in is not the same as
+ * publishing it, so there is no "owner view" shortcut here: this is the one
+ * function every visitor's response goes through, owner included.
+ */
+function toPublicProfileFields(identity: {
+  birthDate: Date | null;
+  showBirthDate: boolean;
+  gender: string | null;
+  showGender: boolean;
+}) {
+  return {
+    birthDate: identity.showBirthDate ? identity.birthDate : null,
+    gender: identity.showGender ? identity.gender : null,
+  };
+}
+
+export async function getProfile(username: string, viewerUserId?: string) {
   const identity = await getVisibleIdentity(username);
   const where = publicationWhere(identity.id);
 
-  const [publicationCount, publications] = await Promise.all([
+  const [publicationCount, publications, followerCount, viewerIsFollowing] = await Promise.all([
     prisma.publication.count({ where }),
     prisma.publication.findMany({ where, select: { tags: true } }),
+    followerCountFor(identity.id),
+    isFollowing(viewerUserId, identity.id),
   ]);
 
   const tagFrequency = new Map<string, number>();
@@ -48,10 +70,20 @@ export async function getProfile(username: string) {
     bio: identity.bio,
     avatarUrl: identity.avatarUrl,
     links: identity.links,
+    location: identity.location,
+    pronouns: identity.pronouns,
+    ...toPublicProfileFields(identity),
     type: identity.type,
+    // Tells the client whether this is the Keeper's own profile or a pen
+    // name — the byline "kind" label the note page and search results share.
+    isPrimary: identity.isPrimary,
     publicationCount,
     commonTags,
     joinedAt: identity.createdAt,
+    // null below the visibility threshold; see follows.service.ts. The
+    // client renders that as "New", never as zero.
+    followerCount,
+    isFollowing: viewerIsFollowing,
   };
 }
 

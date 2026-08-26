@@ -360,7 +360,6 @@ export function DraftEditorPage() {
           <TagInput value={tags} onChange={(next) => { setTags(next); persistMetadata({ tags: next }); }} />
           <div>
             <IdentityModeSelector
-              value={identityMode}
               identities={identities}
               publicIdentityId={publicIdentityId}
               onChange={(mode, pid) => {

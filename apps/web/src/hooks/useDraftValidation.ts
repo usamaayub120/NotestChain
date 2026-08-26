@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { LIMITS, charactersOverLimit, markdownToPlainText, utf8ByteLength } from "@noteschain/shared";
+import { IdentityMode, LIMITS, charactersOverLimit, markdownToPlainText, utf8ByteLength } from "@noteschain/shared";
 
 /**
  * Live validation for the draft editor, mirroring `draftInputSchema`
@@ -40,7 +40,7 @@ export interface DraftValidation {
 export function useDraftValidation(input: {
   title: string;
   content: string;
-  identityMode: "NAMED" | "PSEUDONYMOUS" | "ANONYMOUS";
+  identityMode: IdentityMode;
   publicIdentityId: string | null;
 }): DraftValidation {
   const { title, content, identityMode, publicIdentityId } = input;

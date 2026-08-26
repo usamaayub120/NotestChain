@@ -18,6 +18,19 @@ const envSchema = z.object({
     .transform((v) => v === "true"),
   CORS_ORIGIN: z.string().default("http://localhost:5173"),
 
+  // The last step of removing anonymous posting (both notes and comments).
+  // Both clients stop offering it well before this flips, but an older installed mobile
+  // binary can still submit it, so the server keeps accepting it until
+  // adoption is high enough. Flipping this to "false" closes the door via a
+  // container env change and a restart, with no image rebuild and no
+  // rollback needed to reverse it. Already-published anonymous notes and
+  // comments are unaffected either way: they are immutable and stay
+  // anonymous forever.
+  ALLOW_ANONYMOUS_POSTING: z
+    .string()
+    .optional()
+    .transform((v) => v !== "false"),
+
   AUTH_RATE_LIMIT_MAX: z.coerce.number().int().positive().default(10),
   AUTH_RATE_LIMIT_WINDOW_MS: z.coerce.number().int().positive().default(900_000),
 

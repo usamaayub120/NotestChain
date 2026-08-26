@@ -17,6 +17,7 @@ COPY packages/shared/package.json packages/shared/package.json
 COPY packages/validation/package.json packages/validation/package.json
 COPY packages/blockchain-client/package.json packages/blockchain-client/package.json
 COPY packages/email/package.json packages/email/package.json
+COPY packages/push/package.json packages/push/package.json
 
 RUN pnpm install --frozen-lockfile
 
@@ -33,6 +34,7 @@ COPY --from=deps /app/packages/shared/node_modules ./packages/shared/node_module
 COPY --from=deps /app/packages/validation/node_modules ./packages/validation/node_modules
 COPY --from=deps /app/packages/blockchain-client/node_modules ./packages/blockchain-client/node_modules
 COPY --from=deps /app/packages/email/node_modules ./packages/email/node_modules
+COPY --from=deps /app/packages/push/node_modules ./packages/push/node_modules
 COPY . .
 
 # Prisma client generation needs DATABASE_URL to be *set* (not reachable) at
@@ -82,6 +84,9 @@ COPY --from=build /app/packages/blockchain-client/node_modules ./packages/blockc
 COPY --from=build /app/packages/email/dist ./packages/email/dist
 COPY --from=build /app/packages/email/package.json ./packages/email/package.json
 COPY --from=build /app/packages/email/node_modules ./packages/email/node_modules
+COPY --from=build /app/packages/push/dist ./packages/push/dist
+COPY --from=build /app/packages/push/package.json ./packages/push/package.json
+COPY --from=build /app/packages/push/node_modules ./packages/push/node_modules
 COPY --from=build /app/prisma ./prisma
 # (no separate node_modules/.prisma copy needed — pnpm's node_modules/.pnpm
 # virtual store, already copied above, contains the generated client inline

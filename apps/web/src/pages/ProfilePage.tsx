@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useProfile, useProfilePublications } from "@/hooks/useProfile";
 import { PublicationCard } from "@/components/publication/PublicationCard";
+import { FollowButton } from "@/components/publication/FollowButton";
 import { CardSkeletonList } from "@/components/CardSkeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
@@ -26,11 +27,30 @@ export function ProfilePage({ usernameOverride }: { usernameOverride?: string } 
           )}
         </span>
         <h1 className="mt-3 font-display text-2xl">{profile.displayName}</h1>
-        <p className="text-muted-foreground">@{profile.username}</p>
-        {profile.bio && <p className="mt-2 max-w-sm text-sm">{profile.bio}</p>}
-        <p className="mt-2 text-sm text-muted-foreground">
-          {profile.publicationCount} kept · joined {new Date(profile.joinedAt).toLocaleDateString(undefined, { month: "short", year: "numeric" })}
+        <p className="text-muted-foreground">
+          @{profile.username} · {profile.isPrimary ? "Keeper profile" : "Pen name"}
         </p>
+        {profile.bio && <p className="mt-2 max-w-sm text-sm">{profile.bio}</p>}
+        {(profile.location || profile.pronouns || profile.gender || profile.birthDate) && (
+          <p className="mt-1 text-sm text-muted-foreground">
+            {[
+              profile.location,
+              profile.pronouns,
+              profile.gender,
+              profile.birthDate &&
+                new Date(profile.birthDate).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" }),
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        )}
+        <p className="mt-2 text-sm text-muted-foreground">
+          {profile.publicationCount} kept · {profile.followerCount === null ? "New" : `${profile.followerCount.toLocaleString()} followers`} · joined{" "}
+          {new Date(profile.joinedAt).toLocaleDateString(undefined, { month: "short", year: "numeric" })}
+        </p>
+        <div className="mt-3">
+          <FollowButton username={profile.username} isFollowing={profile.isFollowing} />
+        </div>
         {profile.commonTags.length > 0 && (
           <div className="mt-3 flex flex-wrap justify-center gap-2">
             {profile.commonTags.map((tag) => (

@@ -14,7 +14,7 @@ import { verifyCaptcha } from "../../lib/captcha.js";
 import { authRateLimit } from "../../middleware/rateLimit.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { recordAudit } from "../../lib/audit.js";
-import { AuthError, authenticateUser, deleteOwnAccount, registerUser, toPublicUser } from "./auth.service.js";
+import { AuthError, authenticateUser, deleteOwnAccount, registerUser, toPublicUser, toPublicUserWithProfile } from "./auth.service.js";
 import { createSession, refreshSession, revokeAllSessionsForUser, revokeSession } from "./session.service.js";
 import { requestPasswordReset, resetPassword } from "./passwordReset.service.js";
 import { clearSessionCookies, setSessionCookies } from "./cookies.js";
@@ -38,10 +38,13 @@ authRouter.post(
     const device = mobileDeviceSchema.parse(req.body);
     const captchaOk = await verifyCaptcha(input.captchaToken, req.ip);
     if (!captchaOk) throw Errors.badRequest("Captcha verification failed. Please try again.");
-    const user = await registerUser(input.email, input.password);
+    const { user, primaryIdentity } = await registerUser(input.email, input.password, {
+      username: input.username,
+      displayName: input.displayName,
+    });
     const session = await createSession(user.id, req, { transport: "MOBILE", deviceName: device.deviceName });
     await recordAudit({ actorUserId: user.id, action: "MOBILE_USER_REGISTERED", ipAddress: req.ip });
-    return ok(res, { user: toPublicUser(user), session: mobileSessionPayload(session) }, 201);
+    return ok(res, { user: toPublicUser(user, primaryIdentity), session: mobileSessionPayload(session) }, 201);
   }),
 );
 
@@ -55,7 +58,7 @@ authRouter.post(
       const user = await authenticateUser(input.email, input.password);
       const session = await createSession(user.id, req, { transport: "MOBILE", deviceName: device.deviceName });
       await recordAudit({ actorUserId: user.id, action: "MOBILE_LOGIN_SUCCESS", ipAddress: req.ip });
-      return ok(res, { user: toPublicUser(user), session: mobileSessionPayload(session) });
+      return ok(res, { user: await toPublicUserWithProfile(user), session: mobileSessionPayload(session) });
     } catch (err) {
       if (err instanceof AuthError) await recordAudit({ action: "MOBILE_LOGIN_FAILURE", metadata: { email: input.email }, ipAddress: req.ip });
       throw err;
@@ -92,11 +95,14 @@ authRouter.post(
     const input = registerSchema.parse(req.body);
     const captchaOk = await verifyCaptcha(input.captchaToken, req.ip);
     if (!captchaOk) throw Errors.badRequest("Captcha verification failed. Please try again.");
-    const user = await registerUser(input.email, input.password);
+    const { user, primaryIdentity } = await registerUser(input.email, input.password, {
+      username: input.username,
+      displayName: input.displayName,
+    });
     const session = await createSession(user.id, req);
     setSessionCookies(res, session);
     await recordAudit({ actorUserId: user.id, action: "USER_REGISTERED", ipAddress: req.ip });
-    return ok(res, { user: toPublicUser(user) }, 201);
+    return ok(res, { user: toPublicUser(user, primaryIdentity) }, 201);
   }),
 );
 
@@ -110,7 +116,7 @@ authRouter.post(
       const session = await createSession(user.id, req);
       setSessionCookies(res, session);
       await recordAudit({ actorUserId: user.id, action: "LOGIN_SUCCESS", ipAddress: req.ip });
-      return ok(res, { user: toPublicUser(user) });
+      return ok(res, { user: await toPublicUserWithProfile(user) });
     } catch (err) {
       if (err instanceof AuthError) {
         await recordAudit({
@@ -178,7 +184,7 @@ authRouter.get(
   requireAuth,
   asyncHandler(async (req, res) => {
     const user = await prisma.user.findUniqueOrThrow({ where: { id: req.auth!.userId } });
-    return ok(res, { user: toPublicUser(user) });
+    return ok(res, { user: await toPublicUserWithProfile(user) });
   }),
 );
 

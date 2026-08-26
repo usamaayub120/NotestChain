@@ -36,6 +36,17 @@ checks in this file; a successful build alone is not a release verification.
 - Native publishing is online-only and must keep the explicit irreversible
   confirmation. The app never receives a Solana private key.
 - Mobile administration/moderation remains on the responsive website.
+- Push notifications go through Firebase Cloud Messaging directly — the
+  worker holds a Firebase service account credential
+  (`FIREBASE_SERVICE_ACCOUNT_PATH`/`_JSON`, see `.env.example`) and calls
+  FCM via `firebase-admin`. There is no Expo push-relay service in this
+  design: the app registers its raw native FCM token
+  (`expo-notifications`' `getDevicePushTokenAsync`, not an Expo push token),
+  which requires `apps/mobile/google-services.json` (gitignored, a
+  different file from the Firebase service account key) to be present at
+  build time. Missing Firebase config never blocks anything else — the API
+  queues `PushJob` rows regardless, and the worker just logs a warning and
+  lets them retry with backoff (see `packages/push`).
 
 ## Changes that require a VPS release
 
@@ -94,7 +105,11 @@ require both the image update and the Prisma migrations:
 
    Do not run `prisma migrate dev`, database reset commands, or seed commands
    against production. Do not expose or move the mounted Solana publisher key
-   at `/home/codexops/noteschain/secrets/solana-publisher.json`.
+   at `/home/codexops/noteschain/secrets/solana-publisher.json`, or (once it
+   exists) the Firebase service account key mounted the same way at
+   `/home/codexops/noteschain/secrets/firebase-service-account.json` and
+   bind-mounted to `/run/secrets/firebase-service-account.json` — see
+   `README.md`'s deployment section for adding a new mounted secret.
 
 5. Verify before declaring success:
 
@@ -147,6 +162,14 @@ Before the first Google Play release:
    rollout. EAS/Play publication is an explicit external release action; do
    not make it without the owner's direction.
 
+Push notifications add two GitHub Actions secrets `.github/workflows/eas-android-release.yml`
+requires before a build succeeds: `GOOGLE_SERVICES_JSON` (the Firebase
+Android client config) and, on the worker side of a VPS deploy,
+`FIREBASE_SERVICE_ACCOUNT_PATH` pointing at a mounted service account key
+(see the VPS release procedure above). Both come from the same Firebase
+project, but are two different files — see the comment atop that workflow
+file for exactly where each one comes from in the Firebase console.
+
 ### Legal pages and account deletion (already implemented)
 
 `/privacy`, `/terms`, and `/delete-account` exist on `apps/web` (linked from
@@ -158,13 +181,16 @@ account/data deletion — Google Play requires both an in-app path and a
 public web page for this, not just a contact email, for any app that
 supports account creation. It's a soft delete (flips `AccountStatus` to
 `DELETED`, scrubs the account's email/password/comment name, prunes
-never-published drafts) rather than a hard row delete: `Publication` and
-`Comment` hold required, `ON DELETE RESTRICT` foreign keys to `User`, so the
-database itself refuses to fully delete anyone who ever published or
-commented — already-published content and its byline stay exactly as
-published, which is this product's core permanence promise, not a
-compliance gap. The Privacy Policy states this plainly as the one exception
-to "delete my data."
+never-published drafts, deletes every `Follow` row in both directions, and
+scrubs the optional profile fields — bio, avatar, links, location,
+pronouns, birth date, gender — from any byline it can't hard-delete)
+rather than a hard row delete: `Publication` and `Comment` hold required,
+`ON DELETE RESTRICT` foreign keys to `User`, so the database itself refuses
+to fully delete anyone who ever published or commented — already-published
+content and its byline (the display name and username themselves, not the
+profile embellishment around them) stay exactly as published, which is
+this product's core permanence promise, not a compliance gap. The Privacy
+Policy states this plainly as the one exception to "delete my data."
 
 For the Play Console **Data Safety** form, the inventory to transcribe:
 
@@ -172,16 +198,26 @@ For the Play Console **Data Safety** form, the inventory to transcribe:
 | --- | --- | --- | --- |
 | Email address | Yes | Email delivery provider (for delivery only) | Account, password reset |
 | Password | Yes, hashed (Argon2id), never shared | — | Account authentication |
-| Name (real name or pseudonym) + optional bio | Yes, only if the user sets up a public identity | Public (if published under it) | Attribution on published notes |
+| Username + display name (Keeper profile, created at registration) | Yes, always | Public | Attribution on published notes/comments; profile address |
+| Pen name(s): username, display name, optional bio/avatar URL/links | Yes, only if the user creates one | Public (if published under it) | An alternate byline, unlinkable by readers to the Keeper profile |
+| Location, pronouns (Keeper profile or a pen name) | Optional, user-entered | Public, only if set | Profile context the user chooses to share |
+| Birth date, gender (Keeper profile or a pen name) | Optional, user-entered | Public, only if the user separately turns on that field's own "show on profile" toggle | Profile context the user chooses to share |
 | Draft/note content | Yes | Public, only once published | The product itself |
+| Follow graph (who a Keeper follows) | Yes | Never shared — not even shown to the followed account, and visible only to the Keeper who made it | Powers the Following feed |
 | Device identifier (random, per-device) | Yes | — (one-way hashed server-side) | De-duplicating unique-reader counts, not advertising |
+| Push notification token | Yes, only if the user grants notification permission | Google/Firebase (FCM, delivery only — see `packages/push`) | Comment/moderation/follow/kept-note alerts. Deleted on sign-out and on account deletion; never shared for advertising. |
 | IP address | Yes, in server logs only | — | Security/abuse prevention |
 | Content published to the public Solana blockchain | Yes (title, excerpt, content hash — not the raw body for v2) | Public, permanently | Independent, third-party-verifiable proof a note existed at a given time |
 
-No location, contacts, photos/camera, or financial data are collected. No
+Location, birth date, gender, and the push notification token are the
+fields this table didn't carry before the Keeper/pen-name identity model
+and the push notification feature — re-run the Data Safety declaration and
+confirm the Privacy Policy names them before shipping a build that offers
+them. No contacts, photos/camera, or financial data are collected. No
 advertising or third-party data sale. Cloudflare Turnstile (bot-check at
-registration/comments) is the other third party besides the email provider
-and the Solana network itself.
+registration/comments), the email provider, and Google/Firebase (push
+delivery) are the third parties involved, besides the Solana network
+itself.
 
 ## Safety and source-of-truth notes
 

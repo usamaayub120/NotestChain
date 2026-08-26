@@ -52,6 +52,13 @@ export const LIMITS = {
   USERNAME_MIN_LENGTH: 3,
   USERNAME_MAX_LENGTH: 30,
   DISPLAY_NAME_MAX_LENGTH: 60,
+
+  // Optional profile fields. Short on purpose: a byline is an introduction,
+  // not a form. Gender is free text rather than an enum because a fixed list
+  // is a product opinion we have no reason to impose.
+  LOCATION_MAX_LENGTH: 60,
+  PRONOUNS_MAX_LENGTH: 30,
+  GENDER_MAX_LENGTH: 40,
   TAG_MAX_LENGTH: 24,
   MAX_TAGS_PER_PUBLICATION: 5,
   MODERATION_NOTE_MAX_LENGTH: 2000,

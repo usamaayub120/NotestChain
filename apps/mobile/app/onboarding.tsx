@@ -21,7 +21,7 @@ const steps = [
   },
   {
     title: "Kept means kept",
-    body: "Confirming publication writes your note to a public blockchain. It cannot be edited or deleted after that, and it may stay publicly accessible even if it's later hidden from the site. Anonymous notes are not anonymous to NotesChain itself.",
+    body: "Confirming publication writes your note to a public blockchain. It cannot be edited or deleted after that, and it may stay publicly accessible even if it's later hidden from the site. A pen name keeps your name off the page — it doesn't keep it from us.",
   },
 ];
 
@@ -30,7 +30,7 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState(0);
   const isLast = step === steps.length - 1;
   const finish = () => { void markOnboardingSeen(); router.replace("/"); };
-  return <Screen>
+  return <Screen insetTop clearsTabBar={false}>
     <View style={{ flex: 1, justifyContent: "center", gap: 20 }}>
       <View accessibilityRole="progressbar" accessibilityValue={{ min: 1, max: steps.length, now: step + 1 }} style={{ flexDirection: "row", gap: 6, justifyContent: "center" }}>
         {steps.map((_, i) => <View key={i} style={{ width: i === step ? 20 : 8, height: 8, borderRadius: 4, backgroundColor: i === step ? colors.brand : colors.border }} />)}

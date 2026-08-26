@@ -3,3 +3,4 @@ export * from "./enums.js";
 export * from "./limits.js";
 export * from "./markdown.js";
 export * from "./excerpt.js";
+export * from "./username.js";

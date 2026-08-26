@@ -13,7 +13,7 @@ const pageQuerySchema = z.object({
 profilesRouter.get(
   "/:username",
   asyncHandler(async (req, res) => {
-    const profile = await getProfile(requireParam(req, "username"));
+    const profile = await getProfile(requireParam(req, "username"), req.auth?.userId);
     return ok(res, profile);
   }),
 );

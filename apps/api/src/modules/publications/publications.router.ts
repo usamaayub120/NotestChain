@@ -24,6 +24,7 @@ import { resolveProof } from "./lookup.service.js";
 import { createReport } from "./reports.service.js";
 import { hashVisitorToken, recordView } from "./views.service.js";
 import { createComment, listTopLevelComments, setCommentsEnabled } from "../comments/comments.service.js";
+import { listFollowingIdentityIds } from "../follows/follows.service.js";
 
 export const publicationsRouter = Router();
 
@@ -40,6 +41,10 @@ const listQuerySchema = z.object({
   page: z.coerce.number().int().min(1).max(1000).optional().default(1),
   pageSize: z.coerce.number().int().min(1).max(50).optional().default(20),
   tag: z.string().trim().toLowerCase().max(24).optional(),
+  // "latest" (the default) is the existing global feed — unauthenticated
+  // visitors and the pre-follow-graph mobile app both keep working
+  // unchanged. "following" is new and requires a session.
+  feed: z.enum(["latest", "following"]).optional().default("latest"),
 });
 
 const myAnalyticsQuerySchema = z.object({
@@ -61,6 +66,19 @@ publicationsRouter.get(
   "/",
   asyncHandler(async (req, res) => {
     const query = listQuerySchema.parse(req.query);
+
+    if (query.feed === "following") {
+      if (!req.auth) throw Errors.unauthorized("Sign in to see notes from Keepers you follow.");
+      const publicIdentityIds = await listFollowingIdentityIds(req.auth.userId);
+      // Not following anyone yet: an empty result, not everyone else's notes —
+      // "following" must never silently fall back to the global feed.
+      if (publicIdentityIds.length === 0) {
+        return paginated(res, [], { page: query.page, pageSize: query.pageSize, total: 0 });
+      }
+      const { items, total } = await listPublicPublications({ ...query, publicIdentityIds });
+      return paginated(res, items, { page: query.page, pageSize: query.pageSize, total });
+    }
+
     const { items, total } = await listPublicPublications(query);
     return paginated(res, items, { page: query.page, pageSize: query.pageSize, total });
   }),

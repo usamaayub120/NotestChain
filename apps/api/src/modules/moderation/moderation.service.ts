@@ -2,6 +2,7 @@ import type { Prisma } from "@prisma/client";
 import { DraftStatus, ModerationAction } from "@noteschain/shared";
 import type { ModerationDecisionInput } from "@noteschain/validation";
 import { EmailKind, buildEmailJobData } from "@noteschain/email";
+import { PushKind, buildPushJobData } from "@noteschain/push";
 import { prisma } from "../../lib/prisma.js";
 import { Errors } from "../../lib/apiError.js";
 import { recordAudit } from "../../lib/audit.js";
@@ -105,6 +106,37 @@ function buildDecisionEmailJobData(action: ModerationAction, submissionTitle: st
   }
 }
 
+/**
+ * Same idea as buildDecisionEmailJobData, for the matching push — data is
+ * validated here at construction time (buildPushJobData), same as the email
+ * version's inline buildEmailJobData calls, so decideSubmission can pass the
+ * result straight to tx.pushJob.create without re-deriving K from a value
+ * TypeScript can no longer correlate kind and data through.
+ */
+function buildDecisionPushJobData(action: ModerationAction, submissionTitle: string, draftId: string, reason: string) {
+  switch (action) {
+    case ModerationAction.APPROVE:
+      return {
+        kind: PushKind.PUBLICATION_APPROVED,
+        data: buildPushJobData(PushKind.PUBLICATION_APPROVED, { draftId, publicationTitle: submissionTitle }),
+      };
+    case ModerationAction.REJECT:
+      return {
+        kind: PushKind.PUBLICATION_REJECTED,
+        data: buildPushJobData(PushKind.PUBLICATION_REJECTED, { draftId, publicationTitle: submissionTitle, reason }),
+      };
+    case ModerationAction.REQUEST_CHANGES:
+      return {
+        kind: PushKind.PUBLICATION_CHANGES_REQUESTED,
+        data: buildPushJobData(PushKind.PUBLICATION_CHANGES_REQUESTED, {
+          draftId,
+          publicationTitle: submissionTitle,
+          reason,
+        }),
+      };
+  }
+}
+
 export async function decideSubmission(
   moderatorUserId: string,
   submissionId: string,
@@ -124,6 +156,7 @@ export async function decideSubmission(
   const draft = await prisma.draft.findUniqueOrThrow({ where: { id: submission.draftId } });
   const nextStatus = transitionDraft(draft.status as DraftStatus, ACTION_TO_EVENT[action]);
   const emailJob = buildDecisionEmailJobData(action, submission.titleSnapshot, draft.id, input.reason);
+  const pushJob = buildDecisionPushJobData(action, submission.titleSnapshot, draft.id, input.reason);
 
   const result = await prisma.$transaction(async (tx) => {
     const updatedSubmission = await tx.submission.update({
@@ -156,6 +189,13 @@ export async function decideSubmission(
         // Prisma-free. It already validated this shape against the kind's
         // zod schema, which is the guarantee that makes this cast safe.
         data: emailJob.data as Prisma.InputJsonValue,
+      },
+    });
+    await tx.pushJob.create({
+      data: {
+        kind: pushJob.kind,
+        userId: submission.submittedBy.id,
+        data: pushJob.data as Prisma.InputJsonValue,
       },
     });
     return { submission: updatedSubmission, decision };

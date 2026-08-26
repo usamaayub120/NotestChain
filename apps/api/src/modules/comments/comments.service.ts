@@ -1,20 +1,29 @@
-import type { Comment, Prisma } from "@prisma/client";
+import type { Comment, Prisma, PublicIdentity } from "@prisma/client";
 import type { CreateCommentInput } from "@noteschain/validation";
 import { EmailKind, buildEmailJobData } from "@noteschain/email";
+import { PushKind } from "@noteschain/push";
 import { prisma } from "../../lib/prisma.js";
 import { Errors } from "../../lib/apiError.js";
 import { verifyCaptcha } from "../../lib/captcha.js";
 import { env } from "../../config/env.js";
+import { requireKeeperProfile } from "../identities/keeperProfile.service.js";
+import { enqueuePush } from "../push/push.service.js";
 
 const REPLY_INLINE_CAP = 50;
+
+type CommentWithByline = Comment & { publicIdentity: PublicIdentity | null };
 
 /**
  * Deliberately no "OP replied" badge here or anywhere downstream — even a
  * badge hidden only for anonymous publications would leak "no badge in
  * this thread ⇒ anonymous" as a side channel. isOwn only ever reflects the
  * requesting viewer's own comments, never the publication author's.
+ *
+ * The same reasoning now covers pen names: a badge shown only when the
+ * commenter's byline matches the note's byline would confirm a link between
+ * two identities that must otherwise stay unlinkable. Do not add one.
  */
-function toCommentDTO(comment: Comment, viewerUserId: string | undefined) {
+function toCommentDTO(comment: CommentWithByline, viewerUserId: string | undefined) {
   if (!comment.isVisible) {
     return {
       id: comment.id,
@@ -22,6 +31,7 @@ function toCommentDTO(comment: Comment, viewerUserId: string | undefined) {
       rootCommentId: comment.rootCommentId,
       body: null,
       isRemoved: true,
+      author: null,
       authorDisplayName: null,
       isAnonymous: false,
       isOwn: false,
@@ -29,13 +39,25 @@ function toCommentDTO(comment: Comment, viewerUserId: string | undefined) {
     };
   }
 
+  // Legacy rows (isAnonymous, no publicIdentityId) keep rendering exactly as
+  // they always have — never backfilled to a byline.
+  const author = comment.publicIdentity
+    ? {
+        username: comment.publicIdentity.username,
+        displayName: comment.publicIdentity.displayName,
+        avatarUrl: comment.publicIdentity.avatarUrl,
+        isPrimary: comment.publicIdentity.isPrimary,
+      }
+    : null;
+
   return {
     id: comment.id,
     parentCommentId: comment.parentCommentId,
     rootCommentId: comment.rootCommentId,
     body: comment.body,
     isRemoved: false,
-    authorDisplayName: comment.isAnonymous ? "Anonymous" : comment.authorDisplayNameSnapshot,
+    author,
+    authorDisplayName: comment.isAnonymous ? "Anonymous" : (author?.displayName ?? comment.authorDisplayNameSnapshot),
     isAnonymous: comment.isAnonymous,
     isOwn: viewerUserId !== undefined && viewerUserId === comment.authorUserId,
     createdAt: comment.createdAt,
@@ -62,6 +84,7 @@ export async function listTopLevelComments(
   const [items, total] = await Promise.all([
     prisma.comment.findMany({
       where,
+      include: { publicIdentity: true },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -74,6 +97,7 @@ export async function listTopLevelComments(
       const [replies, repliesTotal] = await Promise.all([
         prisma.comment.findMany({
           where: { rootCommentId: top.id },
+          include: { publicIdentity: true },
           orderBy: { createdAt: "asc" },
           take: REPLY_INLINE_CAP,
         }),
@@ -96,6 +120,7 @@ export async function listReplies(rootCommentId: string, page: number, pageSize:
   const [items, total] = await Promise.all([
     prisma.comment.findMany({
       where,
+      include: { publicIdentity: true },
       orderBy: { createdAt: "asc" },
       skip: (page - 1) * pageSize,
       take: pageSize,
@@ -104,6 +129,42 @@ export async function listReplies(rootCommentId: string, page: number, pageSize:
   ]);
 
   return { items: items.map((c) => toCommentDTO(c, viewerUserId)), total };
+}
+
+/**
+ * Resolves which byline a new comment is posted under.
+ *
+ * `publicIdentityId` is the current, preferred shape — any identity the
+ * commenter owns, Keeper profile or pen name. The legacy `isAnonymous` shape
+ * is still honored for an already-installed mobile binary: `false` becomes
+ * the commenter's Keeper profile, and `true` stays genuinely anonymous only
+ * while ALLOW_ANONYMOUS_POSTING is on (see AGENTS.md's ship-order note on
+ * closing this door once client adoption is high enough).
+ */
+async function resolveCommentByline(
+  authorUserId: string,
+  input: CreateCommentInput,
+): Promise<{ publicIdentityId: string | null; isAnonymous: boolean; legacyDisplayName: string | null }> {
+  if (input.publicIdentityId) {
+    const identity = await prisma.publicIdentity.findUnique({ where: { id: input.publicIdentityId } });
+    if (!identity || identity.userId !== authorUserId) {
+      throw Errors.badRequest("Selected byline does not belong to you.");
+    }
+    return { publicIdentityId: identity.id, isAnonymous: false, legacyDisplayName: null };
+  }
+
+  if (input.isAnonymous === true) {
+    if (!env.ALLOW_ANONYMOUS_POSTING) {
+      throw Errors.badRequest("Comment under your Keeper profile or a pen name.");
+    }
+    return { publicIdentityId: null, isAnonymous: true, legacyDisplayName: input.displayName ?? null };
+  }
+
+  // No byline specified and not explicitly anonymous: an older client's
+  // "post with account" path. Default to the commenter's own profile rather
+  // than rejecting a request that used to work.
+  const keeperProfile = await requireKeeperProfile(authorUserId);
+  return { publicIdentityId: keeperProfile.id, isAnonymous: false, legacyDisplayName: null };
 }
 
 export async function createComment(publicationId: string, authorUserId: string, input: CreateCommentInput) {
@@ -123,16 +184,14 @@ export async function createComment(publicationId: string, authorUserId: string,
   const captchaOk = await verifyCaptcha(input.captchaToken);
   if (!captchaOk) throw Errors.badRequest("Captcha verification failed. Please try again.");
 
-  let authorDisplayNameSnapshot: string | null = null;
-  if (!input.isAnonymous) {
-    const author = await prisma.user.findUniqueOrThrow({ where: { id: authorUserId } });
-    authorDisplayNameSnapshot = author.commentDisplayName ?? input.displayName ?? null;
-    if (!authorDisplayNameSnapshot) {
-      throw Errors.badRequest("A display name is required to comment under your name.");
-    }
-    if (!author.commentDisplayName) {
-      await prisma.user.update({ where: { id: authorUserId }, data: { commentDisplayName: authorDisplayNameSnapshot } });
-    }
+  const byline = await resolveCommentByline(authorUserId, input);
+
+  let authorDisplayNameSnapshot: string | null = byline.legacyDisplayName;
+  if (byline.publicIdentityId) {
+    const identity = await prisma.publicIdentity.findUniqueOrThrow({ where: { id: byline.publicIdentityId } });
+    // Snapshotted, not a live join — a later name change doesn't retroactively
+    // relabel past comments, same rule as the old commentDisplayName snapshot.
+    authorDisplayNameSnapshot = identity.displayName;
   }
 
   // Only the anonymity the COMMENTER chose is reflected here — never
@@ -148,10 +207,12 @@ export async function createComment(publicationId: string, authorUserId: string,
         parentCommentId: input.parentCommentId,
         rootCommentId,
         authorUserId,
-        isAnonymous: input.isAnonymous,
+        publicIdentityId: byline.publicIdentityId,
+        isAnonymous: byline.isAnonymous,
         authorDisplayNameSnapshot,
         body: input.body,
       },
+      include: { publicIdentity: true },
     });
 
     if (notifyAuthor) {
@@ -170,6 +231,11 @@ export async function createComment(publicationId: string, authorUserId: string,
             toUserId: publication.privateAuthorUserId,
             data: emailData as Prisma.InputJsonValue,
           },
+        });
+        await enqueuePush(tx, publication.privateAuthorUserId, PushKind.COMMENT_RECEIVED, {
+          publicationId,
+          publicationTitle: publication.title,
+          commenterName,
         });
       }
     }

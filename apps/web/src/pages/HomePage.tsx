@@ -7,6 +7,9 @@ import { WritingMark } from "@/components/marketing/WritingMark";
 import { KeptThoughtCard } from "@/components/marketing/KeptThoughtCard";
 import { KEPT_THOUGHTS } from "@/lib/keptThoughts";
 import { useScrollReveal } from "@/hooks/useScrollReveal";
+import { useCurrentUser } from "@/hooks/useAuth";
+import { HomeFeed } from "@/pages/HomeFeed";
+import { PageLoader, SESSION_CHECK_LOADER_DELAY_MS } from "@/components/Loader";
 import { cn } from "@/lib/utils";
 
 const GALLERY_THOUGHTS = KEPT_THOUGHTS.slice(0, 4);
@@ -18,7 +21,7 @@ const FEATURES = [
   },
   {
     title: "Publish your way",
-    body: "Under your name, a pseudonym, or anonymously. You decide whether it's easy to find or just reachable by link.",
+    body: "Under your own name, or a pen name nobody can trace back to you. You decide whether it's easy to find or just reachable by link.",
   },
   {
     title: "A public record, once you're sure",
@@ -43,6 +46,15 @@ function RevealSection({ children, className }: { children: ReactNode; className
 }
 
 export function HomePage() {
+  const { data: user, isLoading } = useCurrentUser();
+
+  // Delayed the same way RequireAuth is, so a warm session check doesn't
+  // flash a loader before the feed appears.
+  if (isLoading) return <PageLoader label="Loading" delayMs={SESSION_CHECK_LOADER_DELAY_MS} />;
+  // Signed-in visitors land on their feed, not the pitch for an account they
+  // already have. Marketing copy below is unauthenticated-only.
+  if (user) return <HomeFeed />;
+
   return (
     <div>
       <section className="relative overflow-hidden">

@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import type { IdentityMode } from "@noteschain/shared";
 import { apiFetch } from "@/lib/api";
 
 export interface PublicationAuthor {
@@ -6,6 +7,8 @@ export interface PublicationAuthor {
   displayName: string;
   avatarUrl: string | null;
   type: "REAL_NAME" | "PSEUDONYM";
+  /** True for the author's own Keeper profile, false for a pen name. */
+  isPrimary: boolean;
 }
 
 export interface PublicationChain {
@@ -23,7 +26,7 @@ export interface Publication {
   contentFormat?: "PLAINTEXT" | "MARKDOWN";
   excerpt: string;
   tags: string[];
-  identityMode: "NAMED" | "PSEUDONYMOUS" | "ANONYMOUS";
+  identityMode: IdentityMode;
   discoverability: "PUBLIC" | "UNLISTED";
   author: PublicationAuthor | null;
   status: string;
@@ -54,6 +57,15 @@ export function useExplorePublications(page = 1, tag?: string) {
   return useQuery({
     queryKey: ["publications", "explore", page, tag],
     queryFn: () => fetchPaginated<Publication>(`/publications?${params.toString()}`),
+  });
+}
+
+/** The home feed's Following tab. Requires a session; see the API's 401 when signed out. */
+export function useFollowingPublications(page = 1, enabled = true) {
+  return useQuery({
+    queryKey: ["publications", "following", page],
+    queryFn: () => fetchPaginated<Publication>(`/publications?feed=following&page=${page}`),
+    enabled,
   });
 }
 

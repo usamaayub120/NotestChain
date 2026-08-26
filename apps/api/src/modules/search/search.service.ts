@@ -129,3 +129,66 @@ export async function searchPublications(query: SearchQueryInput): Promise<Searc
 
   return { items, total: Number(countRows[0]?.count ?? 0) };
 }
+
+export interface PersonSearchResult {
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  bio: string;
+  isPrimary: boolean;
+  publicationCount: number;
+}
+
+/**
+ * Keeper/pen-name search by handle or display name.
+ *
+ * A Keeper profile is always findable — a person's own name is already on
+ * every byline they write, so hiding it from search would just make people
+ * search harder to use without protecting anything. A pen name is findable
+ * only when its owner has left it visible, the same "show publicly" toggle
+ * that already governs whether it appears on the wider site. Never returns
+ * PublicIdentity.userId or anything else that could link two results
+ * together — see the leak-analysis rules in identities.service.ts.
+ */
+export async function searchPeople(q: string, page: number, pageSize: number): Promise<{ items: PersonSearchResult[]; total: number }> {
+  const where = {
+    OR: [{ isPrimary: true }, { isVisible: true }],
+    AND: {
+      OR: [
+        { username: { contains: q, mode: "insensitive" as const } },
+        { displayName: { contains: q, mode: "insensitive" as const } },
+      ],
+    },
+  };
+
+  const [identities, total] = await Promise.all([
+    prisma.publicIdentity.findMany({
+      where,
+      orderBy: [{ isPrimary: "desc" }, { username: "asc" }],
+      skip: (page - 1) * pageSize,
+      take: pageSize,
+    }),
+    prisma.publicIdentity.count({ where }),
+  ]);
+
+  if (identities.length === 0) return { items: [], total };
+
+  const counts = await prisma.publication.groupBy({
+    by: ["publicIdentityId"],
+    where: { publicIdentityId: { in: identities.map((i) => i.id) }, isPlatformVisible: true, discoverability: "PUBLIC" },
+    _count: { _all: true },
+  });
+  const countByIdentity = new Map(counts.map((c) => [c.publicIdentityId, c._count._all]));
+
+  return {
+    items: identities.map((identity) => ({
+      username: identity.username,
+      displayName: identity.displayName,
+      avatarUrl: identity.avatarUrl,
+      bio: identity.bio,
+      isPrimary: identity.isPrimary,
+      publicationCount: countByIdentity.get(identity.id) ?? 0,
+    })),
+    total,
+  };
+}

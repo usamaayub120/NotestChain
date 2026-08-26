@@ -46,7 +46,8 @@ sharing one Prisma client and one DB connection pool.
 | Moderation decisions, notes, reports, audit log | PostgreSQL | Off-chain forever. |
 | **Finalized publication content** (v1 publications) | **Solana account** | DB `Publication.content` is a cached copy for fast reads/search; it is rebuildable from chain. |
 | **Finalized publication content** (v2 publications) | **PostgreSQL** | The chain holds `content_hash` + title + a 280-byte excerpt, not the body. Content is **verifiable against** the chain, no longer **rebuildable from** it. See §2.1. |
-| User↔anonymous-publication linkage | PostgreSQL | Never on-chain, used only for abuse handling. |
+| User↔anonymous-publication linkage (legacy only — see §4a) | PostgreSQL | Never on-chain, used only for abuse handling. |
+| Follow graph | PostgreSQL | `Follow` rows point `User → PublicIdentity`. Never on-chain, and never exposed as a member list — see §4a. |
 | Search index | PostgreSQL `tsvector` | Rebuildable from `Publication.contentPlain` (the markup-stripped projection — the index must never see raw markdown, or `**bold**` becomes a search token). Those rows are rebuildable from chain only for v1; for v2 they depend on the Postgres backup. |
 
 **Rule enforced everywhere in code:** a publication is not "done" because an RPC
@@ -188,6 +189,67 @@ a lock or leader election — documented, not built).
   fail auth at session-validation time (existing sessions are revoked on
   suspension), not just at login.
 
+## 4a. Identity model: Keepers, pen names, follows
+
+Every account (a **Keeper**) has exactly one `PublicIdentity` row flagged
+`isPrimary` — their **Keeper profile**, created in the same transaction as
+registration (`identities/keeperProfile.service.ts`). Every other
+`PublicIdentity` a Keeper owns is a **pen name**. Both are the same
+underlying model; `isPrimary` plus a partial unique index
+(`PublicIdentity_userId_primary_key`, added by hand in the
+`20260825090000_add_keeper_profiles_and_follows` migration — Prisma's
+`@@unique` can't express a `WHERE` clause) is what makes the Keeper profile
+permanent: it can never be hidden, renamed more than once, or deleted.
+
+A note or comment is published under one `PublicIdentity` either way —
+`identityMode = NAMED` for the Keeper profile, `PSEUDONYMOUS` for a pen
+name. This unifies cleanly with the pre-existing on-chain encoding: no
+Anchor program change was needed to add this feature.
+
+**Anonymous publishing is removed going forward, not retroactively.**
+`IdentityMode.ANONYMOUS` (on-chain code `2`) stays in the enum forever —
+already-published anonymous publications and comments must keep verifying
+and keep rendering as anonymous, permanently. `ALLOW_ANONYMOUS_POSTING`
+(`apps/api/src/config/env.ts`) is the runtime switch that stops the server
+from accepting new `ANONYMOUS` submissions and legacy-shaped anonymous
+comments; flipping it is a container env change, not a migration, and
+reversible without a rollback. See `AGENTS.md` for the ship-order this
+exists to support — mobile can lag the API by weeks and must keep working
+against it in the meantime.
+
+**Unlinkability is the load-bearing constraint.** A reader must never be
+able to tell that two pen names, or a pen name and its owner's Keeper
+profile, belong to the same account. `PublicIdentity.userId` is never
+returned by any public DTO — `toIdentityDTO`, `toPublicationDTO`, and the
+profile/search DTOs all omit it deliberately, guarded by
+`anonymousSerialization.test.ts` and `keeperProfilesAndFollows.test.ts`.
+Follows are the newest way this could leak, so:
+
+- `Follow.followerUserId` is always the account, never a pen name — there
+  is no way to follow "as" an identity, because a pen name's follow list
+  would fingerprint its owner's own taste graph.
+- A Keeper's own following list (`GET /follows/mine`) is visible only to
+  that Keeper. It is the single strongest correlator available — following
+  the same three obscure accounts from two different bylines links them
+  immediately.
+- A profile's follower *count* is shown; the follower *list* is not, by any
+  endpoint. Below a small threshold (`FOLLOWER_COUNT_VISIBLE_AT` in
+  `follows.service.ts`) the count itself is withheld too, so a pen name's
+  first few followers can't be diffed by polling.
+- Comment attribution follows the same no-side-channel rule the anonymous
+  comment code already established: there is deliberately no "the author
+  replied" badge anywhere, because showing one only when a commenter's
+  byline matches the note's byline would itself confirm a link between two
+  identities.
+
+Deleting an account (`deleteOwnAccount`) now also deletes every `Follow` row
+in both directions and scrubs the new profile fields (bio, avatar, links,
+location, pronouns, birth date, gender) from any byline it can't hard-delete
+— the same "hide, don't delete, if it has published content" rule
+`deleteIdentity` already applied, extended to bylines with comments
+(`Comment.publicIdentityId` is `ON DELETE RESTRICT`, not `SET NULL`, for the
+same reason).
+
 ## 5. Draft state machine
 
 ```
@@ -238,6 +300,46 @@ This whole flow is idempotent: retrying re-derives the same PDA from the same
 publication id, and step 5 checks for an already-existing account at that PDA
 before attempting to create it again (handles "we submitted, crashed before
 recording the signature, and the tx actually landed" cleanly).
+
+## 6a. Notifications (email + push)
+
+Two parallel, deliberately-not-generalized outbox tables:
+`EmailJob` (`packages/email`) and `PushJob` (`packages/push`), each with its
+own claim/backoff loop in the worker
+(`apps/worker/src/{email,push}/`) copying the same shape —
+`FOR UPDATE SKIP LOCKED` claim, `PENDING → PROCESSING → SENT/FAILED`,
+exponential backoff, an `AuditLog` entry once a job exhausts its retry
+budget (`EMAIL_SEND_EXHAUSTED` / `PUSH_SEND_EXHAUSTED`). Neither reuses
+`WorkerJob`/`OutboxEvent` — those are hard-wired to the chain-publish
+pipeline. See `EmailJob`'s doc comment in `prisma/schema.prisma` for the
+full reasoning; `PushJob` copies it rather than re-deriving it.
+
+A trigger site enqueues both in the same Postgres transaction as the
+business event that causes it (a comment, a moderation decision, a chain
+finalization, a follow) — a rollback cancels both notifications, and
+neither can survive without the event that was supposed to cause it.
+`packages/email`/`packages/push` each validate a job's payload against a
+per-`Kind` zod schema at enqueue time and again at send time (the second
+check exists so a template/copy fix, shipped between enqueue and send,
+applies retroactively to whatever's still queued).
+
+The two channels intentionally don't cover the same events:
+`PASSWORD_RESET_REQUESTED` and `WALLET_BALANCE_LOW` are email-only
+(security-sensitive, or admin-only ops nobody needs on their phone);
+`NEW_FOLLOWER` is push-only (no email has ever existed for it). See
+`PushKind`'s doc comment in `packages/push/src/kinds.ts` for the exact
+split.
+
+Push delivery is direct: the worker calls Firebase Cloud Messaging via
+`firebase-admin`, sending to the raw native FCM token the app registered
+(`expo-notifications`' `getDevicePushTokenAsync`, not an Expo push token) —
+there is no Expo push-relay service in this design. A user with zero
+registered devices is a normal `SENT` outcome, not a failure, since most
+Keepers will never install the mobile app; a device-specific "no longer
+registered" error prunes that one `PushToken` row without failing the job.
+Firebase being unconfigured never blocks anything upstream — the API keeps
+enqueueing `PushJob` rows regardless, and the worker just warns at startup
+and lets them retry with backoff until it is.
 
 ## 7. Solana program summary
 
@@ -319,12 +421,13 @@ SPA still boots and hydrates exactly as it does today. Every other route
 `Disallow`'d in `robots.txt`, no reason to pay for server rendering there.
 
 Two things this has to get right:
-- **Anonymity.** `Publication` supports anonymous/pseudonymous authorship
-  (§4's identity model). `seo.service.ts` only ever consumes the already-
-  redacted DTO from `toPublicationDTO`/`getPublicationById` — it never
-  queries `Publication`/`PublicIdentity` directly — so an anonymous note's
-  author can't leak into `og:` tags or JSON-LD the way it can't leak into
-  the normal public API response either.
+- **Anonymity and identity.** `Publication` supports Keeper/pen-name/legacy-
+  anonymous authorship (§4a). `seo.service.ts` only ever consumes the
+  already-redacted DTO from `toPublicationDTO`/`getPublicationById` — it
+  never queries `Publication`/`PublicIdentity` directly — so a legacy
+  anonymous note's author can't leak into `og:` tags or JSON-LD, the same
+  way it can't leak into the normal public API response, and no
+  `PublicIdentity.userId` reaches crawler-facing HTML either.
 - **Admin-editable without a redeploy.** GA4's Measurement ID, Search
   Console's verification code, the default OG image/description/Twitter
   handle, and a sitewide indexing on/off toggle live in a `SiteSettings`

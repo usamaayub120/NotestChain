@@ -19,6 +19,7 @@ import { DraftsListPage } from "@/pages/drafts/DraftsListPage";
 import { DraftEditorPage } from "@/pages/drafts/DraftEditorPage";
 import { IdentitiesPage } from "@/pages/identities/IdentitiesPage";
 import { NewIdentityPage } from "@/pages/identities/NewIdentityPage";
+import { EditIdentityPage } from "@/pages/identities/EditIdentityPage";
 import { ModerationQueuePage } from "@/pages/admin/ModerationQueuePage";
 import { ModerationSubmissionDetailPage } from "@/pages/admin/ModerationSubmissionDetailPage";
 import { AdminHomePage } from "@/pages/admin/AdminHomePage";
@@ -99,6 +100,14 @@ export function App() {
           element={
             <RequireAuth>
               <NewIdentityPage />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/identities/:id/edit"
+          element={
+            <RequireAuth>
+              <EditIdentityPage />
             </RequireAuth>
           }
         />

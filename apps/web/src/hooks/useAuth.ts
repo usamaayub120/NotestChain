@@ -1,5 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { RegisterInput } from "@noteschain/validation";
 import { apiFetch } from "@/lib/api";
+
+export interface PrimaryIdentitySummary {
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  /** Null when the handle was generated (the backfill, or an old client that
+   * registered without one) and the one free rename is still owed. */
+  canChangeUsername: boolean;
+}
 
 export interface PublicUser {
   id: string;
@@ -8,6 +18,8 @@ export interface PublicUser {
   status: string;
   createdAt: string;
   commentDisplayName: string | null;
+  /** The Keeper profile created alongside this account. */
+  primaryIdentity: PrimaryIdentitySummary | null;
 }
 
 export function useCurrentUser() {
@@ -30,7 +42,7 @@ export function useLogin() {
 export function useRegister() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (input: { email: string; password: string }) =>
+    mutationFn: (input: RegisterInput) =>
       apiFetch<{ user: PublicUser }>("/auth/register", { method: "POST", body: input }),
     onSuccess: (data) => queryClient.setQueryData(["auth", "me"], data.user),
   });

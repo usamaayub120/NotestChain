@@ -13,3 +13,10 @@ export const searchQuerySchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(50).optional().default(20),
 });
 export type SearchQueryInput = z.infer<typeof searchQuerySchema>;
+
+export const peopleSearchQuerySchema = z.object({
+  q: z.string().trim().min(1).max(60),
+  page: z.coerce.number().int().min(1).max(1000).optional().default(1),
+  pageSize: z.coerce.number().int().min(1).max(50).optional().default(20),
+});
+export type PeopleSearchQueryInput = z.infer<typeof peopleSearchQuerySchema>;

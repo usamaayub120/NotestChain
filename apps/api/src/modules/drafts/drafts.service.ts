@@ -1,9 +1,10 @@
 import type { Draft } from "@prisma/client";
-import { DraftStatus, normalizeContent } from "@noteschain/shared";
+import { DraftStatus, IdentityMode, normalizeContent } from "@noteschain/shared";
 import type { CreateDraftInput, UpdateDraftInput, DraftInput } from "@noteschain/validation";
 import { draftInputSchema } from "@noteschain/validation";
 import { prisma } from "../../lib/prisma.js";
 import { Errors } from "../../lib/apiError.js";
+import { env } from "../../config/env.js";
 import { DELETABLE_DRAFT_STATUSES, EDITABLE_DRAFT_STATUSES, transitionDraft } from "./stateMachine.js";
 import { createPublicationFromApprovedSubmission } from "../publications/publishing.service.js";
 
@@ -231,6 +232,13 @@ async function validateForSubmission(userId: string, draft: Draft): Promise<Draf
   });
   if (!parsed.success) {
     throw Errors.badRequest("This draft isn't ready to submit.", parsed.error.flatten());
+  }
+  // Anonymous publishing is being removed going forward; already-published
+  // anonymous notes are untouched either way. Gated by an env flag rather
+  // than dropped from the schema so an already-installed mobile binary keeps
+  // working until it's replaced — see AGENTS.md's ship-order note.
+  if (parsed.data.identityMode === IdentityMode.ANONYMOUS && !env.ALLOW_ANONYMOUS_POSTING) {
+    throw Errors.badRequest("Publish under your Keeper profile or a pen name.");
   }
   await verifyIdentityOwnership(userId, parsed.data.publicIdentityId);
   return parsed.data;

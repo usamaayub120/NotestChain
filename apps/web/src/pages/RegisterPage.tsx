@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 import { Link, useNavigate } from "react-router-dom";
-import { registerSchema, type RegisterInput } from "@noteschain/validation";
-import { brand } from "@noteschain/shared";
+import { registerSchema, usernameSchema } from "@noteschain/validation";
+import { brand, LIMITS } from "@noteschain/shared";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
@@ -12,21 +13,37 @@ import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { useRegister } from "@/hooks/useAuth";
 import { ApiClientError } from "@/lib/api";
 
+// registerSchema leaves username/displayName optional so an already-installed
+// mobile binary that doesn't send them still registers (the server generates
+// a handle from the email instead). The web sign-up form is the new front
+// door, so it requires both — this is a stricter local schema, not the wire
+// contract, and its own inferred type (not RegisterInput) is what the form
+// itself is typed against.
+const webRegisterSchema = registerSchema.extend({
+  username: usernameSchema,
+  displayName: z.string().trim().min(1, "Give your Keeper profile a name.").max(LIMITS.DISPLAY_NAME_MAX_LENGTH),
+});
+type WebRegisterInput = z.infer<typeof webRegisterSchema>;
+
 export function RegisterPage() {
   const navigate = useNavigate();
   const register = useRegister();
   const [hasCaptchaToken, setHasCaptchaToken] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const form = useForm<RegisterInput>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: { email: "", password: "", captchaToken: "" },
+  const form = useForm<WebRegisterInput>({
+    resolver: zodResolver(webRegisterSchema),
+    defaultValues: { email: "", password: "", captchaToken: "", username: "", displayName: "" },
   });
 
-  async function onSubmit(values: RegisterInput) {
+  async function onSubmit(values: WebRegisterInput) {
     try {
       await register.mutateAsync(values);
       navigate("/dashboard");
     } catch (err) {
+      if (err instanceof ApiClientError && err.status === 409) {
+        form.setError("username", { message: err.message });
+        return;
+      }
       const message = err instanceof ApiClientError ? err.message : "Something went wrong.";
       form.setError("root", { message });
     }
@@ -64,6 +81,43 @@ export function RegisterPage() {
                     <Input type="password" autoComplete="new-password" {...field} />
                   </FormControl>
                   <FormDescription>At least 10 characters.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="displayName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Your name</FormLabel>
+                  <FormControl>
+                    <Input autoComplete="name" placeholder="Marguerite Vale" {...field} />
+                  </FormControl>
+                  <FormDescription>Shown on your Keeper profile — you can change it any time.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="username"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Username</FormLabel>
+                  <FormControl>
+                    <div className="flex items-center rounded-md border border-input focus-within:ring-1 focus-within:ring-ring">
+                      <span className="pl-3 text-sm text-muted-foreground">@</span>
+                      <Input
+                        autoComplete="username"
+                        placeholder="marguerite"
+                        className="border-0 focus-visible:ring-0"
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.value.toLowerCase())}
+                      />
+                    </div>
+                  </FormControl>
+                  <FormDescription>Your profile's address. Lowercase letters, numbers, - or _ only.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

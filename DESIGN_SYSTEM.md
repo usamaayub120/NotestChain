@@ -22,8 +22,12 @@ Three sentences that describe every screen we build:
 - **Calm density** — mobile screens carry one primary task, never three.
 - **Earned trust, not decoration** — the verification stamp only appears
   once something is actually confirmed; we never fake a state.
-- **Anonymous is a first-class citizen**, not a grey placeholder — its
-  presentation gets the same design care as named authorship.
+- **A byline is an invitation, not a footnote** — the Keeper profile or
+  pen name behind a note gets the same design care as the note itself: big
+  enough to obviously tap, always a real profile to land on. Every
+  already-published anonymous note keeps rendering exactly as it always
+  has (see §11) — this principle governs new work, not a rewrite of what
+  came before.
 
 ## 2. Why this system, not the default
 
@@ -266,7 +270,7 @@ Reading content (`PublicationReader`, `DraftEditor` body) never exceeds a
 
 ```
 ┌───────────────────────────────────────╮╮  ← folded corner (signature detail,
-│ ⚫ Anon · Anonymous voice          ⋯  │      this card only, top-right, 12px)
+│ ⓝ Night Wire · Pen name          ⋯  │      this card only, top-right, 12px)
 │                                        │
 │ Some nights the city sounds like a    │
 │ held breath.                          │
@@ -276,8 +280,12 @@ Reading content (`PublicationReader`, `DraftEditor` body) never exceeds a
 ╰────────────────────────────────────────╯
 ```
 
-Named/pseudonymous variant swaps the top row for
-`AuthorIdentityBadge` (avatar 24px + display name + username, no dot).
+Every card carries `AuthorBadge` — avatar 24px, display name, and a
+`Keeper profile` / `Pen name` kind label — never a dot standing in for
+"nobody." A note published before anonymous posting was removed still
+renders its original `⚫ Anon` treatment (the old anonymous byline, not
+this one) exactly as it always has; that card layout is frozen, not
+migrated.
 
 ## 12. Example: profile header (mobile)
 
@@ -286,15 +294,25 @@ Named/pseudonymous variant swaps the top row for
 │         (avatar, 72px)             │
 │         Marguerite Vale            │
 │         @marguerite                │
+│         Keeper profile             │
 │                                     │
 │  Notices small things. Keeps a     │
 │  few of them.                      │
 │                                     │
-│   42 kept · joined Jan 2025        │
+│   42 kept · 128 followers          │
+│   joined Jan 2025                  │
+│                                     │
+│           [ Follow ]               │
 │                                     │
 │  [ common tags: #dusk #ordinary ]  │
 └────────────────────────────────────┘
 ```
+
+A pen name's header is identical except the kind label reads `Pen name`
+and the follower count is suppressed below a small threshold — it renders
+`New` rather than a raw number, so a handful of early followers can't be
+used to correlate two bylines back to the same Keeper (see the follow
+privacy notes in `ARCHITECTURE.md` §4).
 
 ## 13. Blockchain verification presentation
 

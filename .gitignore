@@ -20,6 +20,10 @@ run/secrets/
 # Written transiently by .github/workflows/eas-android-release.yml from the
 # GOOGLE_SERVICE_ACCOUNT_KEY secret -- never meant to exist on disk outside CI.
 apps/mobile/google-service-account.json
+# The Firebase Android client config (push notification registration) --
+# dropped in locally by whoever has it, written transiently in CI from the
+# GOOGLE_SERVICES_JSON secret. See app.config.ts's android.googleServicesFile.
+apps/mobile/google-services.json
 .cargo-build-tmp/
 
 # Wrong package manager — this repo is pnpm-only (pnpm-lock.yaml is the

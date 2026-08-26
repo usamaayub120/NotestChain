@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { Textarea } from "@/components/ui/textarea";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { useCurrentUser } from "@/hooks/useAuth";
 import { useCreateComment } from "@/hooks/useComments";
+import { useIdentities } from "@/hooks/useIdentities";
 import { ApiClientError } from "@/lib/api";
 
 export function CommentComposer({
@@ -20,12 +20,16 @@ export function CommentComposer({
   autoFocus?: boolean;
 }) {
   const { data: user } = useCurrentUser();
+  const { data: identities } = useIdentities();
   const createComment = useCreateComment();
   const [body, setBody] = useState("");
-  const [isAnonymous, setIsAnonymous] = useState(false);
-  const [displayName, setDisplayName] = useState("");
+  // Undefined until the commenter deliberately picks something; defaults to
+  // the Keeper profile below, computed rather than synced via an effect.
+  const [manualIdentityId, setManualIdentityId] = useState<string | undefined>(undefined);
   const [captchaToken, setCaptchaToken] = useState("");
   const [error, setError] = useState<string | null>(null);
+
+  const publicIdentityId = manualIdentityId ?? identities?.find((identity) => identity.isPrimary)?.id ?? "";
 
   if (!user) {
     return (
@@ -38,28 +42,18 @@ export function CommentComposer({
     );
   }
 
-  const needsDisplayName = !isAnonymous && !user.commentDisplayName;
-
   async function submit() {
     setError(null);
     try {
-      await createComment.mutateAsync({
-        publicationId,
-        body,
-        parentCommentId,
-        isAnonymous,
-        displayName: needsDisplayName ? displayName : undefined,
-        captchaToken,
-      });
+      await createComment.mutateAsync({ publicationId, body, parentCommentId, publicIdentityId, captchaToken });
       setBody("");
-      setDisplayName("");
       onDone?.();
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : "Something went wrong.");
     }
   }
 
-  const canSubmit = body.trim().length > 0 && !!captchaToken && (!needsDisplayName || displayName.trim().length > 0);
+  const canSubmit = body.trim().length > 0 && !!captchaToken && !!publicIdentityId;
 
   return (
     <div className="space-y-2">
@@ -71,23 +65,21 @@ export function CommentComposer({
         onChange={(e) => setBody(e.target.value)}
       />
 
-      <label className="flex items-center gap-2 text-sm text-muted-foreground">
-        <input
-          type="checkbox"
-          checked={isAnonymous}
-          onChange={(e) => setIsAnonymous(e.target.checked)}
-          className="h-4 w-4"
-        />
-        Comment anonymously
-      </label>
-
-      {needsDisplayName && (
-        <Input
-          placeholder="Name to comment under"
-          value={displayName}
-          onChange={(e) => setDisplayName(e.target.value)}
-          maxLength={60}
-        />
+      {identities && identities.length > 1 && (
+        <label className="flex items-center gap-2 text-sm">
+          <span className="text-muted-foreground">Comment as</span>
+          <select
+            className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+            value={publicIdentityId}
+            onChange={(e) => setManualIdentityId(e.target.value)}
+          >
+            {identities.map((identity) => (
+              <option key={identity.id} value={identity.id}>
+                {identity.displayName} {identity.isPrimary ? "· Keeper profile" : "· Pen name"}
+              </option>
+            ))}
+          </select>
+        </label>
       )}
 
       <TurnstileWidget onVerify={setCaptchaToken} />

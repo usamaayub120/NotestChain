@@ -6,6 +6,7 @@ import { EmailKind, buildEmailJobData } from "@noteschain/email";
 import { prisma } from "../../lib/prisma.js";
 import { ARGON2_OPTIONS } from "../../config/security.js";
 import { env } from "../../config/env.js";
+import { createKeeperProfile, getKeeperProfile } from "../identities/keeperProfile.service.js";
 
 export class AuthError extends Error {
   constructor(
@@ -29,7 +30,11 @@ export async function verifyPassword(hash: string, password: string): Promise<bo
   }
 }
 
-export async function registerUser(email: string, password: string) {
+export async function registerUser(
+  email: string,
+  password: string,
+  keeperProfile?: { username?: string | null; displayName?: string | null },
+) {
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) {
     throw new AuthError("An account with this email already exists.", 409, "EMAIL_TAKEN");
@@ -40,12 +45,19 @@ export async function registerUser(email: string, password: string) {
     startWritingUrl: `${env.PUBLIC_WEB_ORIGIN}/drafts`,
   });
 
-  // User + welcome-email job in one transaction: this is a welcome-only
-  // email (no verification gate, no change to login), so the only property
-  // that matters is that an account never exists without one queued.
+  // User + Keeper profile + welcome-email job, all in one transaction: an
+  // account must never exist without the public profile the rest of the
+  // product assumes every account has, any more than it should exist without
+  // the welcome email queued.
   return prisma.$transaction(async (tx) => {
     const user = await tx.user.create({
       data: { email, passwordHash, role: Role.USER, status: AccountStatus.ACTIVE },
+    });
+    const primaryIdentity = await createKeeperProfile(tx, {
+      userId: user.id,
+      email: user.email,
+      username: keeperProfile?.username,
+      displayName: keeperProfile?.displayName,
     });
     await tx.emailJob.create({
       data: {
@@ -55,7 +67,7 @@ export async function registerUser(email: string, password: string) {
         data: welcomeEmailData as Prisma.InputJsonValue,
       },
     });
-    return user;
+    return { user, primaryIdentity };
   });
 }
 
@@ -126,13 +138,53 @@ export async function deleteOwnAccount(userId: string, password: string): Promis
     // own audit trail for content that is still live and public.
     await tx.draft.deleteMany({ where: { userId, publication: null } });
 
+    // The account is gone, so following it (or it following anyone) stops
+    // meaning anything. Deleted in both directions: this account's own
+    // following list, and anyone who followed one of its bylines.
+    const ownedIdentityIds = (await tx.publicIdentity.findMany({ where: { userId }, select: { id: true } })).map(
+      (identity) => identity.id,
+    );
+    await tx.follow.deleteMany({
+      where: { OR: [{ followerUserId: userId }, { targetIdentityId: { in: ownedIdentityIds } }] },
+    });
+
+    // Nothing left to notify and nowhere left to send it — this account's
+    // registered devices and anything still queued for them. Cascade
+    // deletes on User don't fire here because this is a soft delete (the
+    // User row itself survives, tombstoned).
+    await tx.pushToken.deleteMany({ where: { userId } });
+    await tx.pushJob.deleteMany({ where: { userId } });
+
     const identities = await tx.publicIdentity.findMany({ where: { userId } });
     for (const identity of identities) {
-      const publicationCount = await tx.publication.count({ where: { publicIdentityId: identity.id } });
-      if (publicationCount > 0) {
-        // Same rule as identities.service.ts's deleteIdentity: never remove
-        // an identity with attributed publications, just hide its profile.
-        await tx.publicIdentity.update({ where: { id: identity.id }, data: { isVisible: false } });
+      const [publicationCount, commentCount] = await Promise.all([
+        tx.publication.count({ where: { publicIdentityId: identity.id } }),
+        tx.comment.count({ where: { publicIdentityId: identity.id } }),
+      ]);
+      if (publicationCount > 0 || commentCount > 0) {
+        // Same rule as identities.service.ts's deleteIdentity: never remove a
+        // byline that has already been shown to readers — Publication and
+        // Comment both still join to it live for their byline, so the row
+        // has to survive. Only the standalone profile disappears (isVisible)
+        // and the personal fields scrub. displayName/username are left
+        // alone deliberately: they are the byline text itself, already
+        // public on every note and comment it's attached to, not private
+        // profile embellishment the way an avatar photo or bio is.
+        await tx.publicIdentity.update({
+          where: { id: identity.id },
+          data: {
+            isVisible: false,
+            bio: "",
+            avatarUrl: null,
+            links: [],
+            location: null,
+            pronouns: null,
+            birthDate: null,
+            showBirthDate: false,
+            gender: null,
+            showGender: false,
+          },
+        });
       } else {
         await tx.publicIdentity.delete({ where: { id: identity.id } });
       }
@@ -140,14 +192,42 @@ export async function deleteOwnAccount(userId: string, password: string): Promis
   });
 }
 
-export function toPublicUser(user: {
-  id: string;
-  email: string;
-  role: string;
-  status: string;
-  createdAt: Date;
-  commentDisplayName?: string | null;
-}) {
+export type PrimaryIdentitySummary = {
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+  canChangeUsername: boolean;
+} | null;
+
+/** Never returns userId anywhere it could leak — see identities.service.ts. */
+function summarizePrimaryIdentity(
+  identity: {
+    username: string;
+    displayName: string;
+    avatarUrl: string | null;
+    usernameChangedAt: Date | null;
+  } | null,
+): PrimaryIdentitySummary {
+  if (!identity) return null;
+  return {
+    username: identity.username,
+    displayName: identity.displayName,
+    avatarUrl: identity.avatarUrl,
+    canChangeUsername: identity.usernameChangedAt === null,
+  };
+}
+
+export function toPublicUser(
+  user: {
+    id: string;
+    email: string;
+    role: string;
+    status: string;
+    createdAt: Date;
+    commentDisplayName?: string | null;
+  },
+  primaryIdentity: Parameters<typeof summarizePrimaryIdentity>[0] = null,
+) {
   return {
     id: user.id,
     email: user.email,
@@ -155,5 +235,13 @@ export function toPublicUser(user: {
     status: user.status,
     createdAt: user.createdAt,
     commentDisplayName: user.commentDisplayName ?? null,
+    // Every active account has one after the backfill; only reachable as null
+    // for an account created by a path that predates it.
+    primaryIdentity: summarizePrimaryIdentity(primaryIdentity),
   };
+}
+
+/** Convenience for call sites that only have a userId, not an already-loaded identity. */
+export async function toPublicUserWithProfile(user: Parameters<typeof toPublicUser>[0]) {
+  return toPublicUser(user, await getKeeperProfile(user.id));
 }

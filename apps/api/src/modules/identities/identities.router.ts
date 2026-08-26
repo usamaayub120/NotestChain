@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { createIdentitySchema, updateIdentitySchema } from "@noteschain/validation";
+import { changeUsernameSchema, createIdentitySchema, updateIdentitySchema } from "@noteschain/validation";
 import { asyncHandler, ok, requireParam } from "../../lib/http.js";
 import { requireAuth } from "../../middleware/auth.js";
 import {
+  changeKeeperUsername,
   createIdentity,
   deleteIdentity,
   getIdentity,
@@ -44,6 +45,18 @@ identitiesRouter.patch(
   asyncHandler(async (req, res) => {
     const input = updateIdentitySchema.parse(req.body);
     const identity = await updateIdentity(req.auth!.userId, requireParam(req, "id"), input);
+    return ok(res, toIdentityDTO(identity));
+  }),
+);
+
+// The one free rename on the Keeper profile — separate from PATCH /:id
+// because username, unlike every other profile field, is normally immutable
+// after creation; this route is the single deliberate exception.
+identitiesRouter.post(
+  "/me/username",
+  asyncHandler(async (req, res) => {
+    const input = changeUsernameSchema.parse(req.body);
+    const identity = await changeKeeperUsername(req.auth!.userId, input);
     return ok(res, toIdentityDTO(identity));
   }),
 );

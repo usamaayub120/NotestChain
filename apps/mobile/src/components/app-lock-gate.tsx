@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Action, ErrorText, Field } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
 import { authenticateWithBiometrics, biometricLabel, isBiometricEnabled, verifyPin } from "@/src/lib/app-lock";
@@ -7,6 +8,9 @@ import { authenticateWithBiometrics, biometricLabel, isBiometricEnabled, verifyP
 /** Full-screen replacement for the whole app while a PIN is set and not yet unlocked this session. */
 export function AppLockGate({ onUnlock }: { onUnlock: () => void }) {
   const { colors, fontScale } = useTheme();
+  // This replaces the entire navigator, so there is no stack header to clear
+  // the status bar or a punch-hole camera for it.
+  const insets = useSafeAreaInsets();
   const [pin, setPin] = useState("");
   const [error, setError] = useState<string>();
   const [checking, setChecking] = useState(false);
@@ -38,7 +42,7 @@ export function AppLockGate({ onUnlock }: { onUnlock: () => void }) {
     else { setError("Incorrect PIN."); setPin(""); }
   };
 
-  return <View style={{ flex: 1, backgroundColor: colors.paper, alignItems: "center", justifyContent: "center", padding: 32, gap: 16 }}>
+  return <View style={{ flex: 1, backgroundColor: colors.paper, alignItems: "center", justifyContent: "center", padding: 32, paddingTop: 32 + insets.top, paddingBottom: 32 + insets.bottom, gap: 16 }}>
     <Text style={{ color: colors.ink, fontFamily: "serif", fontSize: 26 * fontScale, fontWeight: "700" }}>NotesChain is locked</Text>
     <Text style={{ color: colors.muted, fontSize: 15 * fontScale, textAlign: "center" }}>Enter your PIN to continue.</Text>
     <Field
