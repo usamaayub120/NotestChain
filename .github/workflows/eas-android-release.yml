@@ -82,12 +82,25 @@ jobs:
               console.error("google-services.json is not valid JSON (" + raw.length + " byte(s) written) -- the GOOGLE_SERVICES_JSON repository secret is missing or empty.");
               process.exit(1);
             }
-            const packageName = data.client?.[0]?.client_info?.android_client_info?.package_name;
-            if (packageName !== "org.noteschain.app") {
-              console.error("google-services.json is for package \"" + packageName + "\", expected \"org.noteschain.app\" -- wrong Firebase Android app was exported into this secret.");
+            const client = data.client?.find(
+              (candidate) => candidate.client_info?.android_client_info?.package_name === "org.noteschain.app"
+            );
+            if (!client) {
+              const packageNames = data.client
+                ?.map((candidate) => candidate.client_info?.android_client_info?.package_name)
+                .filter(Boolean)
+                .join(", ") ?? "none";
+              console.error("google-services.json does not contain Android package \"org.noteschain.app\" (found: " + packageNames + ").");
               process.exit(1);
             }
-            console.log("google-services.json looks valid for " + packageName + ".");
+            const appId = client.client_info?.mobilesdk_app_id;
+            const apiKey = client.api_key?.find((key) => typeof key.current_key === "string" && key.current_key.length > 0)?.current_key;
+            const projectNumber = data.project_info?.project_number;
+            if (!appId || !apiKey || !projectNumber) {
+              console.error("google-services.json is missing the Firebase Android app ID, API key, or project number needed to initialize Firebase.");
+              process.exit(1);
+            }
+            console.log("google-services.json looks valid for org.noteschain.app.");
           '
 
       - name: EAS build (local, production profile, Android)

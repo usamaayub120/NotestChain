@@ -1,0 +1,64 @@
+node_modules/
+dist/
+build/
+.turbo/
+*.tsbuildinfo
+
+.env
+.env.*
+!.env.example
+
+# Prisma
+prisma/dev.db
+
+# Solana / Anchor
+programs/**/target/
+programs/**/.anchor/
+programs/**/test-ledger/
+*.keypair.json
+run/secrets/
+# Written transiently by .github/workflows/eas-android-release.yml from the
+# GOOGLE_SERVICE_ACCOUNT_KEY secret -- never meant to exist on disk outside CI.
+apps/mobile/google-service-account.json
+.cargo-build-tmp/
+
+# Wrong package manager — this repo is pnpm-only (pnpm-lock.yaml is the
+# committed lockfile); a stray npm/yarn invocation shouldn't leave one behind.
+package-lock.json
+yarn.lock
+
+# Local tool config — not part of the app, no reason for every collaborator
+# to have the same MCP servers configured.
+.mcp.json
+
+# Local agent-tool session cache (e.g. pasted/uploaded attachments) — not
+# project content, shouldn't land in history.
+.codex-remote-attachments/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# Local Expo bundle checks. These are generated test artifacts, never source.
+apps/mobile/.expo-export*/
+apps/mobile/.expo/
+apps/mobile/android/
+apps/mobile/ios/
+
+# Editors / OS
+.DS_Store
+Thumbs.db
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+
+# Coverage
+coverage/
+
+# The Firebase Android client config is generated in CI immediately before the
+# EAS build. It must be in the EAS source archive: Expo prebuild reads it to
+# generate the Android resource that initializes Firebase. This needs to be
+# last so it overrides the matching ignore rule above.
+!apps/mobile/google-services.json
