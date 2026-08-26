@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as Linking from "expo-linking";
@@ -5,6 +6,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Action, Card, Divider, Eyebrow, Notice, Screen, Subtitle, Title, styles as uiStyles } from "@/src/components/ui";
 import { fontScaleLabels, type FontScalePreset, type ThemeMode, useTheme } from "@/src/lib/theme";
 import { appEnv, webOrigin } from "@/src/lib/config";
+import { describePushDiagnostic, getPushDiagnostic, syncPushRegistration, type PushDiagnostic } from "@/src/lib/push";
 
 const fontScaleOrder: FontScalePreset[] = ["small", "default", "large", "xlarge"];
 
@@ -25,6 +27,8 @@ export default function SettingsScreen() {
     <View style={uiStyles.row}>{fontScaleOrder.map((preset) => <View key={preset} style={{ flex: 1 }}><Action title={fontScaleLabels[preset]} tone={fontScalePreset === preset ? "primary" : "secondary"} accessibilityRole="radio" accessibilityState={{ checked: fontScalePreset === preset }} onPress={() => setFontScalePreset(preset)} /></View>)}</View>
     <View style={[local.preview, { backgroundColor: colors.elevated, borderColor: colors.border }]}><Text style={{ color: colors.ink, fontSize: 16 * fontScale, flexShrink: 1 }}>The quick brown fox jumps over the lazy dog.</Text></View>
     <Divider />
+    <NotificationsRow />
+    <Divider />
     <View style={local.heading}><Eyebrow>Security</Eyebrow><Title>App lock</Title><Subtitle>Require a PIN or fingerprint to open NotesChain on this device.</Subtitle></View>
     <Action title="Set up app lock" tone="secondary" icon={<Ionicons name="lock-closed-outline" size={18} color={colors.ink} />} onPress={() => router.push("/settings/app-lock")} />
     <Divider /><Action title="Replay the introduction" tone="secondary" icon={<Ionicons name="information-circle-outline" size={18} color={colors.ink} />} onPress={() => router.push("/onboarding")} />
@@ -33,6 +37,50 @@ export default function SettingsScreen() {
     <Action title="Privacy policy" tone="secondary" icon={<Ionicons name="document-text-outline" size={18} color={colors.ink} />} onPress={() => Linking.openURL(`${webOrigin}/privacy`)} />
     <Action title="Terms of service" tone="secondary" icon={<Ionicons name="document-text-outline" size={18} color={colors.ink} />} onPress={() => Linking.openURL(`${webOrigin}/terms`)} />
     <Action title="Delete account" tone="danger" icon={<Ionicons name="trash-outline" size={18} color="#fff" />} onPress={() => router.push("/settings/delete-account")} /></Screen>;
+}
+
+/**
+ * What getPushDiagnostic() has to say, in the one place a reader (or we,
+ * over their shoulder) can actually see it — registration itself happens
+ * silently on cold start with nothing else visible anywhere.
+ */
+function NotificationsRow() {
+  const { colors } = useTheme();
+  const [diagnostic, setDiagnostic] = useState<PushDiagnostic | null>(null);
+  const [checking, setChecking] = useState(false);
+
+  useEffect(() => { void getPushDiagnostic().then(setDiagnostic); }, []);
+
+  const retry = async () => {
+    setChecking(true);
+    try {
+      await syncPushRegistration();
+      setDiagnostic(await getPushDiagnostic());
+    } finally {
+      setChecking(false);
+    }
+  };
+
+  const registered = diagnostic?.state === "registered";
+
+  return (
+    <View style={{ gap: 10 }}>
+      <View style={local.heading}><Eyebrow>Alerts</Eyebrow><Title>Notifications</Title><Subtitle>Comments, moderation decisions, kept notes, and new followers.</Subtitle></View>
+      <View style={[local.preview, { backgroundColor: colors.elevated, borderColor: colors.border }]}>
+        <Ionicons name={registered ? "notifications" : "notifications-outline"} size={17} color={registered ? colors.brand : colors.muted} />
+        <Text style={{ color: colors.muted, flex: 1 }}>{diagnostic ? describePushDiagnostic(diagnostic) : "Checking…"}</Text>
+      </View>
+      {!registered && (
+        <Action
+          title={checking ? "Checking…" : "Try again"}
+          tone="secondary"
+          disabled={checking}
+          icon={<Ionicons name="refresh-outline" size={18} color={colors.ink} />}
+          onPress={() => void retry()}
+        />
+      )}
+    </View>
+  );
 }
 
 const local = StyleSheet.create({
