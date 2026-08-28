@@ -10,6 +10,7 @@ import { Action, ErrorText, Field, Loading, Notice, Screen, Subtitle, Title, sty
 import { BylinePicker } from "@/src/components/byline-picker";
 import { PublishConfirmSheet } from "@/src/components/publish-confirm";
 import { useTheme } from "@/src/lib/theme";
+import { refreshDraftList, syncDraftInList } from "@/src/lib/drafts";
 
 const editable = (status: string) => status === "DRAFT" || status === "CHANGES_REQUESTED";
 const saveKey = () => `draft-save-${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -116,7 +117,9 @@ export default function DraftEditorScreen() {
     if (!online) {
       preserveRecovery(id, latest.current);
       enqueue({ id: saveKey(), method: "POST", path: `/drafts/${id}/autosave`, body: latest.current, createdAt: Date.now() });
-      cacheWrite(`draft:${id}`, { ...draft, ...latest.current, updatedAt: new Date().toISOString() });
+      const savedOnDevice = { ...draft, ...latest.current, updatedAt: new Date().toISOString() };
+      cacheWrite(`draft:${id}`, savedOnDevice);
+      syncDraftInList(savedOnDevice);
       setSaveState("Saved on this device — sync queued");
       return;
     }
@@ -125,6 +128,7 @@ export default function DraftEditorScreen() {
       const saved = await api<Draft>(`/drafts/${id}/autosave`, { method: "POST", body: JSON.stringify(latest.current), idempotencyKey: saveKey() });
       cacheWrite(`draft:${id}`, saved);
       setDraft(saved);
+      syncDraftInList(saved);
       setSaveState("Saved");
       clearRecoveries(id);
     } catch {
@@ -138,6 +142,7 @@ export default function DraftEditorScreen() {
       const saved = await api<Draft>(`/drafts/${id}`, { method: "PATCH", body: JSON.stringify(metadata()), idempotencyKey: saveKey() });
       cacheWrite(`draft:${id}`, saved);
       setDraft(saved);
+      syncDraftInList(saved);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not update draft settings.");
     }
@@ -163,6 +168,8 @@ export default function DraftEditorScreen() {
       await updateMetadata();
       const saved = await api<Draft>(`/drafts/${id}/submit`, { method: "POST", idempotencyKey: saveKey() });
       setDraft(saved);
+      cacheWrite(`draft:${id}`, saved);
+      syncDraftInList(saved);
       Alert.alert("Submitted", "Your note is now awaiting review.");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not submit this draft.");
@@ -186,6 +193,7 @@ export default function DraftEditorScreen() {
         body: JSON.stringify({ acknowledgeIrreversible: true }),
         idempotencyKey: saveKey(),
       });
+      refreshDraftList();
       setConfirmingPublish(false);
       router.replace(`/note/${publication.id}`);
     } catch (e) {

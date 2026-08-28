@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/react-query";
 import type { AutosaveInput, UpdateDraftInput } from "@noteschain/validation";
 import type { IdentityMode } from "@noteschain/shared";
 import { apiFetch } from "@/lib/api";
@@ -39,10 +40,31 @@ export interface DraftVersion {
   createdAt: string;
 }
 
+const DRAFTS_QUERY_KEY = ["drafts"] as const;
+
+/** Keep the list and the open editor in sync as soon as a draft mutation succeeds. */
+function syncDraftInCache(queryClient: QueryClient, draft: Draft) {
+  queryClient.setQueryData<Draft[]>(DRAFTS_QUERY_KEY, (current = []) => {
+    const exists = current.some((item) => item.id === draft.id);
+    return exists
+      ? current.map((item) => (item.id === draft.id ? draft : item))
+      : [draft, ...current];
+  });
+  queryClient.setQueryData(["drafts", draft.id], draft);
+  void queryClient.invalidateQueries({ queryKey: DRAFTS_QUERY_KEY });
+}
+
+function removeDraftFromCache(queryClient: QueryClient, id: string) {
+  queryClient.setQueryData<Draft[]>(DRAFTS_QUERY_KEY, (current = []) => current.filter((item) => item.id !== id));
+  queryClient.removeQueries({ queryKey: ["drafts", id] });
+  void queryClient.invalidateQueries({ queryKey: DRAFTS_QUERY_KEY });
+}
+
 export function useDrafts() {
   return useQuery({
-    queryKey: ["drafts"],
+    queryKey: DRAFTS_QUERY_KEY,
     queryFn: () => apiFetch<Draft[]>("/drafts"),
+    refetchInterval: 15_000,
   });
 }
 
@@ -58,7 +80,7 @@ export function useCreateDraft() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: UpdateDraftInput = {}) => apiFetch<Draft>("/drafts", { method: "POST", body: input }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["drafts"] }),
+    onSuccess: (draft) => syncDraftInCache(queryClient, draft),
   });
 }
 
@@ -66,10 +88,7 @@ export function useUpdateDraft(id: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (input: UpdateDraftInput) => apiFetch<Draft>(`/drafts/${id}`, { method: "PATCH", body: input }),
-    onSuccess: (draft) => {
-      queryClient.setQueryData(["drafts", id], draft);
-      queryClient.invalidateQueries({ queryKey: ["drafts"] });
-    },
+    onSuccess: (draft) => syncDraftInCache(queryClient, draft),
   });
 }
 
@@ -78,7 +97,7 @@ export function useAutosaveDraft(id: string) {
   return useMutation({
     mutationFn: (input: AutosaveInput) =>
       apiFetch<Draft>(`/drafts/${id}/autosave`, { method: "POST", body: input }),
-    onSuccess: (draft) => queryClient.setQueryData(["drafts", id], draft),
+    onSuccess: (draft) => syncDraftInCache(queryClient, draft),
   });
 }
 
@@ -86,7 +105,7 @@ export function useDeleteDraft() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiFetch(`/drafts/${id}`, { method: "DELETE" }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["drafts"] }),
+    onSuccess: (_result, id) => removeDraftFromCache(queryClient, id),
   });
 }
 
@@ -104,7 +123,7 @@ export function useRestoreDraftVersion(id: string) {
     mutationFn: (versionId: string) =>
       apiFetch<Draft>(`/drafts/${id}/versions/${versionId}/restore`, { method: "POST" }),
     onSuccess: (draft) => {
-      queryClient.setQueryData(["drafts", id], draft);
+      syncDraftInCache(queryClient, draft);
       queryClient.invalidateQueries({ queryKey: ["drafts", id, "versions"] });
     },
   });
@@ -114,10 +133,7 @@ export function useSubmitDraft() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiFetch<Draft>(`/drafts/${id}/submit`, { method: "POST" }),
-    onSuccess: (draft) => {
-      queryClient.setQueryData(["drafts", draft.id], draft);
-      queryClient.invalidateQueries({ queryKey: ["drafts"] });
-    },
+    onSuccess: (draft) => syncDraftInCache(queryClient, draft),
   });
 }
 
@@ -125,10 +141,7 @@ export function useWithdrawDraft() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => apiFetch<Draft>(`/drafts/${id}/withdraw`, { method: "POST" }),
-    onSuccess: (draft) => {
-      queryClient.setQueryData(["drafts", draft.id], draft);
-      queryClient.invalidateQueries({ queryKey: ["drafts"] });
-    },
+    onSuccess: (draft) => syncDraftInCache(queryClient, draft),
   });
 }
 
@@ -137,6 +150,6 @@ export function useConfirmPublish() {
   return useMutation({
     mutationFn: (id: string) =>
       apiFetch(`/drafts/${id}/confirm-publish`, { method: "POST", body: { acknowledgeIrreversible: true } }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["drafts"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: DRAFTS_QUERY_KEY }),
   });
 }

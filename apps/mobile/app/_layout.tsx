@@ -1,5 +1,5 @@
 import { Stack, router } from "expo-router";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { AppState, Pressable, Text, View } from "react-native";
 import NetInfo from "@react-native-community/netinfo";
@@ -13,6 +13,7 @@ import { HeaderAddButton, HeaderBrand } from "@/src/components/app-header";
 import { AppLockGate } from "@/src/components/app-lock-gate";
 import { hasPinSet } from "@/src/lib/app-lock";
 import { ThemeProvider, useTheme } from "@/src/lib/theme";
+import { queryClient } from "@/src/lib/query-client";
 
 /**
  * Route-level ErrorBoundary export (expo-router convention) — the fallback
@@ -29,8 +30,6 @@ export function ErrorBoundary({ retry }: { error: Error; retry: () => void }) {
     </Pressable>
   </View>;
 }
-
-const client = new QueryClient();
 
 export default function RootLayout() {
   // Initialise synchronously so a first feed request can never race the cache schema.
@@ -81,7 +80,7 @@ export default function RootLayout() {
     return () => sub.remove();
   }, []);
 
-  return <SafeAreaProvider><QueryClientProvider client={client}><ThemeProvider>
+  return <SafeAreaProvider><QueryClientProvider client={queryClient}><ThemeProvider>
     {pinSet === null ? null : locked ? <AppLockGate onUnlock={() => setLocked(false)} /> : <AppNavigator />}
   </ThemeProvider></QueryClientProvider></SafeAreaProvider>;
 }
