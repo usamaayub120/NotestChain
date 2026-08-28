@@ -36,7 +36,7 @@ export default function IdentitiesScreen() {
           <Text style={{ color: colors.muted, fontWeight: "700", fontSize: 13, textTransform: "uppercase" }}>Keeper profile</Text>
           <Link
             href={`/identities/${keeperProfile.id}`}
-            style={[styles.card, { borderColor: colors.border, backgroundColor: colors.surface, shadowColor: colors.ink }]}
+            style={[styles.card, { borderColor: colors.border, backgroundColor: colors.surface }]}
           >
             <Text style={{ fontWeight: "700", color: colors.ink }}>{keeperProfile.displayName}</Text>
             <Subtitle>@{keeperProfile.username} · Your own profile</Subtitle>
@@ -51,7 +51,7 @@ export default function IdentitiesScreen() {
           <Link
             key={identity.id}
             href={`/identities/${identity.id}`}
-            style={[styles.card, { borderColor: colors.border, backgroundColor: colors.surface, shadowColor: colors.ink }]}
+            style={[styles.card, { borderColor: colors.border, backgroundColor: colors.surface }]}
           >
             <Text style={{ fontWeight: "700", color: colors.ink }}>{identity.displayName}</Text>
             <Subtitle>@{identity.username} · {identity.isVisible ? "Visible" : "Hidden"}</Subtitle>

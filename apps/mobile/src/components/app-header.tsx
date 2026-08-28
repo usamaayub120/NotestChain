@@ -87,7 +87,7 @@ export function HeaderAddButton() {
         {anchor ? (
           <View
             accessibilityRole="menu"
-            style={[local.menu, { top: anchor.top, right: anchor.right, backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.ink }]}
+            style={[local.menu, { top: anchor.top, right: anchor.right, backgroundColor: colors.surface, borderColor: colors.border }]}
           >
             <Pressable
               accessibilityRole="menuitem"
@@ -120,7 +120,7 @@ const local = StyleSheet.create({
   addLabel: { fontWeight: "700" },
   pressed: { opacity: 0.6 },
   disabled: { opacity: 0.5 },
-  menu: { position: "absolute", minWidth: 208, borderWidth: 1, borderRadius: 14, paddingVertical: 6, shadowOpacity: 0.16, shadowRadius: 16, shadowOffset: { width: 0, height: 6 }, elevation: 12 },
+  menu: { position: "absolute", minWidth: 208, borderWidth: 1, borderRadius: 14, paddingVertical: 6, boxShadow: "0 6px 16px rgba(32, 30, 27, 0.16)" },
   menuItem: { flexDirection: "row", alignItems: "center", gap: 10, minHeight: 48, paddingHorizontal: 14 },
   menuLabel: { fontWeight: "600" },
   menuError: { paddingHorizontal: 14, paddingTop: 2, paddingBottom: 6, lineHeight: 19 },

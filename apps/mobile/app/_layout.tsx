@@ -95,7 +95,7 @@ const ROOT_SCREEN = { headerTitle: "", headerLeft: () => <HeaderBrand /> } as co
 
 function AppNavigator() {
   const { colors } = useTheme();
-  return <View style={{ flex: 1, backgroundColor: colors.paper }}><Stack screenOptions={{ headerBackTitle: "Back", headerTintColor: colors.brand, headerStyle: { backgroundColor: colors.paper }, headerTitleStyle: { color: colors.ink, fontWeight: "700" }, headerShadowVisible: false, contentStyle: { backgroundColor: colors.paper }, headerRight: () => <HeaderAddButton /> }}>
+  return <View style={{ flex: 1, backgroundColor: colors.paper }}><Stack screenOptions={{ headerBackTitle: "Back", headerTintColor: colors.brand, headerTransparent: false, headerStyle: { backgroundColor: colors.paper }, headerTitleStyle: { color: colors.ink, fontWeight: "700" }, headerShadowVisible: false, contentStyle: { backgroundColor: colors.paper }, headerRight: () => <HeaderAddButton /> }}>
     <Stack.Screen name="index" options={ROOT_SCREEN} />
     <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
     <Stack.Screen name="explore" options={ROOT_SCREEN} />
@@ -112,9 +112,9 @@ function AppNavigator() {
     <Stack.Screen name="identities/index" options={{ title: "Your bylines" }} />
     <Stack.Screen name="identities/new" options={{ title: "New pen name" }} />
     <Stack.Screen name="identities/[id]" options={{ title: "Edit" }} />
-    <Stack.Screen name="register" options={{ title: "Create account" }} />
-    <Stack.Screen name="forgot-password" options={{ title: "Reset password" }} />
-    <Stack.Screen name="reset-password" options={{ title: "Choose password" }} />
+    <Stack.Screen name="register" options={{ headerShown: false }} />
+    <Stack.Screen name="forgot-password" options={{ headerShown: false }} />
+    <Stack.Screen name="reset-password" options={{ headerShown: false }} />
     <Stack.Screen name="settings/index" options={{ title: "Settings" }} />
     <Stack.Screen name="settings/app-lock" options={{ title: "App lock" }} />
     <Stack.Screen name="settings/delete-account" options={{ title: "Delete account" }} />

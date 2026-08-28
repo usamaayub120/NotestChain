@@ -1,6 +1,6 @@
 import type { PropsWithChildren, ReactNode } from "react";
 import { useEffect, useRef } from "react";
-import { AccessibilityInfo, ActivityIndicator, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import { AccessibilityInfo, Animated, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@/src/lib/theme";
 
@@ -38,6 +38,7 @@ export function Screen({ children, refreshing, onRefresh, insetTop = false, clea
   return <ScrollView
     style={{ backgroundColor: colors.paper }}
     contentContainerStyle={[styles.screen, { backgroundColor: colors.paper, paddingTop: padTop, paddingBottom: padBottom }]}
+    contentInsetAdjustmentBehavior="automatic"
     keyboardShouldPersistTaps="handled"
     refreshControl={onRefresh ? <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} tintColor={colors.brand} colors={[colors.brand]} /> : undefined}
   >{children}</ScrollView>;
@@ -53,8 +54,9 @@ export function Action({ title, onPress, disabled, tone = "primary", icon, acces
   accessibilityRole?: "button" | "radio" | "switch"; accessibilityState?: { checked?: boolean }; accessibilityLabel?: string; accessibilityHint?: string;
 }) {
   const { colors, fontScale } = useTheme();
-  const background = tone === "primary" ? colors.brand : tone === "danger" ? colors.danger : colors.soft;
-  const foreground = tone === "secondary" ? colors.ink : "#fff";
+  const background = disabled ? colors.soft : tone === "primary" ? colors.brand : tone === "danger" ? colors.danger : colors.soft;
+  const foreground = disabled ? colors.muted : tone === "secondary" ? colors.ink : "#fff";
+  const border = disabled ? colors.border : tone === "secondary" ? colors.border : background;
   return <Pressable
     accessibilityRole={accessibilityRole}
     accessibilityState={{ disabled, ...accessibilityState }}
@@ -62,7 +64,7 @@ export function Action({ title, onPress, disabled, tone = "primary", icon, acces
     accessibilityHint={accessibilityHint}
     disabled={disabled}
     onPress={onPress}
-    style={({ pressed }) => [styles.button, { backgroundColor: background, borderColor: tone === "secondary" ? colors.border : background, opacity: disabled ? 0.45 : pressed ? 0.82 : 1 }]}
+    style={({ pressed }) => [styles.button, { backgroundColor: background, borderColor: border, opacity: pressed ? 0.82 : 1 }]}
   ><View style={styles.buttonInner}>{icon}{<Text style={[styles.buttonText, { color: foreground, fontSize: 16 * fontScale }]}>{title}</Text>}</View></Pressable>;
 }
 /**
@@ -72,12 +74,12 @@ export function Action({ title, onPress, disabled, tone = "primary", icon, acces
  */
 export function IconButton({ icon, accessibilityLabel, onPress, disabled, tone = "secondary", accessibilityRole = "button", accessibilityState, accessibilityHint }: {
   icon: ReactNode; accessibilityLabel: string; onPress: () => void; disabled?: boolean;
-  tone?: "plain" | "secondary" | "primary";
+  tone?: "plain" | "secondary" | "primary" | "danger";
   accessibilityRole?: "button" | "switch"; accessibilityState?: { checked?: boolean }; accessibilityHint?: string;
 }) {
   const { colors } = useTheme();
-  const background = tone === "primary" ? colors.brand : tone === "secondary" ? colors.soft : "transparent";
-  const border = tone === "plain" ? "transparent" : tone === "primary" ? colors.brand : colors.border;
+  const background = tone === "primary" ? colors.brand : tone === "danger" ? colors.iconSoft : tone === "secondary" ? colors.soft : "transparent";
+  const border = tone === "plain" ? "transparent" : tone === "primary" ? colors.brand : tone === "danger" ? colors.iconSoft : colors.border;
   return <Pressable
     accessibilityRole={accessibilityRole}
     accessibilityLabel={accessibilityLabel}
@@ -88,9 +90,40 @@ export function IconButton({ icon, accessibilityLabel, onPress, disabled, tone =
     style={({ pressed }) => [styles.iconButton, { backgroundColor: background, borderColor: border, opacity: disabled ? 0.45 : pressed ? 0.72 : 1 }]}
   >{icon}</Pressable>;
 }
-export function Loading({ label = "Loading…" }: { label?: string }) { const { colors, fontScale } = useTheme(); return <View style={[styles.center, { backgroundColor: colors.paper }]}><ActivityIndicator color={colors.brand} /><Text style={[styles.subtitle, { color: colors.muted, fontSize: 15 * fontScale }]}>{label}</Text></View>; }
+
+/**
+ * Native counterpart to the web writing-mark loader. A spinner is reserved
+ * for neither NotesChain's proof mark nor its reading/writing experience, so
+ * loading is communicated with three hand-written strokes instead.
+ */
+export function Loading({ label = "Loading…" }: { label?: string }) {
+  const { colors } = useTheme();
+  const opacity = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    let mounted = true;
+    let loop: Animated.CompositeAnimation | null = null;
+    void AccessibilityInfo.isReduceMotionEnabled().then((reduceMotion) => {
+      if (!mounted || reduceMotion) return;
+      loop = Animated.loop(Animated.sequence([
+        Animated.timing(opacity, { toValue: 0.55, duration: 700, useNativeDriver: true }),
+        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
+      ]));
+      loop.start();
+    });
+    return () => { mounted = false; loop?.stop(); };
+  }, [opacity]);
+
+  return <View accessibilityRole="progressbar" accessibilityLabel={label} style={[styles.center, { backgroundColor: colors.paper }]}>
+    <Animated.View importantForAccessibility="no-hide-descendants" style={[styles.writingMark, { opacity }]}>
+      <View style={[styles.writingStroke, { width: 70, backgroundColor: colors.muted, transform: [{ rotate: "-1deg" }] }]} />
+      <View style={[styles.writingStroke, { width: 54, backgroundColor: colors.muted, transform: [{ rotate: "1deg" }] }]} />
+      <View style={[styles.writingStroke, { width: 34, backgroundColor: colors.muted, transform: [{ rotate: "-1deg" }] }]} />
+    </Animated.View>
+  </View>;
+}
 export function Divider() { const { colors } = useTheme(); return <View style={[styles.divider, { backgroundColor: colors.border }]} />; }
-export function Card({ children, style }: PropsWithChildren<{ style?: React.ComponentProps<typeof View>["style"] }>) { const { colors } = useTheme(); return <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.surface, shadowColor: colors.ink }, style]}>{children}</View>; }
+export function Card({ children, style }: PropsWithChildren<{ style?: React.ComponentProps<typeof View>["style"] }>) { const { colors } = useTheme(); return <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.surface }, style]}>{children}</View>; }
 export function Skeleton({ style }: { style?: React.ComponentProps<typeof View>["style"] }) {
   const { colors } = useTheme();
   const opacity = useRef(new Animated.Value(0.5)).current;
@@ -118,6 +151,6 @@ export const styles = StyleSheet.create({
   field: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 16, minHeight: 52 },
   button: { minHeight: 52, borderWidth: 1, borderRadius: 12, alignItems: "center", justifyContent: "center", paddingHorizontal: 16 }, buttonInner: { flexDirection: "row", alignItems: "center", gap: 8 }, buttonText: { fontWeight: "700", fontSize: 16 },
   iconButton: { width: 44, height: 44, borderWidth: 1, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  divider: { height: StyleSheet.hairlineWidth, marginVertical: 6 }, center: { flex: 1, minHeight: 280, padding: 32, alignItems: "center", justifyContent: "center", gap: 12 }, row: { flexDirection: "row", alignItems: "center", gap: 10 },
-  card: { borderWidth: 1, borderRadius: 16, padding: 16, gap: 7, shadowOpacity: 0.05, shadowRadius: 8, shadowOffset: { width: 0, height: 3 }, elevation: 1 }
+  divider: { height: StyleSheet.hairlineWidth, marginVertical: 6 }, center: { flex: 1, minHeight: 280, padding: 32, alignItems: "center", justifyContent: "center" }, writingMark: { width: 72, height: 32, justifyContent: "space-between", alignItems: "flex-start" }, writingStroke: { height: 2, borderRadius: 99 }, row: { flexDirection: "row", alignItems: "center", gap: 10 },
+  card: { borderWidth: 1, borderRadius: 16, padding: 16, gap: 7, boxShadow: "0 3px 8px rgba(32, 30, 27, 0.05)" }
 });

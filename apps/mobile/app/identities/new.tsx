@@ -55,20 +55,20 @@ export default function NewIdentityScreen() {
     <Screen>
       <Title>New pen name</Title>
       <Subtitle>Readers never see that this belongs to the same account as any of your other bylines.</Subtitle>
-      <Field autoCapitalize="none" placeholder="username" value={username} onChangeText={(v) => setUsername(v.toLowerCase())} />
-      <Field placeholder="Display name" value={displayName} onChangeText={setDisplayName} />
-      <Field multiline placeholder="Short bio (optional)" value={bio} onChangeText={setBio} style={{ minHeight: 100, textAlignVertical: "top" }} />
-      <Field placeholder="Location (optional)" value={location} onChangeText={setLocation} />
-      <Field placeholder="Pronouns (optional)" value={pronouns} onChangeText={setPronouns} />
+      <Field accessibilityLabel="Pen name username" autoCapitalize="none" autoComplete="username-new" placeholder="username" value={username} onChangeText={(v) => setUsername(v.toLowerCase())} />
+      <Field accessibilityLabel="Pen name display name" autoComplete="name" placeholder="Display name" value={displayName} onChangeText={setDisplayName} />
+      <Field accessibilityLabel="Short biography" multiline placeholder="Short bio (optional)" value={bio} onChangeText={setBio} style={{ minHeight: 100, textAlignVertical: "top" }} />
+      <Field accessibilityLabel="Location" placeholder="Location (optional)" value={location} onChangeText={setLocation} />
+      <Field accessibilityLabel="Pronouns" placeholder="Pronouns (optional)" value={pronouns} onChangeText={setPronouns} />
 
       <Text style={{ color: colors.ink, fontWeight: "700" }}>Personal details</Text>
       <Subtitle>Both are optional and stay off this pen name's profile until you turn them on here.</Subtitle>
-      <Field placeholder="Birth date (YYYY-MM-DD, optional)" keyboardType="numbers-and-punctuation" value={birthDate} onChangeText={setBirthDate} />
+      <Field accessibilityLabel="Birth date" placeholder="Birth date (YYYY-MM-DD, optional)" keyboardType="numbers-and-punctuation" value={birthDate} onChangeText={setBirthDate} />
       <View style={styles.row}>
         <Switch value={showBirthDate} onValueChange={setShowBirthDate} trackColor={{ true: colors.brand }} accessibilityLabel="Show birth date on profile" />
         <Text style={{ color: colors.ink }}>Show birth date on profile</Text>
       </View>
-      <Field placeholder="Gender (optional)" value={gender} onChangeText={setGender} />
+      <Field accessibilityLabel="Gender" placeholder="Gender (optional)" value={gender} onChangeText={setGender} />
       <View style={styles.row}>
         <Switch value={showGender} onValueChange={setShowGender} trackColor={{ true: colors.brand }} accessibilityLabel="Show gender on profile" />
         <Text style={{ color: colors.ink }}>Show gender on profile</Text>

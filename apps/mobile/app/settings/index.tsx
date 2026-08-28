@@ -3,7 +3,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import * as Linking from "expo-linking";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { Action, Card, Divider, Eyebrow, Notice, Screen, Subtitle, Title, styles as uiStyles } from "@/src/components/ui";
+import { Action, Card, Divider, Eyebrow, Notice, Screen, Subtitle, Title } from "@/src/components/ui";
 import { fontScaleLabels, type FontScalePreset, type ThemeMode, useTheme } from "@/src/lib/theme";
 import { appEnv, webOrigin } from "@/src/lib/config";
 import { describePushDiagnostic, getPushDiagnostic, syncPushRegistration, type PushDiagnostic } from "@/src/lib/push";
@@ -24,7 +24,7 @@ export default function SettingsScreen() {
   })}</View><View style={[local.preview, { backgroundColor: colors.elevated, borderColor: colors.border }]}><Ionicons name={resolvedMode === "dark" ? "moon" : "sunny"} size={17} color={colors.brand} /><Text style={{ color: colors.muted, flex: 1 }}>Currently using {resolvedMode} appearance.</Text></View>
     <Divider />
     <View style={local.heading}><Eyebrow>Accessibility</Eyebrow><Title>Text size</Title><Subtitle>Make reading and writing more comfortable, independent of your device's own text size.</Subtitle></View>
-    <View style={uiStyles.row}>{fontScaleOrder.map((preset) => <View key={preset} style={{ flex: 1 }}><Action title={fontScaleLabels[preset]} tone={fontScalePreset === preset ? "primary" : "secondary"} accessibilityRole="radio" accessibilityState={{ checked: fontScalePreset === preset }} onPress={() => setFontScalePreset(preset)} /></View>)}</View>
+    <View style={local.fontScaleGrid}>{fontScaleOrder.map((preset) => <View key={preset} style={local.fontScaleChoice}><Action title={fontScaleLabels[preset]} tone={fontScalePreset === preset ? "primary" : "secondary"} accessibilityRole="radio" accessibilityState={{ checked: fontScalePreset === preset }} onPress={() => setFontScalePreset(preset)} /></View>)}</View>
     <View style={[local.preview, { backgroundColor: colors.elevated, borderColor: colors.border }]}><Text style={{ color: colors.ink, fontSize: 16 * fontScale, flexShrink: 1 }}>The quick brown fox jumps over the lazy dog.</Text></View>
     <Divider />
     <NotificationsRow />
@@ -87,4 +87,5 @@ const local = StyleSheet.create({
   heading: { gap: 6, paddingTop: 4 }, choiceList: { gap: 10 }, choice: { minHeight: 84, flexDirection: "row", alignItems: "center", gap: 12 },
   icon: { width: 42, height: 42, borderRadius: 12, alignItems: "center", justifyContent: "center" }, copy: { flex: 1, minWidth: 0, gap: 3 }, choiceTitle: { fontSize: 16, fontWeight: "700" }, choiceDetail: { fontSize: 14, lineHeight: 19 },
   radio: { width: 22, height: 22, borderRadius: 11, borderWidth: 2, alignItems: "center", justifyContent: "center" }, dot: { width: 10, height: 10, borderRadius: 5 }, preview: { borderWidth: 1, borderRadius: 12, padding: 13, flexDirection: "row", alignItems: "center", gap: 9 },
+  fontScaleGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 }, fontScaleChoice: { flexBasis: "47%", flexGrow: 1 },
 });

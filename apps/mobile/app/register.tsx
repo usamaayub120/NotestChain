@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useLocalSearchParams, router } from "expo-router";
 import * as Linking from "expo-linking";
+import { Ionicons } from "@expo/vector-icons";
 import { Switch, Text, View } from "react-native";
 import { api, setToken } from "@/src/lib/api";
 import { requestCaptcha } from "@/src/lib/captcha";
 import { syncPushRegistration } from "@/src/lib/push";
-import { Action, ErrorText, Field, Notice, Screen, Subtitle, Title } from "@/src/components/ui";
+import { Action, ErrorText, Field, IconButton, Notice, Screen, Subtitle, Title } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
 import { webOrigin } from "@/src/lib/config";
 
@@ -55,15 +56,18 @@ export default function RegisterScreen() {
   };
 
   return (
-    <Screen>
+    <Screen insetTop>
+      <IconButton tone="plain" icon={<Ionicons name="arrow-back" size={24} color={colors.brand} />} accessibilityLabel="Go back" onPress={() => router.canGoBack() ? router.back() : router.replace("/account")} />
       <Title>Create your account</Title>
       <Subtitle>Your session is stored only in this device's secure storage.</Subtitle>
 
-      <Field autoCapitalize="none" keyboardType="email-address" placeholder="Email" value={email} onChangeText={setEmail} />
-      <Field secureTextEntry placeholder="Password (at least 10 characters)" value={password} onChangeText={setPassword} />
-      <Field placeholder="Your name" value={displayName} onChangeText={setDisplayName} />
+      <Field accessibilityLabel="Email address" autoCapitalize="none" autoComplete="email" keyboardType="email-address" placeholder="Email" value={email} onChangeText={setEmail} />
+      <Field accessibilityLabel="Password" autoComplete="new-password" secureTextEntry placeholder="Password (at least 10 characters)" value={password} onChangeText={setPassword} />
+      <Field accessibilityLabel="Your name" autoComplete="name" placeholder="Your name" value={displayName} onChangeText={setDisplayName} />
       <Field
+        accessibilityLabel="Username"
         autoCapitalize="none"
+        autoComplete="username-new"
         autoCorrect={false}
         placeholder="Username"
         value={username}

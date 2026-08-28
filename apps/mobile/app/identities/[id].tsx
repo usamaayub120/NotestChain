@@ -106,7 +106,7 @@ export default function EditIdentityScreen() {
       </Subtitle>
 
       {identity.isPrimary && identity.canChangeUsername && (
-        <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.surface, shadowColor: colors.ink }]}>
+        <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.surface }]}>
           <Text style={{ color: colors.ink, fontWeight: "700" }}>Your username was generated for you</Text>
           <Subtitle>You can change it once. After that, it's permanent.</Subtitle>
           <Field autoCapitalize="none" value={newUsername} onChangeText={(v) => setNewUsername(v.toLowerCase())} />
