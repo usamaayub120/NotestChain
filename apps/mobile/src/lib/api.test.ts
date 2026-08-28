@@ -24,8 +24,13 @@ function jsonResponse(body: unknown, init: { ok?: boolean; status?: number } = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  jest.spyOn(console, "warn").mockImplementation(() => undefined);
   mockedGetItem.mockResolvedValue(null);
   global.fetch = jest.fn().mockResolvedValue(jsonResponse({ data: {} }));
+});
+
+afterEach(() => {
+  jest.restoreAllMocks();
 });
 
 describe("api", () => {
@@ -50,6 +55,25 @@ describe("api", () => {
     await api("/x", { method: "POST", body: JSON.stringify({ a: 1 }) });
     [, init] = (global.fetch as jest.Mock).mock.calls[1];
     expect((init.headers as Headers).get("content-type")).toBe("application/json");
+  });
+
+  it("retries a failed safe read once before returning its response", async () => {
+    (global.fetch as jest.Mock)
+      .mockRejectedValueOnce(new TypeError("Network request failed"))
+      .mockResolvedValueOnce(jsonResponse({ data: { recovered: true } }));
+
+    await expect(api<{ recovered: boolean }>("/x")).resolves.toEqual({ recovered: true });
+    expect(global.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not retry a failed write", async () => {
+    (global.fetch as jest.Mock).mockRejectedValue(new TypeError("Network request failed"));
+
+    await expect(api("/x", { method: "POST", body: JSON.stringify({ value: true }) })).rejects.toMatchObject({
+      status: 0,
+      kind: "network",
+    });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
   it("passes an Idempotency-Key header through when provided", async () => {

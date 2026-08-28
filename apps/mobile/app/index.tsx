@@ -7,22 +7,22 @@ import { api, apiPage, getToken } from "@/src/lib/api";
 import { cacheRead, cacheWrite } from "@/src/lib/offline";
 import type { Page, Publication } from "@/src/lib/models";
 import { EmptyNotes, PublicationCard, PublicationCardSkeleton } from "@/src/components/publication";
-import { Action, Eyebrow, Screen, Subtitle, Title, styles } from "@/src/components/ui";
+import { Action, ErrorText, Eyebrow, Screen, Subtitle, Title, styles } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
 import { hasSeenOnboarding } from "@/src/lib/first-run";
 
 type Tab = "following" | "latest";
 
+function cachedTab(tab: Tab) {
+  const cached = cacheRead<Page<Publication> | Publication[]>(`home:${tab}`);
+  return Array.isArray(cached) ? cached : cached?.data;
+}
+
 async function fetchTab(tab: Tab) {
   const path = tab === "following" ? "/publications?feed=following&page=1&pageSize=20" : "/publications?page=1&pageSize=20";
-  try {
-    const result = await apiPage<Publication>(path);
-    cacheWrite(`home:${tab}`, result);
-    return result.data;
-  } catch {
-    const cached = cacheRead<Page<Publication> | Publication[]>(`home:${tab}`);
-    return Array.isArray(cached) ? cached : cached?.data ?? [];
-  }
+  const result = await apiPage<Publication>(path);
+  cacheWrite(`home:${tab}`, result);
+  return result.data;
 }
 
 export default function HomeScreen() {
@@ -41,16 +41,23 @@ export default function HomeScreen() {
       const token = await getToken();
       if (!token) { setTab("latest"); return; }
       setSignedIn(true);
+      // The public feed must never wait for a protected preference lookup.
+      // It can render cached/latest notes immediately, then switch to
+      // Following only if that small request completes successfully.
+      setTab("latest");
       try {
         const following = await api<unknown[]>("/follows/mine");
         setTab(following.length > 0 ? "following" : "latest");
-      } catch {
-        setTab("latest");
-      }
+      } catch { /* Latest is already visible; the next refresh can retry. */ }
     })();
   }, []);
 
-  const query = useQuery({ queryKey: ["home", tab], enabled: tab !== null, queryFn: () => fetchTab(tab!) });
+  const query = useQuery({
+    queryKey: ["home", tab],
+    enabled: tab !== null,
+    queryFn: () => fetchTab(tab!),
+    initialData: tab ? () => cachedTab(tab) : undefined,
+  });
 
   return (
     <Screen refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
@@ -89,6 +96,8 @@ export default function HomeScreen() {
         </View>
       )}
 
+      {query.isError && <ErrorText>We couldn’t refresh this feed. Pull down or try again when you’re connected.</ErrorText>}
+
       {query.isLoading || tab === null ? (
         [0, 1, 2].map((i) => <PublicationCardSkeleton key={i} />)
       ) : query.data?.length ? (
@@ -96,7 +105,7 @@ export default function HomeScreen() {
       ) : tab === "following" ? (
         <EmptyNotes title="Nothing new yet" detail="Follow a few authors to see their notes here." />
       ) : (
-        <EmptyNotes title="No notes cached yet" detail="Connect to NotesChain to begin reading." />
+        <EmptyNotes title={query.isError ? "Couldn’t load notes" : "No notes published yet"} detail={query.isError ? "Check your connection and pull down to retry." : "Be the first to publish a note worth returning to."} />
       )}
     </Screen>
   );

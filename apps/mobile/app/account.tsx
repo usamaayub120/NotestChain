@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, router } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import { Pressable, StyleSheet, Text, View } from "react-native";
-import { api, setToken } from "@/src/lib/api";
+import { api, MobileApiError, setToken } from "@/src/lib/api";
 import { syncPushRegistration, unregisterPushToken } from "@/src/lib/push";
 import { Action, Card, ErrorText, Eyebrow, Field, Loading, Screen, Subtitle, Title } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
@@ -14,8 +14,24 @@ function AccountLink({ href, title, detail, icon }: { href: "/drafts" | "/analyt
 
 export default function AccountScreen() {
   const { colors } = useTheme();
-  const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState<string>(); const [user, setUser] = useState<{ email: string } | null>(); const [busy, setBusy] = useState(false);
-  useEffect(() => { api<{ user: { email: string } }>("/auth/me").then((result) => setUser(result.user)).catch(() => setUser(null)); }, []);
+  const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState<string>(); const [user, setUser] = useState<{ email: string } | null>(); const [sessionError, setSessionError] = useState<string>(); const [busy, setBusy] = useState(false);
+  const loadSession = useCallback(async () => {
+    setUser(undefined);
+    setSessionError(undefined);
+    try {
+      const result = await api<{ user: { email: string } }>("/auth/me");
+      setUser(result.user);
+    } catch (e) {
+      // A genuine unauthenticated response should show sign-in. A stalled
+      // connection must not impersonate a signed-out state.
+      if (e instanceof MobileApiError && e.status === 401) setUser(null);
+      else {
+        setUser(null);
+        setSessionError(e instanceof Error ? e.message : "We couldn't check your secure session.");
+      }
+    }
+  }, []);
+  useEffect(() => { void loadSession(); }, [loadSession]);
   const login = async () => {
     setBusy(true); setError(undefined);
     try { const result = await api<{ session: { token: string } }>("/auth/mobile/login", { method: "POST", body: JSON.stringify({ email, password, deviceName: "NotesChain mobile" }) }); await setToken(result.session.token); setUser({ email }); setPassword(""); void syncPushRegistration(); }
@@ -23,6 +39,7 @@ export default function AccountScreen() {
     finally { setBusy(false); }
   };
   if (user === undefined) return <Loading label="Checking your secure session…" />;
+  if (sessionError) return <Screen><View style={{ gap: 8, paddingTop: 4 }}><Eyebrow>NotesChain account</Eyebrow><Title>We couldn’t reach NotesChain</Title><Subtitle>Your account has not been signed out. Check your connection, then try again.</Subtitle></View><ErrorText>{sessionError}</ErrorText><Action title="Try again" onPress={() => void loadSession()} /></Screen>;
   if (user) return <Screen><View style={local.hero}><Eyebrow>Your reading desk</Eyebrow><Title>Welcome back</Title><View style={[local.emailPill, { backgroundColor: colors.soft }]}><Ionicons name="mail-outline" size={15} color={colors.muted} /><Text numberOfLines={1} style={{ color: colors.muted, fontWeight: "700", flexShrink: 1 }}>{user.email}</Text></View></View><View style={local.accountList}><AccountLink href="/drafts" title="Drafts & publishing" detail="Keep writing, then publish when ready." icon="create-outline" /><AccountLink href="/analytics" title="Published notes" detail="See unique readers for your work." icon="stats-chart-outline" /><AccountLink href="/identities" title="Your bylines" detail="Your primary profile and any pen names." icon="person-outline" /><AccountLink href="/bookmarks" title="Saved notes" detail="Return to notes you want to keep." icon="bookmark-outline" /></View><AccountLink href="/verify" title="Verify a note" detail="Check any note's URL, signature, or address against its public record." icon="shield-checkmark-outline" /><AccountLink href="/settings" title="Settings" detail="Appearance and app preferences." icon="settings-outline" /><Action title="Sign out" tone="secondary" icon={<Ionicons name="log-out-outline" size={19} color={colors.ink} />} onPress={async () => { try { await unregisterPushToken(); await api("/auth/mobile/logout", { method: "POST" }); } finally { await setToken(null); router.replace("/"); } }} /></Screen>;
   return <Screen><View style={{ gap: 7, paddingTop: 4 }}><Eyebrow>NotesChain account</Eyebrow><Title>Sign in to keep writing.</Title><Subtitle>Access your drafts, saved notes, and publishing tools on this device.</Subtitle></View><View style={local.form}><Text style={[local.label, { color: colors.ink }]}>Email address</Text><Field accessibilityLabel="Email address" autoCapitalize="none" autoComplete="email" keyboardType="email-address" placeholder="you@example.com" value={email} onChangeText={setEmail} /><Text style={[local.label, { color: colors.ink }]}>Password</Text><Field accessibilityLabel="Password" secureTextEntry autoComplete="password" placeholder="Your password" value={password} onChangeText={setPassword} /></View>{error && <ErrorText>{error}</ErrorText>}<Action title={busy ? "Signing in…" : "Sign in"} disabled={busy || !email || !password} onPress={login} icon={<Ionicons name="log-in-outline" size={18} color="#fff" />} /><View style={local.links}><Link href="/register" style={[local.textLink, { color: colors.brand }]}>Create an account</Link><Link href="/forgot-password" style={[local.textLink, { color: colors.brand }]}>Forgot password?</Link></View></Screen>;
 }
