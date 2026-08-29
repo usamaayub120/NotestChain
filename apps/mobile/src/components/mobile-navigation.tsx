@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { router, usePathname } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { Keyboard, Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MIN_BOTTOM_INSET, TAB_BAR_HEIGHT } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
@@ -16,7 +17,15 @@ export function MobileNavigation() {
   const { colors } = useTheme();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
-  if (!items.some((item) => item.href === pathname)) return null;
+  const [keyboardOpen, setKeyboardOpen] = useState(false);
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", () => setKeyboardOpen(true));
+    const hide = Keyboard.addListener("keyboardDidHide", () => setKeyboardOpen(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
+
+  if (keyboardOpen || !items.some((item) => item.href === pathname)) return null;
   return <View accessibilityRole="tablist" style={[local.bar, { borderColor: colors.border, backgroundColor: colors.paper, paddingBottom: Math.max(insets.bottom, MIN_BOTTOM_INSET), minHeight: TAB_BAR_HEIGHT + Math.max(insets.bottom, MIN_BOTTOM_INSET) }]}>{items.map((item) => {
     const active = pathname === item.href;
     return <Pressable key={item.href} accessibilityRole="tab" accessibilityLabel={item.label} accessibilityState={{ selected: active }} onPress={() => router.replace(item.href)} style={({ pressed }) => [local.item, { backgroundColor: active ? colors.soft : "transparent" }, pressed && local.pressed]}>

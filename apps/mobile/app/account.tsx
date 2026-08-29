@@ -14,7 +14,7 @@ function AccountSection({ title, children }: PropsWithChildren<{ title: string }
 
 function AccountLink({ href, title, detail, icon, last = false }: { href: "/drafts" | "/analytics" | "/identities" | "/bookmarks" | "/settings" | "/verify"; title: string; detail: string; icon: React.ComponentProps<typeof Ionicons>["name"]; last?: boolean }) {
   const { colors } = useTheme();
-  return <Link href={href} asChild><Pressable accessibilityRole="link" style={({ pressed }) => [local.accountLink, { borderBottomColor: colors.border, borderBottomWidth: last ? 0 : StyleSheet.hairlineWidth }, pressed && local.pressed]}><View style={[local.icon, { backgroundColor: colors.iconSoft }]}><Ionicons name={icon} size={19} color={colors.brand} /></View><View style={local.linkCopy}><Text style={[local.linkTitle, { color: colors.ink }]}>{title}</Text><Text style={[local.linkDetail, { color: colors.muted }]}>{detail}</Text></View><Ionicons name="chevron-forward" size={19} color={colors.muted} /></Pressable></Link>;
+  return <Pressable accessibilityRole="link" accessibilityLabel={title} accessibilityHint={detail} onPress={() => router.push(href)} style={({ pressed }) => [local.accountLink, { borderBottomColor: colors.border, borderBottomWidth: last ? 0 : StyleSheet.hairlineWidth }, pressed && local.pressed]}><View style={[local.icon, { backgroundColor: colors.iconSoft }]}><Ionicons name={icon} size={19} color={colors.brand} /></View><View style={local.linkCopy}><Text style={[local.linkTitle, { color: colors.ink }]}>{title}</Text><Text style={[local.linkDetail, { color: colors.muted }]}>{detail}</Text></View><Ionicons name="chevron-forward" size={19} color={colors.muted} /></Pressable>;
 }
 
 export default function AccountScreen() {
