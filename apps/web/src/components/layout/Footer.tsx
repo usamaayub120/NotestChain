@@ -4,7 +4,7 @@ import { brand } from "@noteschain/shared";
 import { pickKeptThought } from "@/lib/keptThoughts";
 
 /**
- * The one place a small "kept thought" shows up on every public page —
+ * The one place a small "kept thought" shows up on every public page
  * quiet, not a banner. Only rendered on reader-facing routes; see
  * AppShell for exactly which ones (utility screens like the draft editor
  * or admin stay footer-free so it never fights with working screens).

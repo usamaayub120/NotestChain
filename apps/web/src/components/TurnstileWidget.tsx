@@ -30,7 +30,7 @@ function loadTurnstileScript(): Promise<void> {
 
 /**
  * Renders nothing and immediately reports a placeholder token when no site
- * key is configured — lets registration/comments work in local dev without
+ * key is configured -  lets registration/comments work in local dev without
  * a Cloudflare account. The API's own verifyCaptcha() has the matching
  * bypass when TURNSTILE_SECRET_KEY is unset (see apps/api/src/lib/captcha.ts).
  */

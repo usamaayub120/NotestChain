@@ -11,7 +11,7 @@ interface NavItem {
 }
 
 // Split left/right around the Write FAB rather than five equal flex-1
-// columns — five equal columns only *look* centered because the math
+// columns -  five equal columns only *look* centered because the math
 // happens to work out in CSS pixels, but at some device pixel ratios
 // (e.g. 393 CSS px @ DPR 3 = 1179 physical px, not divisible by 5) the
 // rounding lands asymmetrically and the FAB visibly drifts off-center.
@@ -22,7 +22,7 @@ const AUTHENTICATED_LEFT: NavItem[] = [
 ];
 const AUTHENTICATED_RIGHT: NavItem[] = [
   { to: "/bookmarks", label: "Saved", icon: Heart },
-  // Was "/settings" (a stub page) mislabeled "Profile" — this is the one
+  // Was "/settings" (a stub page) mislabeled "Profile" -  this is the one
   // persistent path back to drafts/identities/sign-out for the whole app.
   { to: "/dashboard", label: "Account", icon: User },
 ];

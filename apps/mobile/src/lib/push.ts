@@ -73,7 +73,7 @@ export function describePushDiagnostic(diagnostic: PushDiagnostic): string {
     case "unsupported_platform":
       return "Not available on this device.";
     case "simulator":
-      return "Not available on a simulator — try a real device.";
+      return "Not available on a simulator - try a real device.";
     case "permission_denied":
       return "Notifications are turned off for NotesChain in your device settings.";
     case "registered":

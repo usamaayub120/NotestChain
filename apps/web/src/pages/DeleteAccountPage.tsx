@@ -6,7 +6,7 @@ import { PageLoader, SESSION_CHECK_LOADER_DELAY_MS } from "@/components/Loader";
 
 /**
  * The public, no-app-required page Google Play's account-deletion requirement
- * points at — reachable and readable while signed out, and performs the
+ * points at -  reachable and readable while signed out, and performs the
  * actual deletion once signed in, reusing the same section Settings uses.
  */
 export function DeleteAccountPage() {
@@ -25,7 +25,7 @@ export function DeleteAccountPage() {
       ) : (
         <div className="mt-4 max-w-reading text-muted-foreground">
           <p>
-            Sign in and come back to this page, or go to Settings once you're in — either way it takes one
+            Sign in and come back to this page, or go to Settings once you're in -  either way it takes one
             confirmation.
           </p>
           <p className="mt-3">

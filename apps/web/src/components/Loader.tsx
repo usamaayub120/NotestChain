@@ -4,11 +4,11 @@ import { cn } from "@/lib/utils";
 /**
  * The loading state for the whole product.
  *
- * Three ruled strokes that write themselves in, then breathe — a paragraph
+ * Three ruled strokes that write themselves in, then breathe -  a paragraph
  * appearing on a page. Two constraints shaped this and are worth keeping:
  *
  *   1. **Never a ring.** A conventional circular spinner is off-limits here.
- *      DESIGN_SYSTEM.md §6 makes the Kept Stamp — a small circular mark — the
+ *      DESIGN_SYSTEM.md §6 makes the Kept Stamp -  a small circular mark -  the
  *      only motif allowed to represent on-chain proof anywhere in the
  *      product. A spinning ring sitting where content is about to appear
  *      would dilute exactly the mark that is supposed to mean something. The
@@ -16,13 +16,13 @@ import { cn } from "@/lib/utils";
  *   2. **Not database-generated.** The brand asks every screen to feel
  *      "handwritten-considered". A generic spinner is the most
  *      database-generated element there is; strokes being written are the
- *      opposite, and they say what is actually happening — words are on
+ *      opposite, and they say what is actually happening -  words are on
  *      their way.
  *
  * The strokes draw once via the existing `draw` keyframe and stay drawn; the
  * breath is what signals "still working" on a slow load. Under
  * `prefers-reduced-motion` the global rule in globals.css collapses both to a
- * single ~0ms iteration, which lands on fully-drawn strokes at 0.55 opacity —
+ * single ~0ms iteration, which lands on fully-drawn strokes at 0.55 opacity
  * a calm static mark rather than a blank space.
  */
 
@@ -78,7 +78,7 @@ export function Loader({
         ))}
       </svg>
       {/* The label is for assistive tech only. A visible "Loading…" caption
-          is the thing this component replaces — the mark already says it. */}
+          is the thing this component replaces -  the mark already says it. */}
       <span className="sr-only">{label}</span>
     </div>
   );
@@ -97,8 +97,8 @@ export const SESSION_CHECK_LOADER_DELAY_MS = 250;
 /**
  * Renders nothing until `delayMs` has passed.
  *
- * For anything that usually resolves fast — a warm cache, a local auth check
- * — showing a loader immediately is worse than showing nothing: it appears
+ * For anything that usually resolves fast -  a warm cache, a local auth check
+ * -  showing a loader immediately is worse than showing nothing: it appears
  * and vanishes inside 100ms as a flicker, which reads as a glitch rather than
  * as progress. Waiting a beat means a quick load stays silent and only a
  * genuinely slow one explains itself.
@@ -108,7 +108,7 @@ function useAfterDelay(delayMs: number): boolean {
 
   useEffect(() => {
     if (delayMs === 0) return;
-    // Only the timer sets state — nothing runs synchronously in the effect
+    // Only the timer sets state -  nothing runs synchronously in the effect
     // body. Initial state already covers the "not yet elapsed" case, and once
     // the loader is showing it should stay showing rather than flicker back
     // out if the delay were ever re-specified.

@@ -8,6 +8,7 @@ import { MobileBottomNav } from "./MobileBottomNav";
 import { Footer } from "./Footer";
 import { AdminPortalShell } from "@/components/admin/AdminPortalShell";
 import { AppUpdateBanner } from "@/components/AppUpdateBanner";
+import { DesktopWorkspaceShell } from "./DesktopWorkspaceShell";
 
 const DESKTOP_NAV_ITEMS = [
   { to: "/", label: "Home" },
@@ -16,11 +17,11 @@ const DESKTOP_NAV_ITEMS = [
   { to: "/verify", label: "Verify" },
 ];
 
-// The footer is a reader-facing touch, not a utility-screen one — it stays
+// The footer is a reader-facing touch, not a utility-screen one -  it stays
 // off pages where someone's actually doing work (writing, moderating,
 // managing an account) so it never competes with a working screen.
 // /login and /register get their own canopy-dark side panel (see
-// AuthSidePanel) — showing the footer right underneath would stack two
+// AuthSidePanel) -  showing the footer right underneath would stack two
 // dark-green moments on one screen, which reads as repetition, not theme.
 const FOOTER_EXCLUDED_PREFIXES = [
   "/dashboard",
@@ -33,24 +34,25 @@ const FOOTER_EXCLUDED_PREFIXES = [
   "/register",
 ];
 
+const WORKSPACE_PREFIXES = [
+  "/dashboard",
+  "/drafts",
+  "/identities",
+  "/bookmarks",
+  "/settings",
+  "/published-notes",
+];
+
 export function AppShell({ children }: { children: ReactNode }) {
   const { data: user } = useCurrentUser();
   const { start: startNewDraft } = useStartNewDraft();
   const location = useLocation();
   const showFooter = !FOOTER_EXCLUDED_PREFIXES.some((prefix) => location.pathname.startsWith(prefix));
   const inAdmin = location.pathname.startsWith("/admin");
+  const inWorkspace = Boolean(user) && WORKSPACE_PREFIXES.some((prefix) => location.pathname.startsWith(prefix));
 
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
-      {inAdmin && (
-        <div className="flex h-9 shrink-0 items-center justify-between bg-foreground px-4 text-xs font-medium text-background md:px-8">
-          <span>Admin</span>
-          <Link to="/" className="text-background/70 hover:text-background">
-            Back to NotesChain
-          </Link>
-        </div>
-      )}
-
       <MobileTopBar />
 
       <header className="hidden border-b border-border md:flex md:h-16 md:items-center md:justify-between md:px-8">
@@ -85,7 +87,9 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <div className="flex flex-1 flex-col pb-20 md:pb-0">
-        <main className="flex-1">{inAdmin ? <AdminPortalShell>{children}</AdminPortalShell> : children}</main>
+        <main className="flex-1">
+          {inAdmin ? <AdminPortalShell>{children}</AdminPortalShell> : inWorkspace ? <><div className="lg:hidden">{children}</div><DesktopWorkspaceShell>{children}</DesktopWorkspaceShell></> : children}
+        </main>
         {showFooter && <Footer />}
       </div>
 

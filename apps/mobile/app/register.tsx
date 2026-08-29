@@ -73,7 +73,7 @@ export default function RegisterScreen() {
         value={username}
         onChangeText={(value) => setUsername(value.toLowerCase())}
       />
-      <Subtitle>Your Keeper profile's address — lowercase letters, numbers, - or _ only. You can change it once.</Subtitle>
+      <Subtitle>Your Keeper profile's address - lowercase letters, numbers, - or _ only. You can change it once.</Subtitle>
 
       <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
         <Switch

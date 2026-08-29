@@ -136,7 +136,7 @@ describe("syncPushRegistration", () => {
     expect(mockedApi).toHaveBeenCalledWith("/push/tokens", { method: "POST", body: JSON.stringify({ token: "fcm-token-1", platform: "ANDROID" }) });
   });
 
-  it("never throws — a permission/network failure must not break app startup", async () => {
+  it("never throws - a permission/network failure must not break app startup", async () => {
     mockedApi.mockRejectedValue(new Error("network down"));
 
     await expect(syncPushRegistration()).resolves.toBeUndefined();
@@ -159,7 +159,7 @@ describe("unregisterPushToken", () => {
     expect(mockedDeleteItem).toHaveBeenCalled();
   });
 
-  it("never throws — sign-out must not be blocked by this", async () => {
+  it("never throws - sign-out must not be blocked by this", async () => {
     mockSecureStoreState.set(TEST_ONLY_KEYS.LAST_REGISTERED_KEY, "fcm-token-1");
     mockedApi.mockRejectedValue(new Error("network down"));
 
@@ -213,7 +213,7 @@ describe("push diagnostics", () => {
     expect(await getPushDiagnostic()).toEqual({ state: "simulator" });
   });
 
-  it("records a failed diagnostic — with the real error message — when native token retrieval throws", async () => {
+  it("records a failed diagnostic - with the real error message - when native token retrieval throws", async () => {
     // This is the exact production scenario that motivated this whole file:
     // permission granted, everything upstream fine, and the native call
     // itself throws (a misconfigured Firebase project is the likely real-

@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils";
  * for free, which is most of the accessibility work.
  *
  * Unlike the toolbar buttons, this one genuinely takes focus away from the
- * textarea, so preventing default is not enough — the selection has to be
+ * textarea, so preventing default is not enough -  the selection has to be
  * captured before the sheet opens and restored after the insert.
  */
 export function EmojiPickerSheet({
@@ -36,7 +36,7 @@ export function EmojiPickerSheet({
     if (!el) return;
     setOpen(false);
 
-    // Deferred so it lands after Radix restores focus to the trigger —
+    // Deferred so it lands after Radix restores focus to the trigger
     // without the delay, focus() below races it and the caret ends up
     // wherever the browser left it rather than where the writer was typing.
     //

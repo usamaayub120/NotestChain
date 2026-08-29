@@ -71,7 +71,7 @@ export function HeaderAddButton() {
         accessibilityHint="Open writing options"
         accessibilityState={{ expanded: anchor !== null }}
         onPress={open}
-        style={({ pressed }) => [local.addButton, pressed && local.pressed]}
+        style={({ pressed }) => [local.addButton, { backgroundColor: colors.soft }, pressed && local.pressed]}
       >
         <Ionicons name="add" size={20} color={colors.ink} />
         <Text style={[local.addLabel, { color: colors.ink, fontSize: 14 * fontScale }]}>Write</Text>
@@ -116,7 +116,7 @@ export function HeaderAddButton() {
 const local = StyleSheet.create({
   brand: { flexDirection: "row", alignItems: "center", gap: 8 },
   wordmark: { fontWeight: "700", letterSpacing: -0.2 },
-  addButton: { minWidth: 68, minHeight: 48, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 2, borderRadius: 24, paddingHorizontal: 6 },
+  addButton: { minWidth: 72, minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 3, borderRadius: 20, paddingHorizontal: 10 },
   addLabel: { fontWeight: "700" },
   pressed: { opacity: 0.6 },
   disabled: { opacity: 0.5 },

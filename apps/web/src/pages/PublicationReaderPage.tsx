@@ -33,9 +33,9 @@ export function PublicationReaderPage() {
 
   useEffect(() => {
     if (!publication) return;
-    document.title = `${publication.title} — ${brand.name}`;
+    document.title = `${publication.title} -  ${brand.name}`;
     return () => {
-      document.title = `${brand.name} — ${brand.tagline}`;
+      document.title = `${brand.name} -  ${brand.tagline}`;
     };
   }, [publication]);
 
@@ -46,7 +46,7 @@ export function PublicationReaderPage() {
     <article className="mx-auto max-w-reading px-4 py-8">
       {publication.discoverability === "UNLISTED" && (
         <p className="mb-4 rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-          Unlisted — not shown in search or Explore, but reachable by this link.
+          Unlisted -  not shown in search or Explore, but reachable by this link.
         </p>
       )}
 

@@ -9,7 +9,7 @@ import { cn } from "@/lib/utils";
  * both contributed to the original complaint:
  *
  *   * "bytes" is not a unit anyone writing prose can act on, and an emoji
- *     silently cost four of them — so the number moved in ways that looked
+ *     silently cost four of them -  so the number moved in ways that looked
  *     arbitrary.
  *   * It went red when you passed the limit and then did nothing at all.
  *     Nothing read the over-limit state, so the writer had no reason to

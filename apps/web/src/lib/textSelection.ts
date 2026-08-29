@@ -3,7 +3,7 @@
  *
  * The editor is a plain <textarea> rather than a contenteditable, and these
  * helpers are why that stays workable. The stored value must be markdown
- * source, and a textarea's value *is* that source — no DOM-to-markdown
+ * source, and a textarea's value *is* that source -  no DOM-to-markdown
  * serializer sits between what the writer typed and what gets hashed onto a
  * chain permanently.
  */
@@ -15,7 +15,7 @@
  * this function: it is the only way to make a programmatic edit join the
  * browser's NATIVE undo stack. Without it, pressing Ctrl+Z after clicking the
  * bold button either does nothing or reverts something the writer did much
- * earlier — a genuinely disorienting way to lose work.
+ * earlier -  a genuinely disorienting way to lose work.
  *
  * `setRangeText` is the fallback. It works everywhere but resets undo
  * history, so it is second choice, not first.

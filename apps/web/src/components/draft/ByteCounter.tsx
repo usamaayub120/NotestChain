@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * The title counter. Still measured in UTF-8 bytes, because the title really
- * is stored inside a fixed-size Solana account field — that is a genuine
+ * is stored inside a fixed-size Solana account field -  that is a genuine
  * constraint, not an implementation detail leaking out.
  *
  * The note body uses NoteCounter instead: its length is no longer bounded by
@@ -17,7 +17,7 @@ export function ByteCounter({ value, max, id }: { value: string; max: number; id
   const bytes = utf8ByteLength(value);
   const over = bytes > max;
 
-  // A character is multi-byte if it costs more than one byte in UTF-8 — any
+  // A character is multi-byte if it costs more than one byte in UTF-8 -  any
   // emoji, accented letter, or CJK character. Only worth mentioning when it
   // is actually why the writer is close to the limit.
   const hasMultiByte = bytes > [...value].length;

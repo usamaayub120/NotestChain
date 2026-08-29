@@ -16,7 +16,7 @@ import { ApiClientError } from "@/lib/api";
 // stricter CreateIdentityInput output type the API expects.
 type IdentityFormValues = z.input<typeof createIdentitySchema>;
 
-// Every pen name created here IS a pen name — a REAL_NAME byline only ever
+// Every pen name created here IS a pen name -  a REAL_NAME byline only ever
 // exists as the Keeper profile made at registration, and the API ignores
 // `type` on this route regardless of what's sent (identities.service.ts).
 export function NewIdentityPage() {
@@ -99,7 +99,7 @@ export function NewIdentityPage() {
               <FormItem>
                 <FormLabel>Avatar URL</FormLabel>
                 <FormControl>
-                  <Input placeholder="Optional — a link to an image" {...field} value={field.value ?? ""} />
+                  <Input placeholder="Optional -  a link to an image" {...field} value={field.value ?? ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

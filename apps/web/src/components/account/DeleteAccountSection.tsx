@@ -29,7 +29,7 @@ export function DeleteAccountSection() {
     <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-5">
       <h2 className="text-lg text-foreground">Delete your account</h2>
       <p className="mt-2 text-sm text-muted-foreground">
-        This closes your account for good — every session ends, your password stops working, and unfinished
+        This closes your account for good -  every session ends, your password stops working, and unfinished
         drafts are deleted with it. Notes you've already published stay published; that's the one thing account
         deletion can't undo.
       </p>

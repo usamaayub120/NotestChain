@@ -11,12 +11,12 @@ export function DashboardPage() {
   const keeperProfile = useKeeperProfile();
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-8">
-      <h1 className="text-2xl">Dashboard</h1>
+    <div className="mx-auto max-w-6xl px-4 py-8 md:px-8 lg:py-12">
+      <h1 className="text-2xl md:text-3xl">Dashboard</h1>
       <p className="mt-1 text-muted-foreground">Signed in as {user?.email}</p>
       <p className="mt-4 text-sm italic text-muted-foreground">Some days it's one sentence. That's still a keep.</p>
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2">
+      <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <button
           type="button"
           onClick={() => startNewDraft()}
@@ -53,7 +53,7 @@ export function DashboardPage() {
         {keeperProfile && (
           <Link to={`/@${keeperProfile.username}`} className="rounded-md border border-border bg-surface p-4 hover:bg-muted">
             <h2 className="text-lg">Your Keeper profile</h2>
-            <p className="mt-1 text-sm text-muted-foreground">@{keeperProfile.username} — what readers see.</p>
+            <p className="mt-1 text-sm text-muted-foreground">@{keeperProfile.username} -  what readers see.</p>
           </Link>
         )}
         {user && (user.role === "MODERATOR" || user.role === "ADMIN") && (

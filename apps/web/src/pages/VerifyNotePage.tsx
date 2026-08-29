@@ -52,7 +52,7 @@ export function VerifyNotePage() {
 
       {!isFetching && isError && (
         <p role="alert" className="mt-8 text-sm text-destructive">
-          Something went wrong looking that up — try again.
+          Something went wrong looking that up -  try again.
         </p>
       )}
 
@@ -85,7 +85,7 @@ export function VerifyNotePage() {
       {!isFetching && data?.kind === "onchain_only" && (
         <article className="mt-8 border-t border-border pt-6">
           <p className="rounded-md bg-muted px-3 py-2 text-xs text-muted-foreground">
-            This on-chain record has no matching entry in our records — it isn't a note published through this
+            This on-chain record has no matching entry in our records -  it isn't a note published through this
             platform's normal review process. Showing only what's directly on-chain.
           </p>
           <h2 className="mt-4 font-display text-2xl">{data.account.title}</h2>
@@ -97,7 +97,7 @@ export function VerifyNotePage() {
           </p>
           {data.account.schemaVersion === 2 && (
             <p className="mt-3 text-xs text-muted-foreground">
-              This is a v2 record — only an excerpt and a content hash live on-chain; the full body isn't
+              This is a v2 record -  only an excerpt and a content hash live on-chain; the full body isn't
               recoverable from here.
             </p>
           )}

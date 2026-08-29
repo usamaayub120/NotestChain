@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
  * and the mark gets applied to a caret position instead of the words the
  * writer highlighted.
  *
- * The buttons are plain commands, not toggles — no `aria-pressed`. Reflecting
+ * The buttons are plain commands, not toggles -  no `aria-pressed`. Reflecting
  * "is the caret currently inside a bold span" means re-parsing at the caret on
  * every selection change, and a toggle button that reports the wrong state is
  * worse for a screen-reader user than one that reports none.
@@ -43,7 +43,7 @@ export function FormatToolbar({
           disabled={disabled}
           aria-label={`${label}, ${shortcut}`}
           title={`${label} (${shortcut})`}
-          // Keeps focus — and therefore the selection — in the textarea.
+          // Keeps focus -  and therefore the selection -  in the textarea.
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => {
             const el = textareaRef.current;

@@ -5,13 +5,13 @@ type IdentityMode = "NAMED" | "PSEUDONYMOUS" | "ANONYMOUS";
 
 /**
  * The byline picker: every note is published under either the Keeper's own
- * profile or one of their pen names — there is no anonymous option here.
+ * profile or one of their pen names -  there is no anonymous option here.
  * `identityMode` is derived from which identity is chosen (NAMED for the
  * Keeper profile, PSEUDONYMOUS for a pen name) rather than picked
  * separately, so the two can never disagree with each other.
  *
  * `onChange` still reports both values because DraftEditorPage persists
- * identityMode and publicIdentityId as sibling fields on the draft — see
+ * identityMode and publicIdentityId as sibling fields on the draft -  see
  * checkIdentityConsistency in packages/validation/src/drafts.ts, which still
  * accepts ANONYMOUS on the wire for an already-installed mobile binary even
  * though nothing in this UI offers it anymore.
@@ -55,7 +55,7 @@ export function IdentityModeSelector({
         ))}
       </div>
       {!keeperProfile && (
-        <p className="mt-2 text-sm text-muted-foreground">Your Keeper profile is still loading — try again in a moment.</p>
+        <p className="mt-2 text-sm text-muted-foreground">Your Keeper profile is still loading -  try again in a moment.</p>
       )}
       <p className="mt-2 text-sm text-muted-foreground">
         Want to publish under something other than your own name?{" "}

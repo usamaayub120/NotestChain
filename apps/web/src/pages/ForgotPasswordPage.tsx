@@ -21,7 +21,7 @@ export function ForgotPasswordPage() {
   async function onSubmit(values: ForgotPasswordInput) {
     try {
       await forgotPassword.mutateAsync(values);
-      // Shown regardless of whether the email has an account — the server
+      // Shown regardless of whether the email has an account -  the server
       // gives the same response either way, and repeating that here in the
       // UI is what actually makes the guarantee hold end to end.
       setSubmitted(true);

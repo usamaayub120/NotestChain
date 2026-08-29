@@ -102,7 +102,7 @@ export default function EditIdentityScreen() {
     <Screen>
       <Title>{identity.isPrimary ? "Your Keeper profile" : identity.displayName}</Title>
       <Subtitle>
-        @{identity.username} · {identity.isPrimary ? "This is your own profile — always visible and findable." : "Pen name"}
+        @{identity.username} · {identity.isPrimary ? "This is your own profile - always visible and findable." : "Pen name"}
       </Subtitle>
 
       {identity.isPrimary && identity.canChangeUsername && (

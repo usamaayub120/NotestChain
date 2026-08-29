@@ -64,7 +64,7 @@ async function request(path: string, options: RequestOptions): Promise<{ data: u
 }
 
 /**
- * Always relative to /api/v1 — never a hardcoded environment-specific
+ * Always relative to /api/v1 -  never a hardcoded environment-specific
  * domain. Nginx proxies this to the API in every environment.
  */
 export async function apiFetch<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -72,7 +72,7 @@ export async function apiFetch<T>(path: string, options: RequestOptions = {}): P
   return payload.data as T;
 }
 
-/** Same as apiFetch, but for endpoints using the `paginated()` response shape — keeps `meta` too. */
+/** Same as apiFetch, but for endpoints using the `paginated()` response shape -  keeps `meta` too. */
 export async function apiFetchPaginated<T>(path: string, options: RequestOptions = {}): Promise<PaginatedResult<T>> {
   const payload = await request(path, options);
   return { data: payload.data as T[], meta: payload.meta! };

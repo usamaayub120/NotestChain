@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 /**
  * Confirmation gate for admin actions that are destructive/hard to reverse
  * (suspend an author, delist a publication, remove a comment, reject a
- * submission) — reserved for exactly those, per apple-design's Agency
- * principle ("use sparingly — overusing it trains people to click through").
+ * submission) -  reserved for exactly those, per apple-design's Agency
+ * principle ("use sparingly -  overusing it trains people to click through").
  * Dismiss/approve/request-changes stay single-click.
  */
 export function ConfirmActionDialog({

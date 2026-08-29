@@ -9,7 +9,7 @@ import { useMyFollowing } from "@/hooks/useFollows";
 
 /**
  * The signed-in home screen: Following is the default once you follow
- * anyone, Latest otherwise — a new reader is never staring at an empty
+ * anyone, Latest otherwise -  a new reader is never staring at an empty
  * tab. Marketing HomePage.tsx renders this in place of its own content once
  * a session exists; Explore stays the separate, tab-free discovery surface.
  */

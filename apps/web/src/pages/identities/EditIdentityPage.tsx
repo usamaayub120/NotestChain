@@ -35,7 +35,7 @@ export function EditIdentityPage() {
         {identity.isPrimary ? "Your Keeper profile" : `Edit ${identity.displayName}`}
       </h1>
       <p className="mt-1 text-sm text-muted-foreground">
-        @{identity.username} · {identity.isPrimary ? "This is your own profile — always visible and findable." : "Pen name"}
+        @{identity.username} · {identity.isPrimary ? "This is your own profile -  always visible and findable." : "Pen name"}
       </p>
 
       {identity.isPrimary && identity.canChangeUsername && <UsernameChangeForm currentUsername={identity.username} />}
@@ -68,7 +68,7 @@ function UsernameChangeForm({ currentUsername }: { currentUsername: string }) {
     <div className="mt-6 rounded-md border border-border bg-surface p-4">
       <p className="text-sm font-medium">Your username was generated for you</p>
       <p className="mt-1 text-xs text-muted-foreground">
-        You can change it once. After that, it's permanent — it's already how people will find and link to you.
+        You can change it once. After that, it's permanent -  it's already how people will find and link to you.
       </p>
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="mt-3 flex items-start gap-2" noValidate>
@@ -177,7 +177,7 @@ function IdentityFieldsForm({
             <FormItem>
               <FormLabel>Avatar URL</FormLabel>
               <FormControl>
-                <Input placeholder="Optional — a link to an image" {...field} value={field.value ?? ""} />
+                <Input placeholder="Optional -  a link to an image" {...field} value={field.value ?? ""} />
               </FormControl>
               <FormMessage />
             </FormItem>

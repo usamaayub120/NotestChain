@@ -61,7 +61,7 @@ export default function VerifyScreen() {
 
       {query.isFetching && <Loading label="Looking that up…" />}
 
-      {!query.isFetching && query.isError && <ErrorText>Something went wrong looking that up — try again.</ErrorText>}
+      {!query.isFetching && query.isError && <ErrorText>Something went wrong looking that up - try again.</ErrorText>}
 
       {!query.isFetching && query.data?.kind === "not_found" && (
         <Text style={{ color: colors.muted, fontSize: 15 }}>
@@ -74,7 +74,7 @@ export default function VerifyScreen() {
       {!query.isFetching && onChainAccount && (
         <Card>
           <Text style={{ color: colors.muted, fontSize: 13, lineHeight: 18 }}>
-            This on-chain record has no matching entry in our records — it isn't a note published through this
+            This on-chain record has no matching entry in our records - it isn't a note published through this
             platform's normal review process. Showing only what's directly on-chain.
           </Text>
           <Text style={{ color: colors.ink, fontFamily: "serif", fontSize: 20, fontWeight: "700", marginTop: 4 }}>

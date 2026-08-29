@@ -104,7 +104,7 @@ export function DraftEditorPage() {
 
     // Derived from nextContent rather than read off `validation`. The
     // memoized validation belongs to the render this closure was created in,
-    // which is the one BEFORE setContent applied — so reading it here reports
+    // which is the one BEFORE setContent applied -  so reading it here reports
     // the previous keystroke's length and the indicator lags a character
     // behind. Exactly the kind of "it says it's fine" staleness this whole
     // change exists to remove.
@@ -147,7 +147,7 @@ export function DraftEditorPage() {
 
   /** Cmd/Ctrl+B and +I, plus Cmd/Ctrl+Shift+H for highlight. */
   function handleKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
-    // Never fight an in-progress IME composition — intercepting keys mid
+    // Never fight an in-progress IME composition -  intercepting keys mid
     // composition drops characters for anyone typing Japanese or Korean.
     if (event.nativeEvent.isComposing || event.repeat) return;
     const mod = event.metaKey || event.ctrlKey;
@@ -175,7 +175,7 @@ export function DraftEditorPage() {
 
     // Submit uses aria-disabled rather than `disabled`, so it stays focusable
     // and clickable. A truly disabled button is a dead end: a keyboard or
-    // screen-reader user tabs past it and never learns why — which is the
+    // screen-reader user tabs past it and never learns why -  which is the
     // original complaint in a quieter form. Pressing it names the problem and
     // puts the cursor on it.
     if (!validation.isValid) {
@@ -251,7 +251,7 @@ export function DraftEditorPage() {
   const contentError = serverErrors.content ?? validation.fieldErrors.content;
 
   return (
-    // max-w-reading (72ch), per DESIGN_SYSTEM.md §10 — the previous
+    // max-w-reading (72ch), per DESIGN_SYSTEM.md §10 -  the previous
     // max-w-2xl worked out to roughly 79ch at text-body.
     <div className="mx-auto flex min-h-[calc(100dvh-3.5rem)] max-w-reading flex-col px-4 py-3 md:min-h-0 md:py-8">
       <div
@@ -281,7 +281,7 @@ export function DraftEditorPage() {
 
       {!editable && (
         <div className="mt-3 rounded-md bg-muted px-3 py-2 text-sm">
-          {draft.status === "PENDING_REVIEW" && "Awaiting moderator review — you can withdraw it below."}
+          {draft.status === "PENDING_REVIEW" && "Awaiting moderator review -  you can withdraw it below."}
           {draft.status === "APPROVED" && "Approved! Publish it permanently when you're ready."}
           {draft.status === "REJECTED" && "This submission was rejected."}
           {draft.status === "ARCHIVED" && "This draft is archived."}

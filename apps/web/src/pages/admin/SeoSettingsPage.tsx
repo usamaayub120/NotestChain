@@ -17,13 +17,13 @@ export function SeoSettingsPage() {
   const updateSettings = useUpdateSiteSettings();
   const [justSaved, setJustSaved] = useState(false);
 
-  // Unlike NewIdentityPage's schema, this one has no .transform() — the
-  // "" -> null normalization happens server-side in settings.service.ts —
+  // Unlike NewIdentityPage's schema, this one has no .transform() -  the
+  // "" -> null normalization happens server-side in settings.service.ts
   // so the form's values and the submitted values are the same type.
   const form = useForm<UpdateSiteSettingsInput>({
     resolver: zodResolver(updateSiteSettingsSchema),
     // `values` (rather than defaultValues) keeps the form in sync once the
-    // async GET resolves — there's nothing sensible to show before that.
+    // async GET resolves -  there's nothing sensible to show before that.
     values: settings
       ? {
           ga4MeasurementId: settings.ga4MeasurementId ?? "",
@@ -50,7 +50,7 @@ export function SeoSettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-6 md:px-8">
+      <div className="px-4 py-6 md:px-8 lg:px-10 lg:py-10">
         <AdminPageHeader title="Settings" />
         <div className="mt-6">
           <CardSkeletonList count={3} />
@@ -60,14 +60,14 @@ export function SeoSettingsPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6 md:px-8">
+    <div className="px-4 py-6 md:px-8 lg:px-10 lg:py-10">
       <AdminPageHeader
         title="Settings"
         description="Search Console verification, GA4, and default sharing metadata. Changes apply right away."
       />
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-6 space-y-5" noValidate>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="mt-6 max-w-4xl space-y-5" noValidate>
           <FormField
             control={form.control}
             name="indexingEnabled"

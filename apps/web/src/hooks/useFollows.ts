@@ -12,7 +12,7 @@ export interface FollowedIdentity {
 
 /**
  * The signed-in Keeper's own following list. There is no equivalent for
- * anyone else's — a following list is visible only to its owner, since it's
+ * anyone else's -  a following list is visible only to its owner, since it's
  * the strongest correlator between a Keeper and their pen names. See
  * follows.service.ts on the API for the full reasoning.
  */
@@ -31,7 +31,7 @@ function invalidateFollowState(queryClient: ReturnType<typeof useQueryClient>, u
 
 // Addressed by username, not an identity id: every DTO that renders a byline
 // (a note's author, a profile) already carries username, and none of them
-// carry PublicIdentity.id — deliberately, since exposing it everywhere would
+// carry PublicIdentity.id -  deliberately, since exposing it everywhere would
 // serve no purpose once username already does the job.
 export function useFollow() {
   const queryClient = useQueryClient();

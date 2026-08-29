@@ -77,7 +77,7 @@ export function AdminPagination({ state, total, onChange }: { state: AdminListSt
           {ADMIN_PAGE_SIZES.map((size) => <option key={size} value={size}>{size}</option>)}
         </select>
       </label>
-      <span className="text-muted-foreground">{total === 0 ? "No rows" : `${(state.page - 1) * state.pageSize + 1}–${Math.min(state.page * state.pageSize, total)} of ${total}`}</span>
+      <span className="text-muted-foreground">{total === 0 ? "No rows" : `${(state.page - 1) * state.pageSize + 1}-${Math.min(state.page * state.pageSize, total)} of ${total}`}</span>
       <div className="flex gap-2">
         <Button variant="outline" size="sm" disabled={state.page <= 1} onClick={() => onChange({ page: state.page - 1 })}>Previous</Button>
         <Button variant="outline" size="sm" disabled={state.page >= totalPages} onClick={() => onChange({ page: state.page + 1 })}>Next</Button>

@@ -16,7 +16,7 @@ import { ApiClientError } from "@/lib/api";
 // registerSchema leaves username/displayName optional so an already-installed
 // mobile binary that doesn't send them still registers (the server generates
 // a handle from the email instead). The web sign-up form is the new front
-// door, so it requires both — this is a stricter local schema, not the wire
+// door, so it requires both -  this is a stricter local schema, not the wire
 // contract, and its own inferred type (not RegisterInput) is what the form
 // itself is typed against.
 const webRegisterSchema = registerSchema.extend({
@@ -94,7 +94,7 @@ export function RegisterPage() {
                   <FormControl>
                     <Input autoComplete="name" placeholder="Marguerite Vale" {...field} />
                   </FormControl>
-                  <FormDescription>Shown on your Keeper profile — you can change it any time.</FormDescription>
+                  <FormDescription>Shown on your Keeper profile -  you can change it any time.</FormDescription>
                   <FormMessage />
                 </FormItem>
               )}

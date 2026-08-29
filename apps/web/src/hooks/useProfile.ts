@@ -20,7 +20,7 @@ export interface Profile {
   commonTags: string[];
   joinedAt: string;
   /**
-   * null below the visibility threshold — render "New", never 0. There is no
+   * null below the visibility threshold -  render "New", never 0. There is no
    * endpoint that returns the follower list itself; see the API's
    * follows.service.ts for why.
    */

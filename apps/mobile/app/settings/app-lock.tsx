@@ -68,7 +68,7 @@ export default function AppLockSettingsScreen() {
   if (loading) return <Screen><Title>App lock</Title><Subtitle>Loading…</Subtitle></Screen>;
 
   return <Screen>
-    <View style={{ gap: 6, paddingTop: 4 }}><Eyebrow>Security</Eyebrow><Title>App lock</Title><Subtitle>Require a PIN or fingerprint before NotesChain opens on this device — on top of, not instead of, your account sign-in.</Subtitle></View>
+    <View style={{ gap: 6, paddingTop: 4 }}><Eyebrow>Security</Eyebrow><Title>App lock</Title><Subtitle>Require a PIN or fingerprint before NotesChain opens on this device - on top of, not instead of, your account sign-in.</Subtitle></View>
     {notice ? <Notice>{notice}</Notice> : null}
 
     {pinSet ? <>
@@ -91,7 +91,7 @@ export default function AppLockSettingsScreen() {
         </View>
       </View>}
     </> : <>
-      <Text style={{ color: colors.ink, fontWeight: "700" }}>Choose a PIN (4–6 digits)</Text>
+      <Text style={{ color: colors.ink, fontWeight: "700" }}>Choose a PIN (4-6 digits)</Text>
       <Field value={newPin} onChangeText={(v) => setNewPin(v.replace(/[^0-9]/g, "").slice(0, 6))} keyboardType="number-pad" secureTextEntry maxLength={6} placeholder="New PIN" />
       <Field value={confirmPin} onChangeText={(v) => setConfirmPin(v.replace(/[^0-9]/g, "").slice(0, 6))} keyboardType="number-pad" secureTextEntry maxLength={6} placeholder="Confirm PIN" />
       {error ? <ErrorText>{error}</ErrorText> : null}

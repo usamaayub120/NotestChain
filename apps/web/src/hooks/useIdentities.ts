@@ -5,7 +5,7 @@ import { apiFetch } from "@/lib/api";
 export interface Identity {
   id: string;
   type: "REAL_NAME" | "PSEUDONYM";
-  /** The Keeper profile — every account has exactly one, and it's this one. */
+  /** The Keeper profile -  every account has exactly one, and it's this one. */
   isPrimary: boolean;
   username: string;
   displayName: string;
@@ -14,7 +14,7 @@ export interface Identity {
   links: string[];
   location: string | null;
   pronouns: string | null;
-  /** This is the owner's own view — the private value is returned whether or not showBirthDate is on; the public profile applies that gate itself. */
+  /** This is the owner's own view -  the private value is returned whether or not showBirthDate is on; the public profile applies that gate itself. */
   birthDate: string | null;
   showBirthDate: boolean;
   gender: string | null;
@@ -26,7 +26,7 @@ export interface Identity {
   updatedAt: string;
 }
 
-/** Keeper profile first, then pen names — matches the API's ordering. */
+/** Keeper profile first, then pen names -  matches the API's ordering. */
 export function useIdentities() {
   return useQuery({
     queryKey: ["identities"],
@@ -69,7 +69,7 @@ export function useDeleteIdentity() {
   });
 }
 
-/** The one free rename on the Keeper profile — see canChangeUsername on Identity. */
+/** The one free rename on the Keeper profile -  see canChangeUsername on Identity. */
 export function useChangeKeeperUsername() {
   const queryClient = useQueryClient();
   return useMutation({

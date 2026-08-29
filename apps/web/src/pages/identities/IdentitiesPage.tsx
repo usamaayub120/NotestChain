@@ -31,7 +31,7 @@ export function IdentitiesPage() {
                 {keeperProfile.displayName}{" "}
                 <span className="font-normal text-muted-foreground">@{keeperProfile.username}</span>
               </p>
-              <p className="text-xs text-muted-foreground">Your own profile — always visible and findable.</p>
+              <p className="text-xs text-muted-foreground">Your own profile -  always visible and findable.</p>
             </div>
             <span className="text-sm text-muted-foreground">Edit →</span>
           </Link>

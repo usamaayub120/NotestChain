@@ -1,5 +1,5 @@
 /**
- * Original short lines written in NotesChain's own voice — illustrative
+ * Original short lines written in NotesChain's own voice -  illustrative
  * copy, not real published content, and never presented with a fake
  * author or avatar (see .claude/skills/noteschain-copywriter). Used across
  * the homepage gallery, the footer, and the auth side panel so the same
@@ -12,7 +12,7 @@ export const KEPT_THOUGHTS: readonly string[] = [
   "Some thoughts aren't for anyone. I keep them anyway.",
   "You don't remember most days. This is for the ones you'd want to.",
   "Wrote this on a bench. Still true from here.",
-  "Half of what I write is wrong by morning. I keep it anyway — it was true when I meant it.",
+  "Half of what I write is wrong by morning. I keep it anyway -  it was true when I meant it.",
   "A good thought doesn't need an audience to be worth keeping.",
   "Somewhere between a diary and a headstone. I like that about this.",
 ];

@@ -7,10 +7,10 @@ const STATE_MESSAGES: Record<string, string> = {
   VERIFIED: "This matches what's on the public record.",
   NOT_FINALIZED: "This hasn't reached the public record yet.",
   ACCOUNT_NOT_FOUND: "We couldn't find this on the public record.",
-  HASH_MISMATCH: "This doesn't match the public record — it's been reported for review.",
-  PDA_MISMATCH: "This doesn't match the public record — it's been reported for review.",
+  HASH_MISMATCH: "This doesn't match the public record -  it's been reported for review.",
+  PDA_MISMATCH: "This doesn't match the public record -  it's been reported for review.",
   UNSUPPORTED_VERSION: "We can't verify this version yet.",
-  RPC_UNAVAILABLE: "We couldn't confirm this right now — try again shortly.",
+  RPC_UNAVAILABLE: "We couldn't confirm this right now -  try again shortly.",
 };
 
 export function BlockchainProofSheet({ publication }: { publication: Publication }) {
@@ -41,7 +41,7 @@ export function BlockchainProofSheet({ publication }: { publication: Publication
           <dl className="mt-3 space-y-2 font-proof text-xs text-muted-foreground">
             <div>
               <dt className="text-foreground">Network</dt>
-              <dd>{publication.chain?.network ?? "—"}</dd>
+              <dd>{publication.chain?.network ?? " - "}</dd>
             </div>
             <div>
               <dt className="text-foreground">Publication PDA</dt>

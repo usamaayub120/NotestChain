@@ -1,5 +1,5 @@
 /**
- * A small drawn-on sprig — deliberately linear and open, never a ring, so
+ * A small drawn-on sprig -  deliberately linear and open, never a ring, so
  * it can't be confused with the Kept Stamp (DESIGN_SYSTEM.md §6), which is
  * the only motif allowed to represent on-chain verification anywhere in
  * the product. This one means something different: writing, growing,

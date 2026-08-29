@@ -17,7 +17,7 @@ const GALLERY_THOUGHTS = KEPT_THOUGHTS.slice(0, 4);
 const FEATURES = [
   {
     title: "Drafts stay yours",
-    body: "Every note starts private — autosaved, versioned, and never public until you choose to submit it.",
+    body: "Every note starts private -  autosaved, versioned, and never public until you choose to submit it.",
   },
   {
     title: "Publish your way",
@@ -25,7 +25,7 @@ const FEATURES = [
   },
   {
     title: "A public record, once you're sure",
-    body: "After moderation, you choose whether to publish an approved note permanently on Solana — verifiable by anyone, forever.",
+    body: "After moderation, you choose whether to publish an approved note permanently on Solana -  verifiable by anyone, forever.",
   },
 ];
 
@@ -57,35 +57,45 @@ export function HomePage() {
 
   return (
     <div>
-      <section className="relative overflow-hidden">
+      <section className="relative overflow-hidden border-b border-border">
         <CanopyGlow />
-        <div className="mx-auto max-w-2xl px-4 py-10 md:py-20">
-          <div className="flex items-start gap-4">
-            <div>
-              <p className="mb-3 text-sm font-medium text-primary">{brand.name}</p>
-              <h1 className="text-3xl leading-tight md:text-5xl">{brand.tagline}</h1>
+        <div className="mx-auto grid max-w-7xl gap-10 px-4 py-12 md:px-8 md:py-20 lg:grid-cols-[minmax(0,1.05fr)_minmax(22rem,0.7fr)] lg:items-center lg:gap-16 lg:py-24">
+          <div className="max-w-2xl">
+            <div className="flex items-start gap-4">
+              <div>
+                <p className="mb-3 text-sm font-medium text-primary">{brand.name}</p>
+                <h1 className="text-3xl leading-tight md:text-5xl lg:text-6xl">{brand.tagline}</h1>
+              </div>
+              <WritingMark className="mt-1 hidden h-16 w-14 shrink-0 text-verified md:block" />
             </div>
-            <WritingMark className="mt-1 hidden h-16 w-14 shrink-0 text-verified md:block" />
-          </div>
-          <p className="mt-4 max-w-reading text-body text-muted-foreground md:text-lg">
-            Write privately. Publish intentionally. Keep meaningful notes verifiable.
-          </p>
+            <p className="mt-5 max-w-reading text-body text-muted-foreground md:text-lg">
+              Write privately. Publish intentionally. Keep meaningful notes verifiable.
+            </p>
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button asChild size="lg">
-              <Link to="/register">Start writing</Link>
-            </Button>
-            <Button asChild size="lg" variant="outline">
-              <Link to="/explore">Explore notes</Link>
-            </Button>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Button asChild size="lg">
+                <Link to="/register">Start writing</Link>
+              </Button>
+              <Button asChild size="lg" variant="outline">
+                <Link to="/explore">Explore notes</Link>
+              </Button>
+            </div>
+          </div>
+          <div className="hidden border-l border-border pl-8 lg:block">
+            <p className="font-display text-xl text-foreground">A thought can stay private until it is ready.</p>
+            <div className="mt-6 grid gap-3">
+              {GALLERY_THOUGHTS.slice(0, 2).map((thought) => (
+                <KeptThoughtCard key={thought} text={thought} />
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      <RevealSection className="border-t border-border">
-        <div className="mx-auto max-w-2xl px-4 py-14">
+      <RevealSection>
+        <div className="mx-auto max-w-7xl px-4 py-14 md:px-8 lg:py-20">
           <h2 className="text-sm font-medium uppercase tracking-wide text-muted-foreground">A few recent notes</h2>
-          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+          <div className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {GALLERY_THOUGHTS.map((thought) => (
               <KeptThoughtCard key={thought} text={thought} />
             ))}
@@ -93,8 +103,8 @@ export function HomePage() {
         </div>
       </RevealSection>
 
-      <RevealSection className="border-t border-border bg-surface-elevated">
-        <div className="mx-auto max-w-2xl px-4 py-16 text-center">
+      <RevealSection className="border-y border-border bg-surface-elevated">
+        <div className="mx-auto max-w-4xl px-4 py-16 text-center md:px-8 lg:py-24">
           <p className="font-display text-2xl leading-snug md:text-4xl">
             Most of what you write today will be gone by next year.
             <br />A few things shouldn't be.
@@ -103,33 +113,30 @@ export function HomePage() {
         </div>
       </RevealSection>
 
-      <RevealSection className="border-t border-border">
-        <div className="mx-auto max-w-2xl space-y-6 px-4 py-14">
+      <RevealSection>
+        <div className="mx-auto grid max-w-7xl gap-8 px-4 py-16 md:px-8 lg:grid-cols-[minmax(16rem,0.7fr)_minmax(0,1.3fr)] lg:gap-16 lg:py-24">
+          <div aria-hidden="true" className="hidden items-start lg:flex">
+            <WritingMark className="h-24 w-20 text-verified" />
+          </div>
+          <div className="space-y-6">
           {FEATURES.map((feature) => (
-            <div key={feature.title}>
+            <div key={feature.title} className="border-l border-border pl-5">
               <h2 className="text-xl">{feature.title}</h2>
               <p className="mt-1 text-muted-foreground">{feature.body}</p>
             </div>
           ))}
-          <Link to="/how-it-works" className="inline-block text-sm text-primary underline">
-            See exactly how a note is published
-          </Link>
-          <Link to="/verify" className="block text-sm text-primary underline">
-            Verify a note’s public record
-          </Link>
-        </div>
-      </RevealSection>
-
-      <RevealSection className="border-t border-border">
-        <div className="mx-auto max-w-2xl px-4 py-16 text-center">
-          <h2 className="font-display text-2xl md:text-3xl">Something worth keeping, right now?</h2>
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            <Button asChild size="lg">
-              <Link to="/register">Start writing</Link>
-            </Button>
+            <div className="flex flex-wrap gap-x-6 gap-y-3 pt-2">
+              <Link to="/how-it-works" className="inline-block text-sm text-primary underline">
+                See exactly how a note is published
+              </Link>
+              <Link to="/verify" className="inline-block text-sm text-primary underline">
+                Verify a note’s public record
+              </Link>
+            </div>
           </div>
         </div>
       </RevealSection>
+
     </div>
   );
 }

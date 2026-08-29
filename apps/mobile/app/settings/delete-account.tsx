@@ -33,7 +33,7 @@ export default function DeleteAccountScreen() {
     <Screen>
       <Title>Delete your account</Title>
       <Subtitle>
-        This closes your account for good — every session ends, your password stops working, and unfinished
+        This closes your account for good - every session ends, your password stops working, and unfinished
         drafts are deleted with it. Notes you've already published stay published; that's the one thing account
         deletion can't undo.
       </Subtitle>

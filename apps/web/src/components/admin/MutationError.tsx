@@ -1,4 +1,4 @@
-/** Inline failure feedback for an admin mutation — so a failed suspend/
+/** Inline failure feedback for an admin mutation -  so a failed suspend/
  * delist/reject/retry never fails silently (the button just re-enabling
  * with no explanation). */
 export function MutationError({ error }: { error: unknown }) {

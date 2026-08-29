@@ -1,5 +1,5 @@
 /**
- * Ambient light for the hero — two soft, slow-drifting blurred shapes, warm
+ * Ambient light for the hero -  two soft, slow-drifting blurred shapes, warm
  * gold and moss green, meant to read as sunlight through a canopy rather
  * than a decoration you consciously notice. Purely atmospheric: never sits
  * under interactive content, never used for contrast/reading purposes.

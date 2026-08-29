@@ -10,7 +10,7 @@ import { AuthSidePanel } from "@/components/auth/AuthSidePanel";
 import { useResetPassword } from "@/hooks/useAuth";
 import { ApiClientError } from "@/lib/api";
 
-// The token comes from the URL, not typed by hand — the form itself only
+// The token comes from the URL, not typed by hand -  the form itself only
 // ever collects the new password.
 const formSchema = resetPasswordSchema.omit({ token: true });
 type FormValues = z.infer<typeof formSchema>;
@@ -44,7 +44,7 @@ export function ResetPasswordPage() {
 
         {!token ? (
           <p className="mt-4 text-muted-foreground">
-            This link is missing its token — check the URL, or{" "}
+            This link is missing its token -  check the URL, or{" "}
             <Link to="/forgot-password" className="font-medium text-primary">
               request a new one
             </Link>

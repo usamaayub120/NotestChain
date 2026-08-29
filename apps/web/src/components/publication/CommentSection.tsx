@@ -27,7 +27,7 @@ export function CommentSection({ publication }: { publication: Publication }) {
 
           {isLoading && <SectionLoader label="Loading comments" />}
           {!isLoading && data?.data.length === 0 && (
-            <p className="mt-6 text-sm text-muted-foreground">Nothing here yet — be the first to comment.</p>
+            <p className="mt-6 text-sm text-muted-foreground">Nothing here yet -  be the first to comment.</p>
           )}
 
           <div className="mt-6 space-y-3">

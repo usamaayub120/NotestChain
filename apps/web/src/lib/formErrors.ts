@@ -2,7 +2,7 @@
  * Maps a server validation failure back onto the field that caused it.
  *
  * `ApiClientError.details` already carries `parsed.error.flatten()` from the
- * API — it always has, and the draft editor simply threw it away and showed
+ * API -  it always has, and the draft editor simply threw it away and showed
  * the generic top-level message in an `alert()`. That is why a writer whose
  * note was too long saw "This draft isn't ready to submit." with no
  * indication of which field was at fault or why.
@@ -16,7 +16,7 @@ export interface ZodFlatten {
 /**
  * Runtime shape check rather than a cast. `details` is typed `unknown` and
  * genuinely can be anything the server sends, so a cast would turn a
- * malformed error response into a crash inside the error handler — the worst
+ * malformed error response into a crash inside the error handler -  the worst
  * possible place for one.
  */
 export function asZodFlatten(details: unknown): ZodFlatten | null {

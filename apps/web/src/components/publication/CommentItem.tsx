@@ -91,7 +91,7 @@ function CommentReportTrigger({ commentId }: { commentId: string }) {
           <SheetTitle>Report this comment</SheetTitle>
         </SheetHeader>
         {status === "sent" ? (
-          <p className="mt-4 text-sm text-muted-foreground">Thanks — a moderator will take a look.</p>
+          <p className="mt-4 text-sm text-muted-foreground">Thanks -  a moderator will take a look.</p>
         ) : (
           <>
             <Textarea

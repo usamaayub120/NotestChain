@@ -20,8 +20,8 @@ const mutationId = () => `mutation-${Date.now()}-${Math.random().toString(16).sl
 
 const chainPendingCopy = (status: string) =>
   status === "FAILED_RETRYABLE" || status === "FAILED_PERMANENT"
-    ? "We hit a snag writing this note to the blockchain. We'll keep retrying — check back soon."
-    : "Writing this note to the blockchain — this can take a few minutes. Its verification link will appear here once it's confirmed.";
+    ? "We hit a snag writing this note to the blockchain. We'll keep retrying - check back soon."
+    : "Writing this note to the blockchain - this can take a few minutes. Its verification link will appear here once it's confirmed.";
 
 export default function NoteScreen() {
   const navigation = useNavigation();
@@ -96,7 +96,7 @@ export default function NoteScreen() {
     const online = (await NetInfo.fetch()).isConnected;
     if (!online) {
       enqueue({ id: mutationId(), method, path, body: payload, createdAt: Date.now() });
-      setNotice("Saved on this device — it will sync when you reconnect.");
+      setNotice("Saved on this device - it will sync when you reconnect.");
       return;
     }
     await api(path, { method, body: JSON.stringify(payload), idempotencyKey: mutationId() });

@@ -14,7 +14,7 @@ const STATUS_LABELS: Record<string, string> = {
   PENDING_REVIEW: "Awaiting review",
   CHANGES_REQUESTED: "Changes requested",
   REJECTED: "Rejected",
-  APPROVED: "Approved — ready to publish",
+  APPROVED: "Approved -  ready to publish",
   CHAIN_PENDING: "Publishing…",
   CHAIN_SUBMITTED: "Publishing…",
   PUBLISHED: "Published",
@@ -53,7 +53,7 @@ export function DraftsListPage() {
       {!isLoading && (!drafts || drafts.length === 0) && (
         <EmptyState
           title="Nothing here yet"
-          description="Start a draft — it's autosaved and stays private until you submit it."
+          description="Start a draft -  it's autosaved and stays private until you submit it."
           action={
             <Button onClick={() => startNewDraft()} disabled={isStarting}>
               Start writing

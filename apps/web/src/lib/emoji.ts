@@ -5,13 +5,13 @@
  * emoji-picker-element fetches its dataset at runtime, which fights the app's
  * `connectSrc: 'self'` CSP and the same offline reasoning that made the fonts
  * self-hosted. These ~75 cover the overwhelming majority of what appears in
- * a piece of writing, and the OS keyboard picker still handles the rest —
+ * a piece of writing, and the OS keyboard picker still handles the rest
  * this is a real <textarea>, not a contenteditable.
  *
  * Every entry is a SINGLE code point, so each costs three or four UTF-8 bytes
  * and never more. No ZWJ sequences (family and profession emoji run 7-25
  * bytes), no skin-tone modifiers, no flags (regional-indicator pairs). That
- * bound is what keeps the title's byte counter explainable — "emoji take
+ * bound is what keeps the title's byte counter explainable -  "emoji take
  * extra room" stays true and small rather than varying by a factor of six.
  *
  * Pasted or keyboard-entered sequences still work and are still measured

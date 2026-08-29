@@ -68,7 +68,7 @@ function WalletCard({ wallet }: { wallet: WalletBalance }) {
         </>
       ) : (
         <p className="mt-3 text-sm text-muted-foreground">
-          No public key configured for this wallet yet — set it in the environment to see its balance here.
+          No public key configured for this wallet yet -  set it in the environment to see its balance here.
         </p>
       )}
     </div>
@@ -82,7 +82,7 @@ export function WalletBalancesPage() {
 
   if (isLoading) {
     return (
-      <div className="mx-auto max-w-2xl px-4 py-6 md:px-8">
+      <div className="px-4 py-6 md:px-8 lg:px-10 lg:py-10">
         <AdminPageHeader title="Solana wallets" />
         <div className="mt-6">
           <CardSkeletonList count={2} />
@@ -92,7 +92,7 @@ export function WalletBalancesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6 md:px-8">
+    <div className="px-4 py-6 md:px-8 lg:px-10 lg:py-10">
       <AdminPageHeader
         title="Solana wallets"
         description="Which on-chain accounts need a balance, what for, and how much they currently have."
@@ -100,7 +100,7 @@ export function WalletBalancesPage() {
 
       {anyLow && (
         <p role="alert" className="mt-4 rounded-md border border-destructive/40 bg-destructive/10 px-3 py-2 text-sm text-destructive">
-          One or more wallets are running low — see below.
+          One or more wallets are running low -  see below.
         </p>
       )}
 
@@ -110,7 +110,7 @@ export function WalletBalancesPage() {
         </Button>
       </div>
 
-      <div className="mt-3 space-y-4">
+      <div className="mt-3 grid gap-4 xl:grid-cols-2">
         {wallets.map((wallet) => (
           <WalletCard key={wallet.key} wallet={wallet} />
         ))}

@@ -15,7 +15,7 @@ export function PrivacyPolicyPage() {
         <section>
           <h2 className="text-lg text-foreground">What we collect</h2>
           <ul className="mt-2 list-disc space-y-1 pl-5">
-            <li>Your email address and a hashed password — we never store your password itself.</li>
+            <li>Your email address and a hashed password -  we never store your password itself.</li>
             <li>
               If you set up a public identity, its display name and, if you add one, a short bio. You choose
               whether to write under your real name or a pseudonym.
@@ -44,7 +44,7 @@ export function PrivacyPolicyPage() {
             <li>Cloudflare Turnstile checks that a registration or comment is coming from a person, not a script.</li>
             <li>An email provider sends your account and password-reset emails.</li>
             <li>
-              The Solana blockchain — a public, independent record anyone can check. When you publish a note, we
+              The Solana blockchain -  a public, independent record anyone can check. When you publish a note, we
               commit a cryptographic fingerprint of its title, excerpt, and content to it, along with a timestamp.
               That's what lets anyone verify a note existed at a given moment, without taking our word for it.
             </li>
@@ -55,7 +55,7 @@ export function PrivacyPolicyPage() {
           <h2 className="text-lg text-foreground">Once something is kept, it's kept</h2>
           <p className="mt-2">
             This part is worth reading slowly. Publishing is the one deliberate, irreversible step in{" "}
-            {brand.name} — and it means what it says. A published note becomes a permanent public record.
+            {brand.name} -  and it means what it says. A published note becomes a permanent public record.
             Deleting your account afterward does not retract it, and neither can we. If you write under a
             pseudonym, that byline stays attached to what you published under it, because a permanent record with
             no attribution would be unverifiable to anyone reading it later.
@@ -94,8 +94,8 @@ export function PrivacyPolicyPage() {
             and we'll handle it.
           </p>
           <p className="mt-2">
-            A small amount of operational data — things like the delivery record of an account email, or a log of
-            a failed sign-in attempt — can outlive account deletion. We keep it for fraud prevention and our own
+            A small amount of operational data -  things like the delivery record of an account email, or a log of
+            a failed sign-in attempt -  can outlive account deletion. We keep it for fraud prevention and our own
             records, not tied to your active account.
           </p>
         </section>

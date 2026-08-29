@@ -120,7 +120,7 @@ export default function DraftEditorScreen() {
       const savedOnDevice = { ...draft, ...latest.current, updatedAt: new Date().toISOString() };
       cacheWrite(`draft:${id}`, savedOnDevice);
       syncDraftInList(savedOnDevice);
-      setSaveState("Saved on this device — sync queued");
+      setSaveState("Saved on this device - sync queued");
       return;
     }
     try {
@@ -132,7 +132,7 @@ export default function DraftEditorScreen() {
       setSaveState("Saved");
       clearRecoveries(id);
     } catch {
-      setSaveState("Could not save — retrying when online");
+      setSaveState("Could not save - retrying when online");
     }
   };
 
@@ -219,7 +219,7 @@ export default function DraftEditorScreen() {
 
       {recoveryOffer && (
         <>
-          <Notice>This device has newer edits than what's shown below — likely from before the app closed. Restore them?</Notice>
+          <Notice>This device has newer edits than what's shown below - likely from before the app closed. Restore them?</Notice>
           <View style={styles.row}>
             <Action title="Restore" tone="secondary" onPress={restoreRecovery} />
             <Action title="Discard" tone="secondary" onPress={discardRecovery} />
@@ -227,7 +227,7 @@ export default function DraftEditorScreen() {
         </>
       )}
       {draft.status === "PENDING_REVIEW" && <Notice>Awaiting moderator review. You can withdraw it from the website for now.</Notice>}
-      {draft.status === "APPROVED" && <Notice>Approved — you can now publish permanently while online.</Notice>}
+      {draft.status === "APPROVED" && <Notice>Approved - you can now publish permanently while online.</Notice>}
       {draft.status === "REJECTED" && <Notice>This submission was rejected. Read any moderation feedback on the website.</Notice>}
 
       <Field editable={canEdit} placeholder="Title" value={title} onChangeText={setTitle} />

@@ -9,7 +9,7 @@ import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminDateControls, AdminPagination, applyDatePreset, type AdminDatePreset, type AdminListState } from "@/components/admin/AdminTableControls";
 
 const statuses = ["ALL", "PENDING", "PROCESSING", "PROCESSED", "FAILED"] as const;
-function Retry({ job }: { job: BlockchainJob }) { const retry = useRetryBlockchainJob(); return job.status === "FAILED" ? <Button size="sm" variant="outline" disabled={retry.isPending} onClick={() => retry.mutate({ id: job.id })}>{retry.isPending ? "Retrying…" : "Retry"}</Button> : <span className="text-muted-foreground">—</span>; }
+function Retry({ job }: { job: BlockchainJob }) { const retry = useRetryBlockchainJob(); return job.status === "FAILED" ? <Button size="sm" variant="outline" disabled={retry.isPending} onClick={() => retry.mutate({ id: job.id })}>{retry.isPending ? "Retrying…" : "Retry"}</Button> : <span className="text-muted-foreground"> - </span>; }
 export function BlockchainJobsPage() {
   const [status, setStatus] = useState<(typeof statuses)[number]>("ALL"); const [preset, setPreset] = useState<AdminDatePreset>("all"); const [state, setState] = useState<AdminListState>({ page: 1, pageSize: 25 }); const { data, isLoading } = useBlockchainJobs(state, status === "ALL" ? undefined : status);
   const onChange = (next: Partial<AdminListState>) => setState((current) => ({ ...current, ...next })); const onPreset = (next: AdminDatePreset) => { setPreset(next); setState((current) => ({ ...current, ...applyDatePreset(next), page: 1 })); };

@@ -13,7 +13,7 @@ export const TAB_BAR_HEIGHT = 68;
 /** Floor for the bottom inset on devices that report none (older Androids). */
 export const MIN_BOTTOM_INSET = 12;
 /** Base gutter on every screen, mirrored in styles.screen below. */
-const SCREEN_PADDING = 20;
+const SCREEN_PADDING = 22;
 
 /**
  * The one layout every screen renders through. It owns the display cutout —
@@ -40,6 +40,7 @@ export function Screen({ children, refreshing, onRefresh, insetTop = false, clea
     contentContainerStyle={[styles.screen, { backgroundColor: colors.paper, paddingTop: padTop, paddingBottom: padBottom }]}
     contentInsetAdjustmentBehavior="automatic"
     keyboardShouldPersistTaps="handled"
+    showsVerticalScrollIndicator={false}
     refreshControl={onRefresh ? <RefreshControl refreshing={Boolean(refreshing)} onRefresh={onRefresh} tintColor={colors.brand} colors={[colors.brand]} /> : undefined}
   >{children}</ScrollView>;
 }
@@ -64,7 +65,7 @@ export function Action({ title, onPress, disabled, tone = "primary", icon, acces
     accessibilityHint={accessibilityHint}
     disabled={disabled}
     onPress={onPress}
-    style={({ pressed }) => [styles.button, { backgroundColor: background, borderColor: border, opacity: pressed ? 0.82 : 1 }]}
+    style={({ pressed }) => [styles.button, { backgroundColor: background, borderColor: border, opacity: pressed ? 0.84 : 1, transform: [{ scale: pressed ? 0.985 : 1 }] }]}
   ><View style={styles.buttonInner}>{icon}{<Text style={[styles.buttonText, { color: foreground, fontSize: 16 * fontScale }]}>{title}</Text>}</View></Pressable>;
 }
 /**
@@ -87,7 +88,7 @@ export function IconButton({ icon, accessibilityLabel, onPress, disabled, tone =
     accessibilityState={{ disabled, ...accessibilityState }}
     disabled={disabled}
     onPress={onPress}
-    style={({ pressed }) => [styles.iconButton, { backgroundColor: background, borderColor: border, opacity: disabled ? 0.45 : pressed ? 0.72 : 1 }]}
+    style={({ pressed }) => [styles.iconButton, { backgroundColor: background, borderColor: border, opacity: disabled ? 0.45 : pressed ? 0.76 : 1, transform: [{ scale: pressed ? 0.96 : 1 }] }]}
   >{icon}</Pressable>;
 }
 
@@ -143,8 +144,8 @@ export function Skeleton({ style }: { style?: React.ComponentProps<typeof View>[
   return <Animated.View importantForAccessibility="no-hide-descendants" style={[{ backgroundColor: colors.soft, borderRadius: 6 }, style, { opacity }]} />;
 }
 export const styles = StyleSheet.create({
-  screen: { padding: SCREEN_PADDING, gap: 16, flexGrow: 1 },
-  title: { fontFamily: "serif", fontSize: 31, fontWeight: "700", letterSpacing: -0.5 },
+  screen: { padding: SCREEN_PADDING, gap: 18, flexGrow: 1 },
+  title: { fontFamily: "serif", fontSize: 31, fontWeight: "700", letterSpacing: -0.8, lineHeight: 37 },
   eyebrow: { fontSize: 12, fontWeight: "700", letterSpacing: 1.25, textTransform: "uppercase" },
   subtitle: { fontSize: 15, lineHeight: 22 }, error: { fontSize: 14, fontWeight: "600", lineHeight: 20 },
   notice: { borderRadius: 12, borderWidth: 1, padding: 14 }, noticeText: { lineHeight: 21 },
@@ -152,5 +153,5 @@ export const styles = StyleSheet.create({
   button: { minHeight: 52, borderWidth: 1, borderRadius: 12, alignItems: "center", justifyContent: "center", paddingHorizontal: 16 }, buttonInner: { flexDirection: "row", alignItems: "center", gap: 8 }, buttonText: { fontWeight: "700", fontSize: 16 },
   iconButton: { width: 44, height: 44, borderWidth: 1, borderRadius: 12, alignItems: "center", justifyContent: "center" },
   divider: { height: StyleSheet.hairlineWidth, marginVertical: 6 }, center: { flex: 1, minHeight: 280, padding: 32, alignItems: "center", justifyContent: "center" }, writingMark: { width: 72, height: 32, justifyContent: "space-between", alignItems: "flex-start" }, writingStroke: { height: 2, borderRadius: 99 }, row: { flexDirection: "row", alignItems: "center", gap: 10 },
-  card: { borderWidth: 1, borderRadius: 16, padding: 16, gap: 7, boxShadow: "0 3px 8px rgba(32, 30, 27, 0.05)" }
+  card: { borderWidth: 1, borderRadius: 16, padding: 16, gap: 7, boxShadow: "0 5px 14px rgba(32, 30, 27, 0.055)" }
 });

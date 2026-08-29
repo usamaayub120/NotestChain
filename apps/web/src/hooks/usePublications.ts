@@ -95,7 +95,7 @@ export type ProofLookupResult =
   | { kind: "onchain_only"; account: OnChainOnlyResult }
   | { kind: "not_found" };
 
-/** Enabled only once a query has actually been submitted — see VerifyNotePage. */
+/** Enabled only once a query has actually been submitted -  see VerifyNotePage. */
 export function useProofLookup(query: string, enabled: boolean) {
   return useQuery({
     queryKey: ["publications", "lookup", query],

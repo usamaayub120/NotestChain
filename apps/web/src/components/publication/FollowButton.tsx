@@ -5,8 +5,8 @@ import { useIdentities } from "@/hooks/useIdentities";
 import { useFollow, useUnfollow } from "@/hooks/useFollows";
 
 /**
- * Follow/unfollow for a byline. Hidden entirely on any of your own bylines —
- * Keeper profile or pen name — since there's no reading of "follow yourself"
+ * Follow/unfollow for a byline. Hidden entirely on any of your own bylines
+ * Keeper profile or pen name -  since there's no reading of "follow yourself"
  * that means anything, and for a signed-out visitor, since following
  * requires an account. The API blocks it too (followIdentity checks
  * target.userId), but this is the difference between that rejection never
@@ -31,7 +31,7 @@ export function FollowButton({
   // query, but that round-trip shouldn't be what makes the button feel right.
   const [optimistic, setOptimistic] = useState<boolean | null>(null);
   // Once the server's own value catches up (via the query invalidation the
-  // mutations already trigger), let it take back over — adjusted during
+  // mutations already trigger), let it take back over -  adjusted during
   // render rather than in an effect, the pattern React recommends for
   // resetting local state when a prop changes.
   const [lastSeenIsFollowing, setLastSeenIsFollowing] = useState(isFollowing);

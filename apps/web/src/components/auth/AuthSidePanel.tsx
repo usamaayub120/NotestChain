@@ -1,5 +1,5 @@
 /**
- * Desktop-only atmosphere for the login/register forms — mobile skips it
+ * Desktop-only atmosphere for the login/register forms -  mobile skips it
  * entirely rather than squeezing it in above the form, since screen space
  * there is better spent getting to the fields.
  */

@@ -27,7 +27,7 @@ export function TermsOfServicePage() {
           <p className="mt-2">
             Write what you want, but not anything illegal, anything designed to harass or endanger someone, or
             anything impersonating a person or organization you're not. A moderator reads every submission before
-            it can be published — not a review of your ideas, just a check for the obvious stuff.
+            it can be published -  not a review of your ideas, just a check for the obvious stuff.
           </p>
         </section>
 
@@ -35,7 +35,7 @@ export function TermsOfServicePage() {
           <h2 className="text-lg text-foreground">Permanence</h2>
           <p className="mt-2">
             Publishing is deliberate and irreversible. Once a note is published, it's kept as a permanent public
-            record — notarized independently of {brand.name}, verifiable by anyone. Neither you nor we can edit
+            record -  notarized independently of {brand.name}, verifiable by anyone. Neither you nor we can edit
             or remove it afterward. Make sure you mean it before you confirm.
           </p>
         </section>
@@ -44,7 +44,7 @@ export function TermsOfServicePage() {
           <h2 className="text-lg text-foreground">Your account</h2>
           <p className="mt-2">
             You're responsible for what's published under it and for keeping your password to yourself. Use a
-            real name or a pseudonym for your public identity — either way, it shouldn't belong to someone else.
+            real name or a pseudonym for your public identity -  either way, it shouldn't belong to someone else.
           </p>
         </section>
 

@@ -3,7 +3,7 @@ import { useCreateDraft } from "./useDrafts";
 
 /**
  * Deliberately NOT a mount-effect ("create a draft as soon as /drafts/new
- * renders") — that pattern is fragile under React 18 StrictMode / Fast
+ * renders") -  that pattern is fragile under React 18 StrictMode / Fast
  * Refresh remounts (each remount reruns the effect with fresh component
  * state, so a ref-based "only once" guard doesn't survive a true
  * remount, and it's easy to end up firing the create call more than once).

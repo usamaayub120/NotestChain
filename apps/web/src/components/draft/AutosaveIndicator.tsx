@@ -8,13 +8,13 @@ const LABELS: Record<AutosaveState, string> = {
   saving: "Saving…",
   saved: "Saved",
   // The state at the heart of the original complaint. A note over the limit
-  // still saves — losing someone's words because they wrote too many would
-  // be worse than the bug being fixed — but "Saved" on its own implied
+  // still saves -  losing someone's words because they wrote too many would
+  // be worse than the bug being fixed -  but "Saved" on its own implied
   // "ready to submit", which is what let a writer keep going for a long time
   // before finding out otherwise.
-  "saved-too-long": "Saved — too long to submit",
-  offline: "Offline — we'll save when you're back",
-  error: "Save failed — retrying",
+  "saved-too-long": "Saved -  too long to submit",
+  offline: "Offline -  we'll save when you're back",
+  error: "Save failed -  retrying",
 };
 
 export function AutosaveIndicator({ state }: { state: AutosaveState }) {

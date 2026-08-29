@@ -2,7 +2,7 @@ import { cn } from "@/lib/utils";
 
 /**
  * A single illustrative line, styled to feel found rather than designed.
- * Deliberately has no author, avatar, or username — these are ours, not
+ * Deliberately has no author, avatar, or username -  these are ours, not
  * fabricated user testimonials (see .claude/skills/noteschain-copywriter).
  */
 export function KeptThoughtCard({ text, className }: { text: string; className?: string }) {

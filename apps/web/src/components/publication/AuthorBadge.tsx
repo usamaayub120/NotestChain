@@ -14,13 +14,13 @@ export function AuthorBadge({
   author: PublicationAuthor | null;
   timestamp?: string;
   /** Set false when this badge is already nested inside another link
-   * (e.g. PublicationCard) — nesting an <a> inside an <a> is invalid HTML
+   * (e.g. PublicationCard) -  nesting an <a> inside an <a> is invalid HTML
    * and breaks click targeting. */
   linkToProfile?: boolean;
   /**
    * "reader" is the note page's byline: large, obviously tappable, carries
    * the Keeper-profile/pen-name label and a Follow button. "compact" is
-   * everywhere else (cards, comments) — small, no label, no follow control.
+   * everywhere else (cards, comments) -  small, no label, no follow control.
    */
   size?: "compact" | "reader";
 }) {
@@ -66,7 +66,7 @@ export function AuthorBadge({
 }
 
 /**
- * The note page's byline — big enough to obviously be a link, and the one
+ * The note page's byline -  big enough to obviously be a link, and the one
  * place besides the profile page itself that a reader can follow a byline
  * without leaving what they're reading. isFollowing needs a live profile
  * fetch (the publication DTO doesn't carry per-viewer follow state), so this

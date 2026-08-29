@@ -12,7 +12,7 @@ const STEPS = [
   {
     icon: ShieldCheck,
     title: "A person checks it",
-    body: "A moderator reads it before it can go any further — a quick check for the obvious stuff, not a review of your ideas.",
+    body: "A moderator reads it before it can go any further -  a quick check for the obvious stuff, not a review of your ideas.",
   },
   {
     icon: Check,
@@ -22,12 +22,12 @@ const STEPS = [
   {
     icon: null,
     title: "It's kept on Solana",
-    body: "Not stored on one company's server — kept across many independent computers, the same way. No one, including us, can quietly edit or delete it afterward.",
+    body: "Not stored on one company's server -  kept across many independent computers, the same way. No one, including us, can quietly edit or delete it afterward.",
   },
   {
     icon: ScanSearch,
     title: "Anyone can verify it",
-    body: "The verification mark on a publication links straight to the public record. You don't have to take our word for it — you can look yourself.",
+    body: "The verification mark on a publication links straight to the public record. You don't have to take our word for it -  you can look yourself.",
   },
 ] as const;
 

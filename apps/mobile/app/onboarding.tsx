@@ -36,7 +36,7 @@ export default function OnboardingScreen() {
       <View accessibilityRole="progressbar" accessibilityValue={{ min: 1, max: steps.length, now: step + 1 }} style={{ flexDirection: "row", gap: 6, justifyContent: "center" }}>
         {steps.map((_, i) => <View key={i} style={{ width: i === step ? 20 : 8, height: 8, borderRadius: 4, backgroundColor: i === step ? colors.brand : colors.border }} />)}
       </View>
-      <Text style={{ color: colors.muted, fontSize: 14, fontWeight: "700", textAlign: "center" }}>Step {step + 1} of {steps.length}</Text>
+      <Text style={{ color: colors.muted, fontSize: 14, fontWeight: "700", textAlign: "center" }}>{step + 1} of {steps.length}</Text>
       <Title>{steps[step].title}</Title>
       <Subtitle>{steps[step].body}</Subtitle>
       <View style={{ flexDirection: "row", gap: 10, marginTop: 8 }}>

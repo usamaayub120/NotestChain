@@ -6,7 +6,7 @@ function isFinalizedStatus(status: string | null | undefined) {
   return status === "FINALIZED" || status === "PUBLISHED";
 }
 
-/** The "Kept Stamp" — the one motif allowed to represent blockchain proof
+/** The "Kept Stamp" -  the one motif allowed to represent blockchain proof
  * anywhere in the product. See DESIGN_SYSTEM.md §6. */
 export function VerificationBadge({
   status,
@@ -18,10 +18,10 @@ export function VerificationBadge({
   className?: string;
 }) {
   // Only the *transition* into a finalized status (a live verification call
-  // resolving while this badge is mounted) should play the enter animation —
+  // resolving while this badge is mounted) should play the enter animation
   // a badge that's already finalized on first render (e.g. a card fetched
   // from a list) must render statically. See DESIGN_SYSTEM.md §6: "never on
-  // every render — no ambient animation."
+  // every render -  no ambient animation."
   const prevStatusRef = useRef(status);
   const [justVerified, setJustVerified] = useState(false);
 

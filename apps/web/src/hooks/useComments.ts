@@ -15,7 +15,7 @@ export interface CommentDTO {
   rootCommentId: string | null;
   body: string | null;
   isRemoved: boolean;
-  /** Null for a legacy isAnonymous comment, which still renders as "Anonymous" — see authorDisplayName. */
+  /** Null for a legacy isAnonymous comment, which still renders as "Anonymous" -  see authorDisplayName. */
   author: CommentAuthor | null;
   authorDisplayName: string | null;
   isAnonymous: boolean;

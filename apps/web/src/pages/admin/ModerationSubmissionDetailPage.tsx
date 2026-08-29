@@ -54,7 +54,7 @@ export function ModerationSubmissionDetailPage() {
   const activeError = approve.isError ? approve.error : reject.isError ? reject.error : requestChanges.isError ? requestChanges.error : null;
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6">
+    <div className="mx-auto max-w-4xl px-4 py-6 md:px-8 lg:py-10">
       <Link
         to="/admin/submissions"
         className="inline-flex min-h-11 items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
@@ -72,7 +72,7 @@ export function ModerationSubmissionDetailPage() {
           they get both views. Rendered is the default because it is what a
           reader will see; Source exists so marker abuse (a note that is
           mostly shimmer, say) is visible rather than hidden behind styling.
-          Source uses font-sans, not font-mono — DESIGN_SYSTEM.md §4 reserves
+          Source uses font-sans, not font-mono -  DESIGN_SYSTEM.md §4 reserves
           mono for signatures, PDAs, and hashes, and markdown source is
           prose. Please don't "fix" that to mono. */}
       {submission.contentFormatSnapshot === "MARKDOWN" ? (
@@ -122,7 +122,7 @@ export function ModerationSubmissionDetailPage() {
           <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
             {priorSubmissions.map((s) => (
               <li key={s.id}>
-                {s.status} — {new Date(s.createdAt).toLocaleString()}
+                {s.status} -  {new Date(s.createdAt).toLocaleString()}
               </li>
             ))}
           </ul>
@@ -136,7 +136,7 @@ export function ModerationSubmissionDetailPage() {
             {submission.decisions.map((d) => (
               <li key={d.id} className="rounded-md bg-muted p-2">
                 <p className="font-medium">
-                  {d.action} — {d.moderator.email}
+                  {d.action} -  {d.moderator.email}
                 </p>
                 <p className="text-muted-foreground">{d.reason}</p>
               </li>
@@ -148,7 +148,7 @@ export function ModerationSubmissionDetailPage() {
       {!decided && (
         <div className="mt-6 space-y-3 border-t border-border pt-6">
           <Textarea
-            placeholder="Reason (required, shown internally — never on-chain)"
+            placeholder="Reason (required, shown internally -  never on-chain)"
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={3}
@@ -192,7 +192,7 @@ export function ModerationSubmissionDetailPage() {
         open={confirmingReject}
         onOpenChange={setConfirmingReject}
         title="Reject this submission?"
-        description="The author will see your reason and can revise and resubmit — this does not ban them."
+        description="The author will see your reason and can revise and resubmit -  this does not ban them."
         confirmLabel="Reject"
         pendingLabel="Rejecting…"
         isPending={reject.isPending}

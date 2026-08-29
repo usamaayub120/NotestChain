@@ -21,7 +21,7 @@ function renderInline(nodes: InlineNode[], shimmer: boolean, keyPrefix = ""): Re
 
     const children = renderInline(node.children, shimmer, `${key}.`);
 
-    // <strong>/<em>, never <b>/<i> — bold and italic here carry the author's
+    // <strong>/<em>, never <b>/<i> -  bold and italic here carry the author's
     // emphasis, which is semantic and should reach a screen reader as such.
     if (node.type === "strong") return <strong key={key}>{children}</strong>;
     if (node.type === "em") return <em key={key}>{children}</em>;
@@ -49,7 +49,7 @@ export function NoteContent({
    * rather than silently reinterpreting a permanent record.
    */
   format?: NoteFormat;
-  /** Reader and editor preview only — see the note below. */
+  /** Reader and editor preview only -  see the note below. */
   shimmer?: boolean;
   className?: string;
 }) {

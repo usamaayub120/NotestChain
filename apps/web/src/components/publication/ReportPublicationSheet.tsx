@@ -35,7 +35,7 @@ export function ReportPublicationSheet({ publicationId }: { publicationId: strin
           <SheetTitle>Report this publication</SheetTitle>
         </SheetHeader>
         {status === "sent" ? (
-          <p className="mt-4 text-sm text-muted-foreground">Thanks — a moderator will take a look.</p>
+          <p className="mt-4 text-sm text-muted-foreground">Thanks -  a moderator will take a look.</p>
         ) : (
           <>
             <Textarea

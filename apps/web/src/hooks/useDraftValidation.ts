@@ -11,8 +11,8 @@ import { IdentityMode, LIMITS, charactersOverLimit, markdownToPlainText, utf8Byt
  * cheerfully saving and calling "Saved".
  *
  * It is kept as a plain derived hook rather than react-hook-form on purpose.
- * `useSubmitDraft` POSTs to /drafts/:id/submit with NO body — the server
- * re-reads and validates the persisted row — so there are no form values to
+ * `useSubmitDraft` POSTs to /drafts/:id/submit with NO body -  the server
+ * re-reads and validates the persisted row -  so there are no form values to
  * collect and submit, and RHF's core value proposition does not apply here.
  * Meanwhile the editor has debounced autosave, per-field metadata
  * persistence, and a server-owned state machine, all three of which fight
@@ -66,7 +66,7 @@ export function useDraftValidation(input: {
     } else if (!content.trim()) {
       fieldErrors.content = "Write something first.";
     } else if (markdownToPlainText(content).trim().length === 0) {
-      fieldErrors.content = "This note is only formatting marks — add some words.";
+      fieldErrors.content = "This note is only formatting marks -  add some words.";
     }
 
     const needsIdentity = identityMode === "NAMED" || identityMode === "PSEUDONYMOUS";

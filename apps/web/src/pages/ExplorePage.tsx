@@ -8,9 +8,11 @@ export function ExplorePage() {
   const { data, isLoading, isError, refetch } = useExplorePublications();
 
   return (
-    <div className="mx-auto max-w-2xl px-4 py-6">
-      <h1 className="text-2xl">Explore notes</h1>
+    <div className="mx-auto max-w-6xl px-4 py-8 md:px-8 lg:py-12">
+      <div className="max-w-2xl">
+        <h1 className="text-2xl md:text-3xl">Explore notes</h1>
       <p className="mt-1 text-sm text-muted-foreground">Recent notes from the NotesChain community.</p>
+      </div>
 
       <div className="mt-6">
         {isLoading && <CardSkeletonList />}
@@ -18,7 +20,7 @@ export function ExplorePage() {
         {!isLoading && !isError && data?.data.length === 0 && (
           <EmptyState title="No notes published yet" description="Be the first to publish a note." />
         )}
-        <div className="space-y-3">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {data?.data.map((pub) => (
             <PublicationCard key={pub.id} publication={pub} />
           ))}

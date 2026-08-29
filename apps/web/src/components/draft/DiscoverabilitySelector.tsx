@@ -40,7 +40,7 @@ export function DiscoverabilitySelector({
       </div>
       {value === "UNLISTED" && (
         <p className="mt-2 text-xs text-muted-foreground">
-          Unlisted isn't private — it's still stored on Solana and reachable by anyone with the link.
+          Unlisted isn't private -  it's still stored on Solana and reachable by anyone with the link.
         </p>
       )}
     </fieldset>
