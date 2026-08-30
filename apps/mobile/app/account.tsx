@@ -29,7 +29,10 @@ export default function AccountScreen() {
     } catch (e) {
       // A genuine unauthenticated response should show sign-in. A stalled
       // connection must not impersonate a signed-out state.
-      if (e instanceof MobileApiError && e.status === 401) setUser(null);
+      if (e instanceof MobileApiError && e.status === 401) {
+        await setToken(null);
+        setUser(null);
+      }
       else {
         setUser(null);
         setSessionError(e instanceof Error ? e.message : "We couldn't check your secure session.");

@@ -17,6 +17,7 @@ import { queryClient } from "@/src/lib/query-client";
 import { Loading } from "@/src/components/ui";
 import { AppUpdateGate } from "@/src/components/app-update-gate";
 import { useAppVersionCheck } from "@/src/hooks/use-app-version-check";
+import { setUnauthorizedHandler } from "@/src/lib/api";
 
 /**
  * Route-level ErrorBoundary export (expo-router convention) — the fallback
@@ -46,6 +47,14 @@ function AppShell() {
   const [locked, setLocked] = useState(false);
   const versionCheck = useAppVersionCheck();
   const appMayRun = versionCheck.status !== "checking" && versionCheck.status !== "required";
+
+  useEffect(() => setUnauthorizedHandler(() => {
+    // An expired bearer credential must not leave a protected screen showing
+    // a generic network error. Its cached private data is discarded before
+    // returning to the mobile sign-in screen.
+    queryClient.clear();
+    router.replace("/account");
+  }), []);
 
   useEffect(() => {
     if (!appMayRun) return;

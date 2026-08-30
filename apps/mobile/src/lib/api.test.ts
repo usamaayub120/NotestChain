@@ -11,7 +11,7 @@ jest.mock("expo-crypto", () => ({
 }));
 jest.mock("@/src/lib/config", () => ({ apiRoot: "https://noteschain.org/api/v1" }));
 
-import { api, apiPage, setToken } from "./api";
+import { api, apiPage, setToken, setUnauthorizedHandler } from "./api";
 
 const mockedGetItem = SecureStore.getItemAsync as jest.Mock;
 const mockedSetItem = SecureStore.setItemAsync as jest.Mock;
@@ -24,6 +24,7 @@ function jsonResponse(body: unknown, init: { ok?: boolean; status?: number } = {
 
 beforeEach(() => {
   jest.clearAllMocks();
+  setUnauthorizedHandler(undefined);
   jest.spyOn(console, "warn").mockImplementation(() => undefined);
   mockedGetItem.mockResolvedValue(null);
   global.fetch = jest.fn().mockResolvedValue(jsonResponse({ data: {} }));
@@ -97,6 +98,27 @@ describe("api", () => {
   it("throws MobileApiError carrying the response status and server message", async () => {
     (global.fetch as jest.Mock).mockResolvedValue(jsonResponse({ error: { message: "nope" } }, { ok: false, status: 422 }));
     await expect(api("/x")).rejects.toMatchObject({ status: 422, message: "nope" });
+  });
+
+  it("clears an expired stored session and notifies the navigator on a 401", async () => {
+    const onUnauthorized = jest.fn();
+    setUnauthorizedHandler(onUnauthorized);
+    mockedGetItem.mockResolvedValue("expired-token");
+    (global.fetch as jest.Mock).mockResolvedValue(jsonResponse({ error: { message: "Sign in required." } }, { ok: false, status: 401 }));
+
+    await expect(api("/bookmarks")).rejects.toMatchObject({ status: 401 });
+    expect(mockedDeleteItem).toHaveBeenCalled();
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps the sign-in form in place for invalid mobile credentials", async () => {
+    const onUnauthorized = jest.fn();
+    setUnauthorizedHandler(onUnauthorized);
+    (global.fetch as jest.Mock).mockResolvedValue(jsonResponse({ error: { message: "Invalid email or password." } }, { ok: false, status: 401 }));
+
+    await expect(api("/auth/mobile/login", { method: "POST", body: JSON.stringify({}) })).rejects.toMatchObject({ status: 401 });
+    expect(mockedDeleteItem).not.toHaveBeenCalled();
+    expect(onUnauthorized).not.toHaveBeenCalled();
   });
 
   it("uses a friendly fallback message for a 404 on a mobile auth endpoint", async () => {

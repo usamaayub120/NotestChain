@@ -9,6 +9,8 @@ const VISITOR_KEY = "noteschain.mobile.visitor";
 const REQUEST_TIMEOUT_MS = 10_000;
 const READ_RETRY_DELAY_MS = 400;
 
+let unauthorizedHandler: (() => void) | undefined;
+
 export class MobileApiError extends Error {
   constructor(
     public status: number,
@@ -21,6 +23,19 @@ export async function getToken() { return SecureStore.getItemAsync(TOKEN_KEY); }
 export async function setToken(token: string | null) {
   if (token) await SecureStore.setItemAsync(TOKEN_KEY, token);
   else await SecureStore.deleteItemAsync(TOKEN_KEY);
+}
+
+/**
+ * The navigator registers this once so an expired mobile bearer session
+ * consistently returns the person to Account, regardless of which protected
+ * screen made the request. Returning a cleanup function keeps test/runtime
+ * remounts from retaining a stale callback.
+ */
+export function setUnauthorizedHandler(handler: (() => void) | undefined) {
+  unauthorizedHandler = handler;
+  return () => {
+    if (unauthorizedHandler === handler) unauthorizedHandler = undefined;
+  };
 }
 
 async function visitorToken() {
@@ -82,6 +97,14 @@ async function request<T>(path: string, init: MobileRequestInit = {}): Promise<A
       const response = await fetch(`${API_ROOT}${path}`, { ...init, headers, signal: controller.signal });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
+        // A mobile bearer token is invalid or expired. Remove it before the
+        // screen handles the error, then let the root navigator show sign-in.
+        // Do not redirect for a bad sign-in attempt: there is no existing
+        // session to clear and the form needs to display that server message.
+        if (response.status === 401 && token && !path.startsWith("/auth/mobile/login")) {
+          await setToken(null);
+          unauthorizedHandler?.();
+        }
         const message = response.status === 404 && path.startsWith("/auth/mobile/")
           ? "Mobile sign-in is not available on the server yet. Please try again after the NotesChain update finishes."
           : payload?.error?.message ?? "Request failed.";
