@@ -14,6 +14,9 @@ import { AppLockGate } from "@/src/components/app-lock-gate";
 import { hasPinSet } from "@/src/lib/app-lock";
 import { ThemeProvider, useTheme } from "@/src/lib/theme";
 import { queryClient } from "@/src/lib/query-client";
+import { Loading } from "@/src/components/ui";
+import { AppUpdateGate } from "@/src/components/app-update-gate";
+import { useAppVersionCheck } from "@/src/hooks/use-app-version-check";
 
 /**
  * Route-level ErrorBoundary export (expo-router convention) — the fallback
@@ -34,19 +37,29 @@ export function ErrorBoundary({ retry }: { error: Error; retry: () => void }) {
 export default function RootLayout() {
   // Initialise synchronously so a first feed request can never race the cache schema.
   initialiseOfflineStore();
+
+  return <SafeAreaProvider><QueryClientProvider client={queryClient}><ThemeProvider><AppShell /></ThemeProvider></QueryClientProvider></SafeAreaProvider>;
+}
+
+function AppShell() {
   const [pinSet, setPinSet] = useState<boolean | null>(null);
   const [locked, setLocked] = useState(false);
+  const versionCheck = useAppVersionCheck();
+  const appMayRun = versionCheck.status !== "checking" && versionCheck.status !== "required";
 
   useEffect(() => {
+    if (!appMayRun) return;
     void hasPinSet().then((isSet) => { setPinSet(isSet); setLocked(isSet); });
-  }, []);
+  }, [appMayRun]);
 
   useEffect(() => {
+    if (!appMayRun) return;
     void syncQueuedMutations();
     return NetInfo.addEventListener((state) => { if (state.isConnected) void syncQueuedMutations(); });
-  }, []);
+  }, [appMayRun]);
 
   useEffect(() => {
+    if (!appMayRun) return;
     // Re-check on every foreground transition (rather than trusting a
     // captured pinSet flag) so turning app lock on/off from Settings takes
     // effect immediately without needing a restart.
@@ -54,9 +67,10 @@ export default function RootLayout() {
       if (state === "active") void hasPinSet().then((isSet) => { if (isSet) setLocked(true); });
     });
     return () => sub.remove();
-  }, []);
+  }, [appMayRun]);
 
   useEffect(() => {
+    if (!appMayRun) return;
     // Same event, same reasoning as the app-lock re-check above: a fresh
     // sign-in doesn't remount this layout, so registration has to happen on
     // every foreground transition, not just once at cold start. The upsert
@@ -66,9 +80,10 @@ export default function RootLayout() {
       if (state === "active") void syncPushRegistration();
     });
     return () => sub.remove();
-  }, []);
+  }, [appMayRun]);
 
   useEffect(() => {
+    if (!appMayRun) return;
     // A push notification tapped from the tray (app backgrounded or killed)
     // opens the screen its payload points at — see packages/push's
     // RenderedPush.deepLink, an expo-router path resolved the same way a
@@ -78,11 +93,20 @@ export default function RootLayout() {
       if (typeof deepLink === "string") router.push(deepLink as never);
     });
     return () => sub.remove();
-  }, []);
+  }, [appMayRun]);
 
-  return <SafeAreaProvider><QueryClientProvider client={queryClient}><ThemeProvider>
-    {pinSet === null ? null : locked ? <AppLockGate onUnlock={() => setLocked(false)} /> : <AppNavigator />}
-  </ThemeProvider></QueryClientProvider></SafeAreaProvider>;
+  if (versionCheck.status === "checking") return <Loading label="Checking for updates…" />;
+  if (versionCheck.status === "required" && versionCheck.config) {
+    return <AppUpdateGate status="required" config={versionCheck.config} onLater={() => undefined} />;
+  }
+  if (pinSet === null) return <Loading label="Loading NotesChain…" />;
+
+  return <>
+    {locked ? <AppLockGate onUnlock={() => setLocked(false)} /> : <AppNavigator />}
+    {versionCheck.status === "optional" && versionCheck.config && !versionCheck.optionalPromptDismissed ? (
+      <AppUpdateGate status="optional" config={versionCheck.config} onLater={versionCheck.dismissOptionalPrompt} />
+    ) : null}
+  </>;
 }
 
 /**

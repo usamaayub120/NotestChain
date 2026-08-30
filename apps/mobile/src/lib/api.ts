@@ -32,7 +32,14 @@ async function visitorToken() {
   return token;
 }
 
-type MobileRequestInit = RequestInit & { idempotencyKey?: string; visitor?: boolean };
+export type MobileRequestInit = RequestInit & {
+  idempotencyKey?: string;
+  visitor?: boolean;
+  /** Override the normal API timeout for a request with a stricter deadline. */
+  timeoutMs?: number;
+  /** Safe reads retry once by default; startup policy checks intentionally do not. */
+  retry?: boolean;
+};
 type ApiEnvelope<T> = { data: T; meta?: Page<never>["meta"] };
 
 const pause = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
@@ -59,14 +66,14 @@ async function request<T>(path: string, init: MobileRequestInit = {}): Promise<A
   if (init.idempotencyKey) headers.set("Idempotency-Key", init.idempotencyKey);
   if (init.visitor) headers.set("X-NotesChain-Visitor", await visitorToken());
 
-  const attempts = isSafeRead(init.method) ? 2 : 1;
+  const attempts = isSafeRead(init.method) && init.retry !== false ? 2 : 1;
   let lastError: MobileApiError | undefined;
   for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const controller = new AbortController();
     let timedOut = false;
     const abortFromCaller = () => controller.abort();
     init.signal?.addEventListener("abort", abortFromCaller, { once: true });
-    const timer = setTimeout(() => { timedOut = true; controller.abort(); }, REQUEST_TIMEOUT_MS);
+    const timer = setTimeout(() => { timedOut = true; controller.abort(); }, init.timeoutMs ?? REQUEST_TIMEOUT_MS);
     const startedAt = Date.now();
 
     try {

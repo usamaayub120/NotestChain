@@ -30,6 +30,11 @@ something other than production (see "Environments" below).
   draft → review → permanent-publish lifecycle before a first-time user
   writes anything; gated in `index.tsx` and `draft/new.tsx` via
   `src/lib/first-run.ts`.
+- **Android update policy**: `src/hooks/use-app-version-check.ts` checks the
+  installed Android `versionCode` at launch and on foreground, using the
+  public API policy. A failed/malformed policy check is fail-open; an older
+  build below the configured minimum replaces the navigator with an
+  non-dismissible update gate.
 
 ## Environments
 
@@ -56,9 +61,43 @@ Unit tests (`jest-expo`) cover `src/lib/*`. There is no E2E suite yet.
 - `eas build --profile preview --platform android` — internal APK, no store
   account required. This is the profile used for day-to-day debug testing.
 - `eas build --profile production --platform android` — Play Store bundle.
-- iOS builds/submission and Play Store submission both need external
-  accounts (Apple Developer Program, Google Play Console) that aren't set up
-  yet — `eas.json` has no `ios` build profile and an empty `submit.production`
-  block until those exist.
+- `eas.json` uses EAS remote app-version management and sets
+  `production.autoIncrement: true`, so every production Android build gets a
+  new `versionCode`. Its production submission profile targets Google Play's
+  **Internal testing** track.
 - EAS Build/Submit and OTA updates are explicit, owner-directed release
   actions — never run automatically by CI or by an agent without being asked.
+
+### Android minimum-build policy
+
+The API exposes `GET /api/v1/app/version` as:
+
+```json
+{
+  "data": {
+    "android": {
+      "latestBuild": 20,
+      "minimumBuild": 17,
+      "latestVersion": "1.3.0"
+    }
+  }
+}
+```
+
+The values come from the API/container environment, not from the mobile
+binary: `ANDROID_LATEST_BUILD`, `ANDROID_MINIMUM_BUILD`, and
+`ANDROID_LATEST_VERSION` (documented in the root `.env.example`). Build
+numbers are Android `versionCode` values; `latestVersion` is display copy
+only. `latestBuild` and `minimumBuild` must stay independent:
+
+- Set `latestBuild` to a newly available Play build and leave
+  `minimumBuild` unchanged for an optional update.
+- Raise `minimumBuild` only when that already-available Play build is
+  required. Builds below it are blocked, while builds from the minimum up to
+  (but not including) latest see the optional prompt.
+
+Release order is a safety requirement: run local checks, build the AAB,
+submit it to Play Internal Testing, wait until that exact `versionCode` is
+available to testers, then deploy/restart the API with the new policy. Never
+raise `ANDROID_MINIMUM_BUILD` while Google Play is still processing the AAB,
+or users can be blocked before an update exists.

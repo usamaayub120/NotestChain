@@ -27,6 +27,7 @@ import { followsRouter } from "./modules/follows/follows.router.js";
 import { pushRouter } from "./modules/push/push.router.js";
 import { adminRouter } from "./modules/admin/admin.router.js";
 import { seoRouter } from "./modules/seo/seo.router.js";
+import { appVersionRouter } from "./modules/app-version/app-version.router.js";
 
 export function createApp() {
   const app = express();
@@ -85,6 +86,7 @@ export function createApp() {
 
   app.get("/health", (_req, res) => res.status(200).json({ status: "ok" }));
   app.use("/api/v1", healthRouter);
+  app.use("/api/v1/app", appVersionRouter);
   app.use("/api/v1/auth", authRouter);
   app.use("/api/v1/identities", identitiesRouter);
   // A route-scoped body limit rather than raising the global one: a 20,000
