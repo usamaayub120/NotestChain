@@ -105,6 +105,8 @@ jobs:
 
       - name: EAS build (local, production profile, Android)
         working-directory: apps/mobile
+        env:
+          EAS_BUILD_DISABLE_EXPO_DOCTOR_STEP: "1"
         run: |
           npx eas-cli build \
             --local \
