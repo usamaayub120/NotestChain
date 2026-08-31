@@ -103,6 +103,12 @@ require both the image update and the Prisma migrations:
    docker exec noteschain sh -c 'cd /app && node_modules/.bin/prisma migrate deploy --schema prisma/schema.prisma'
    ```
 
+   After a successful recreate, inspect the NotesChain image list and remove
+   the prior image only when Docker confirms that no container uses it. This
+   keeps the small VPS from filling with superseded application images. Never
+   run a broad `docker system prune` or delete images used by the unrelated
+   projects on the shared VPS.
+
    Do not run `prisma migrate dev`, database reset commands, or seed commands
    against production. Do not expose or move the mounted Solana publisher key
    at `/home/codexops/noteschain/secrets/solana-publisher.json`, or (once it
