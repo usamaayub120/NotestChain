@@ -1,6 +1,6 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { loginSchema, type LoginInput } from "@noteschain/validation";
 import { brand } from "@noteschain/shared";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import { ApiClientError } from "@/lib/api";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const login = useLogin();
   const form = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
@@ -21,7 +22,8 @@ export function LoginPage() {
   async function onSubmit(values: LoginInput) {
     try {
       await login.mutateAsync(values);
-      navigate("/dashboard");
+      const next = new URLSearchParams(location.search).get("next");
+      navigate(next?.startsWith("/") ? next : "/dashboard");
     } catch (err) {
       const message = err instanceof ApiClientError ? err.message : "Something went wrong.";
       form.setError("root", { message });
@@ -83,7 +85,7 @@ export function LoginPage() {
 
         <p className="mt-6 text-sm text-muted-foreground">
           New here?{" "}
-          <Link to="/register" className="font-medium text-primary">
+          <Link to={`/register${location.search}`} className="font-medium text-primary">
             Create an account
           </Link>
         </p>

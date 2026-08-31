@@ -42,6 +42,7 @@ import { DeleteAccountPage } from "@/pages/DeleteAccountPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { NotFoundPage } from "@/pages/NotFoundPage";
 import { MobileCaptchaPage } from "@/pages/MobileCaptchaPage";
+import { StaffInvitationPage } from "@/pages/StaffInvitationPage";
 
 export function App() {
   return (
@@ -53,6 +54,7 @@ export function App() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/mobile-captcha" element={<MobileCaptchaPage />} />
+        <Route path="/access/invitation" element={<StaffInvitationPage />} />
         <Route path="/explore" element={<ExplorePage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/how-it-works" element={<HowItWorksPage />} />

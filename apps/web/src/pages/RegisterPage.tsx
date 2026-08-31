@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { registerSchema, usernameSchema } from "@noteschain/validation";
 import { brand, LIMITS } from "@noteschain/shared";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,7 @@ type WebRegisterInput = z.infer<typeof webRegisterSchema>;
 
 export function RegisterPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const register = useRegister();
   const [hasCaptchaToken, setHasCaptchaToken] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -38,7 +39,8 @@ export function RegisterPage() {
   async function onSubmit(values: WebRegisterInput) {
     try {
       await register.mutateAsync(values);
-      navigate("/dashboard");
+      const next = new URLSearchParams(location.search).get("next");
+      navigate(next?.startsWith("/") ? next : "/dashboard");
     } catch (err) {
       if (err instanceof ApiClientError && err.status === 409) {
         form.setError("username", { message: err.message });
@@ -169,7 +171,7 @@ export function RegisterPage() {
 
         <p className="mt-6 text-sm text-muted-foreground">
           Already have an account?{" "}
-          <Link to="/login" className="font-medium text-primary">
+          <Link to={`/login${location.search}`} className="font-medium text-primary">
             Sign in
           </Link>
         </p>
