@@ -6,10 +6,10 @@ import { Ionicons } from "@expo/vector-icons";
 import * as Linking from "expo-linking";
 import { Text, View } from "react-native";
 import { api, apiPage } from "@/src/lib/api";
-import { requestCaptcha } from "@/src/lib/captcha";
 import { cacheRead, cacheWrite, enqueue } from "@/src/lib/offline";
 import type { Comment, Identity, Page, Publication } from "@/src/lib/models";
 import { Action, Card, Divider, ErrorText, Field, IconButton, Loading, Notice, Screen, Subtitle, styles } from "@/src/components/ui";
+import { CaptchaSheet } from "@/src/components/captcha-sheet";
 import { ReportDialog } from "@/src/components/report-dialog";
 import { BylinePicker } from "@/src/components/byline-picker";
 import { FollowButton } from "@/src/components/follow-button";
@@ -26,7 +26,7 @@ const chainPendingCopy = (status: string) =>
 export default function NoteScreen() {
   const navigation = useNavigation();
   const { colors, fontScale } = useTheme();
-  const { id, captchaToken } = useLocalSearchParams<{ id: string; captchaToken?: string }>();
+  const { id } = useLocalSearchParams<{ id: string }>();
 
   const query = useQuery({
     queryKey: ["note", id],
@@ -66,6 +66,7 @@ export default function NoteScreen() {
   const [reportError, setReportError] = useState<string>();
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
+  const [captchaOpen, setCaptchaOpen] = useState(false);
 
   useEffect(() => {
     api<{ publication: { id: string } }[]>("/bookmarks")
@@ -130,15 +131,15 @@ export default function NoteScreen() {
     }
   };
 
-  const postComment = async () => {
+  const postComment = async (captchaToken?: string) => {
     if (!body.trim()) return;
     if (!commentIdentityId) {
       setError("Choose which byline to comment under.");
       return;
     }
     if (!captchaToken) {
-      setNotice("Complete the quick verification, then return here to post your comment.");
-      await requestCaptcha(`note/${id}`);
+      setNotice("Complete the quick verification here in the app to post your comment.");
+      setCaptchaOpen(true);
       return;
     }
     try {
@@ -170,7 +171,7 @@ export default function NoteScreen() {
   };
 
   return (
-    <Screen>
+    <Screen fitContent>
       <Text style={{ color: colors.ink, fontFamily: "serif", fontSize: 29 * fontScale, fontWeight: "700", lineHeight: 36 * fontScale }}>
         {note.title}
       </Text>
@@ -245,7 +246,7 @@ export default function NoteScreen() {
           <Text style={{ color: colors.ink, fontWeight: "700" }}>Comment as</Text>
           <BylinePicker identities={identities} selectedId={commentIdentityId} onSelect={(identity) => setCommentIdentityId(identity.id)} />
           <Action
-            title={captchaToken ? "Post comment" : "Verify & post comment"}
+            title="Post comment"
             icon={<Ionicons name="send-outline" size={18} color="#fff" />}
             onPress={() => void postComment()}
           />
@@ -276,6 +277,11 @@ export default function NoteScreen() {
         error={reportError}
         onCancel={() => setReportOpen(false)}
         onSubmit={(reason) => void report(reason)}
+      />
+      <CaptchaSheet
+        visible={captchaOpen}
+        onCancel={() => setCaptchaOpen(false)}
+        onVerified={(captchaToken) => { setCaptchaOpen(false); void postComment(captchaToken); }}
       />
     </Screen>
   );

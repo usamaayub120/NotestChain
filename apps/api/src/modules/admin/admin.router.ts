@@ -1,10 +1,11 @@
 import { Router } from "express";
 import { z } from "zod";
-import { Role } from "@noteschain/shared";
+import { AccountStatus, Role } from "@noteschain/shared";
 import {
   delistPublicationSchema,
   resolveCommentReportSchema,
   resolveReportSchema,
+  updateUserStatusSchema,
   updateSiteSettingsSchema,
 } from "@noteschain/validation";
 import { asyncHandler, ok, paginated, requireParam } from "../../lib/http.js";
@@ -12,15 +13,18 @@ import { requireAuth, requireRole } from "../../middleware/auth.js";
 import {
   delistPublication,
   getViewBreakdown,
+  getUserStats,
   listAuditLog,
   listBlockchainJobs,
   listCommentReports,
   listMostViewedPublications,
   listReports,
+  listUsers,
   resolveCommentReport,
   resolveReport,
   restorePublicationListing,
   retryBlockchainJob,
+  updateUserStatus,
 } from "./admin.service.js";
 import { getSiteSettings, updateSiteSettings } from "./settings.service.js";
 import { listWalletBalances } from "./walletBalances.service.js";
@@ -31,6 +35,11 @@ adminRouter.use(requireAuth, requireRole(Role.ADMIN));
 const paginationQuerySchema = z.object({
   page: z.coerce.number().int().min(1).max(1000).optional().default(1),
   pageSize: z.coerce.number().int().min(1).max(100).optional().default(25),
+});
+
+const usersQuerySchema = paginationQuerySchema.extend({
+  status: z.enum([AccountStatus.ACTIVE, AccountStatus.SUSPENDED, AccountStatus.DELETED]).optional(),
+  search: z.string().trim().min(1).max(120).optional(),
 });
 
 const dateRangeFields = {
@@ -51,6 +60,31 @@ adminRouter.post(
     const input = delistPublicationSchema.parse(req.body);
     const publication = await delistPublication(req.auth!.userId, requireParam(req, "id"), input, req.ip);
     return ok(res, publication);
+  }),
+);
+
+adminRouter.get(
+  "/users/stats",
+  asyncHandler(async (_req, res) => ok(res, await getUserStats())),
+);
+
+adminRouter.get(
+  "/users",
+  asyncHandler(async (req, res) => {
+    const query = usersQuerySchema.parse(req.query);
+    const page = query.page ?? 1;
+    const pageSize = query.pageSize ?? 25;
+    const { items, total } = await listUsers({ ...query, page, pageSize });
+    return paginated(res, items, { page, pageSize, total });
+  }),
+);
+
+adminRouter.patch(
+  "/users/:id/status",
+  asyncHandler(async (req, res) => {
+    const input = updateUserStatusSchema.parse(req.body);
+    const user = await updateUserStatus(req.auth!.userId, requireParam(req, "id"), input, req.ip);
+    return ok(res, user);
   }),
 );
 

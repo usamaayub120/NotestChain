@@ -25,11 +25,13 @@ const SCREEN_PADDING = 22;
  * top cutout for everything else. `clearsTabBar` adds room for the floating
  * bottom bar, which hides itself outside the four root routes.
  */
-export function Screen({ children, refreshing, onRefresh, insetTop = false, clearsTabBar = true }: PropsWithChildren<{
+export function Screen({ children, refreshing, onRefresh, insetTop = false, clearsTabBar = true, fitContent = false }: PropsWithChildren<{
   refreshing?: boolean;
   onRefresh?: () => void;
   insetTop?: boolean;
   clearsTabBar?: boolean;
+  /** Let long-form reading screens grow to the full height of their content. */
+  fitContent?: boolean;
 }>) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
@@ -37,7 +39,7 @@ export function Screen({ children, refreshing, onRefresh, insetTop = false, clea
   const padBottom = SCREEN_PADDING + Math.max(insets.bottom, MIN_BOTTOM_INSET) + (clearsTabBar ? TAB_BAR_HEIGHT : 0);
   return <ScrollView
     style={{ backgroundColor: colors.paper }}
-    contentContainerStyle={[styles.screen, { backgroundColor: colors.paper, paddingTop: padTop, paddingBottom: padBottom }]}
+    contentContainerStyle={[styles.screen, !fitContent && styles.screenFill, { backgroundColor: colors.paper, paddingTop: padTop, paddingBottom: padBottom }]}
     contentInsetAdjustmentBehavior="automatic"
     keyboardShouldPersistTaps="handled"
     showsVerticalScrollIndicator={false}
@@ -144,7 +146,8 @@ export function Skeleton({ style }: { style?: React.ComponentProps<typeof View>[
   return <Animated.View importantForAccessibility="no-hide-descendants" style={[{ backgroundColor: colors.soft, borderRadius: 6 }, style, { opacity }]} />;
 }
 export const styles = StyleSheet.create({
-  screen: { padding: SCREEN_PADDING, gap: 18, flexGrow: 1 },
+  screen: { padding: SCREEN_PADDING, gap: 18 },
+  screenFill: { flexGrow: 1 },
   title: { fontFamily: "serif", fontSize: 31, fontWeight: "700", letterSpacing: -0.8, lineHeight: 37 },
   eyebrow: { fontSize: 12, fontWeight: "700", letterSpacing: 1.25, textTransform: "uppercase" },
   subtitle: { fontSize: 15, lineHeight: 22 }, error: { fontSize: 14, fontWeight: "600", lineHeight: 20 },

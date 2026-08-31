@@ -1,20 +1,19 @@
 import { useState } from "react";
-import { useLocalSearchParams, router } from "expo-router";
+import { router } from "expo-router";
 import * as Linking from "expo-linking";
 import { Ionicons } from "@expo/vector-icons";
 import { Switch, Text, View } from "react-native";
 import { api, setToken } from "@/src/lib/api";
-import { requestCaptcha } from "@/src/lib/captcha";
 import { syncPushRegistration } from "@/src/lib/push";
 import { Action, ErrorText, Field, IconButton, Notice, Screen, Subtitle, Title } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
 import { webOrigin } from "@/src/lib/config";
+import { CaptchaSheet } from "@/src/components/captcha-sheet";
 
 const USERNAME_PATTERN = /^[a-z0-9][a-z0-9_-]{2,29}$/;
 
 export default function RegisterScreen() {
   const { colors } = useTheme();
-  const { captchaToken } = useLocalSearchParams<{ captchaToken?: string }>();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
@@ -22,14 +21,11 @@ export default function RegisterScreen() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
+  const [captchaOpen, setCaptchaOpen] = useState(false);
 
   const validUsername = USERNAME_PATTERN.test(username);
 
-  const register = async () => {
-    if (!captchaToken) {
-      await requestCaptcha("register");
-      return;
-    }
+  const register = async (captchaToken: string) => {
     setBusy(true);
     setError(undefined);
     try {
@@ -53,6 +49,11 @@ export default function RegisterScreen() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const beginRegistration = () => {
+    setError(undefined);
+    setCaptchaOpen(true);
   };
 
   return (
@@ -95,16 +96,18 @@ export default function RegisterScreen() {
         </Text>
       </View>
 
-      {!captchaToken && (
-        <Notice>Before creating the account, complete a quick first-party verification in your browser. You will return here automatically.</Notice>
-      )}
-      {captchaToken && <Notice>Verification complete. You can create your account now.</Notice>}
+      <Notice>Before creating your account, complete a quick verification here in the app.</Notice>
       {error && <ErrorText>{error}</ErrorText>}
 
       <Action
-        title={busy ? "Creating…" : captchaToken ? "Create account" : "Verify to continue"}
+        title={busy ? "Creating…" : "Create account"}
         disabled={busy || !email || password.length < 10 || !displayName.trim() || !validUsername || !acceptedTerms}
-        onPress={() => void register()}
+        onPress={beginRegistration}
+      />
+      <CaptchaSheet
+        visible={captchaOpen}
+        onCancel={() => setCaptchaOpen(false)}
+        onVerified={(captchaToken) => { setCaptchaOpen(false); void register(captchaToken); }}
       />
     </Screen>
   );

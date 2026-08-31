@@ -29,6 +29,7 @@ import { BlockchainJobsPage } from "@/pages/admin/BlockchainJobsPage";
 import { ViewsPage } from "@/pages/admin/ViewsPage";
 import { SeoSettingsPage } from "@/pages/admin/SeoSettingsPage";
 import { WalletBalancesPage } from "@/pages/admin/WalletBalancesPage";
+import { UsersPage } from "@/pages/admin/UsersPage";
 import { HowItWorksPage } from "@/pages/HowItWorksPage";
 import { VerifyNotePage } from "@/pages/VerifyNotePage";
 import { PrivacyPolicyPage } from "@/pages/PrivacyPolicyPage";
@@ -189,6 +190,14 @@ export function App() {
           element={
             <RequireRole role="ADMIN">
               <ViewsPage />
+            </RequireRole>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <RequireRole role="ADMIN">
+              <UsersPage />
             </RequireRole>
           }
         />

@@ -12,6 +12,9 @@ const randomId = () => randomUUID();
 const ADMIN_ROUTES: Array<{ method: "get" | "post" | "patch"; path: string; body?: Record<string, unknown> }> = [
   { method: "post", path: `/api/v1/admin/publications/${randomId()}/delist`, body: { reason: "test" } },
   { method: "post", path: `/api/v1/admin/publications/${randomId()}/restore-listing` },
+  { method: "get", path: "/api/v1/admin/users" },
+  { method: "get", path: "/api/v1/admin/users/stats" },
+  { method: "patch", path: `/api/v1/admin/users/${randomId()}/status`, body: { status: "SUSPENDED", reason: "test" } },
   { method: "get", path: "/api/v1/admin/reports" },
   { method: "post", path: `/api/v1/admin/reports/${randomId()}/resolve`, body: { action: "DISMISSED" } },
   { method: "get", path: "/api/v1/admin/audit-log" },

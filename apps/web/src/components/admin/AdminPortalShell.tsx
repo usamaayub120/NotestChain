@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { ArrowLeft, ClipboardList, Eye, FileWarning, Landmark, ScrollText, Search, ShieldCheck } from "lucide-react";
+import { ArrowLeft, ClipboardList, Eye, FileWarning, Landmark, ScrollText, Search, ShieldCheck, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useAuth";
 
@@ -8,6 +8,7 @@ const items = [
   { to: "/admin/submissions", label: "Moderation", icon: ClipboardList, role: "MODERATOR" },
   { to: "/admin/reports", label: "Reports", icon: FileWarning, role: "ADMIN" },
   { to: "/admin/views", label: "Analytics", icon: Eye, role: "ADMIN" },
+  { to: "/admin/users", label: "Users", icon: Users, role: "ADMIN" },
   { to: "/admin/settings", label: "Settings", icon: Search, role: "ADMIN" },
   { to: "/admin/blockchain", label: "Blockchain jobs", icon: Landmark, role: "ADMIN" },
   { to: "/admin/audit-log", label: "Audit log", icon: ScrollText, role: "ADMIN" },

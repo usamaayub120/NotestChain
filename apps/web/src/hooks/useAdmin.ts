@@ -205,3 +205,62 @@ export function useUpdateSiteSettings() {
     onSuccess: (settings) => queryClient.setQueryData(["admin", "settings"], settings),
   });
 }
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  role: "USER" | "MODERATOR" | "ADMIN";
+  status: "ACTIVE" | "SUSPENDED" | "DELETED";
+  createdAt: string;
+  lastLoginAt: string | null;
+  lastActiveAt: string | null;
+  primaryIdentity: { username: string; displayName: string } | null;
+  publishedNotes: number;
+  comments: number;
+  activeSessions: number;
+}
+
+export interface UserStats {
+  total: number;
+  active: number;
+  suspended: number;
+  deleted: number;
+  newLast30Days: number;
+  activeLast7Days: number;
+  activeLast30Days: number;
+  publishedNotes: number;
+  comments: number;
+}
+
+export function useUserStats() {
+  return useQuery({
+    queryKey: ["admin", "users", "stats"],
+    queryFn: () => apiFetch<UserStats>("/admin/users/stats"),
+  });
+}
+
+export function useAdminUsers(
+  query: Pick<AdminQuery, "page" | "pageSize"> & { status?: AdminUser["status"]; search?: string },
+) {
+  return useQuery({
+    queryKey: ["admin", "users", query],
+    queryFn: () => {
+      const params = new URLSearchParams({ page: String(query.page), pageSize: String(query.pageSize) });
+      if (query.status) params.set("status", query.status);
+      if (query.search?.trim()) params.set("search", query.search.trim());
+      return apiFetchPaginated<AdminUser>(`/admin/users?${params.toString()}`);
+    },
+  });
+}
+
+export function useUpdateUserStatus() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, status, reason }: { id: string; status: "ACTIVE" | "SUSPENDED"; reason: string }) =>
+      apiFetch<AdminUser>(`/admin/users/${id}/status`, { method: "PATCH", body: { status, reason } }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin", "audit-log"] });
+    },
+  });
+}

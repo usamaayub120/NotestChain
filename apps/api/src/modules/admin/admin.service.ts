@@ -1,6 +1,6 @@
-import { ChainStatus, OutboxStatus } from "@noteschain/shared";
+import { AccountStatus, ChainStatus, OutboxStatus, Role } from "@noteschain/shared";
 import { CommentReportResolution, Prisma, ReportResolution, ReportStatus } from "@prisma/client";
-import type { DelistPublicationInput, ResolveCommentReportInput, ResolveReportInput } from "@noteschain/validation";
+import type { DelistPublicationInput, ResolveCommentReportInput, ResolveReportInput, UpdateUserStatusInput } from "@noteschain/validation";
 import { prisma } from "../../lib/prisma.js";
 import { Errors } from "../../lib/apiError.js";
 import { recordAudit } from "../../lib/audit.js";
@@ -62,6 +62,137 @@ export interface DateRangeQuery {
 export interface PaginatedAdminQuery extends DateRangeQuery {
   page: number;
   pageSize: number;
+}
+
+export interface UsersQuery {
+  page: number;
+  pageSize: number;
+  status?: "ACTIVE" | "SUSPENDED" | "DELETED";
+  search?: string;
+}
+
+function activitySince(days: number): Date {
+  return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+}
+
+function activeUserWhere(since: Date): Prisma.UserWhereInput {
+  return {
+    status: { not: AccountStatus.DELETED },
+    OR: [
+      { lastLoginAt: { gte: since } },
+      { sessions: { some: { lastUsedAt: { gte: since } } } },
+    ],
+  };
+}
+
+/** Account health metrics deliberately use real authenticated activity, not
+ * pageviews or device identifiers. A session request updates `lastUsedAt`.
+ */
+export async function getUserStats() {
+  const sevenDaysAgo = activitySince(7);
+  const thirtyDaysAgo = activitySince(30);
+  const [total, active, suspended, deleted, newLast30Days, activeLast7Days, activeLast30Days, publishedNotes, comments] = await Promise.all([
+    prisma.user.count(),
+    prisma.user.count({ where: { status: AccountStatus.ACTIVE } }),
+    prisma.user.count({ where: { status: AccountStatus.SUSPENDED } }),
+    prisma.user.count({ where: { status: AccountStatus.DELETED } }),
+    prisma.user.count({ where: { createdAt: { gte: thirtyDaysAgo } } }),
+    prisma.user.count({ where: activeUserWhere(sevenDaysAgo) }),
+    prisma.user.count({ where: activeUserWhere(thirtyDaysAgo) }),
+    prisma.publication.count({ where: { status: "PUBLISHED" } }),
+    prisma.comment.count(),
+  ]);
+
+  return { total, active, suspended, deleted, newLast30Days, activeLast7Days, activeLast30Days, publishedNotes, comments };
+}
+
+export async function listUsers(query: UsersQuery) {
+  const search = query.search?.trim();
+  const where: Prisma.UserWhereInput = {
+    ...(query.status ? { status: query.status } : {}),
+    ...(search
+      ? {
+          OR: [
+            { email: { contains: search, mode: "insensitive" } },
+            { identities: { some: { username: { contains: search, mode: "insensitive" } } } },
+            { identities: { some: { displayName: { contains: search, mode: "insensitive" } } } },
+          ],
+        }
+      : {}),
+  };
+  const now = new Date();
+  const [items, total] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: { createdAt: "desc" },
+      skip: (query.page - 1) * query.pageSize,
+      take: query.pageSize,
+      select: {
+        id: true,
+        email: true,
+        role: true,
+        status: true,
+        createdAt: true,
+        lastLoginAt: true,
+        identities: { where: { isPrimary: true }, select: { username: true, displayName: true }, take: 1 },
+        sessions: { where: { lastUsedAt: { not: null } }, orderBy: { lastUsedAt: "desc" }, select: { lastUsedAt: true }, take: 1 },
+        _count: {
+          select: {
+            publications: { where: { status: "PUBLISHED" } },
+            comments: true,
+            sessions: { where: { revokedAt: null, expiresAt: { gt: now } } },
+          },
+        },
+      },
+    }),
+    prisma.user.count({ where }),
+  ]);
+
+  return {
+    items: items.map(({ identities, sessions, _count, ...user }) => ({
+      ...user,
+      primaryIdentity: identities[0] ?? null,
+      lastActiveAt: [user.lastLoginAt, sessions[0]?.lastUsedAt].filter((date): date is Date => date !== null && date !== undefined).sort((a, b) => b.getTime() - a.getTime())[0] ?? null,
+      publishedNotes: _count.publications,
+      comments: _count.comments,
+      activeSessions: _count.sessions,
+    })),
+    total,
+  };
+}
+
+/**
+ * User deletion is deliberately self-service only: it performs data scrubbing
+ * with permanence-aware rules in auth.service.ts. Admins may only suspend or
+ * reinstate non-admin accounts here, and suspension invalidates every session.
+ */
+export async function updateUserStatus(adminUserId: string, userId: string, input: UpdateUserStatusInput, ipAddress?: string) {
+  if (adminUserId === userId) throw Errors.forbidden("You cannot change your own account status.");
+  if (input.status === AccountStatus.DELETED) throw Errors.badRequest("Account deletion remains a self-service action.");
+
+  const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true, status: true, email: true } });
+  if (!user) throw Errors.notFound("User not found.");
+  if (user.role === Role.ADMIN) throw Errors.forbidden("Administrator accounts cannot be changed from this screen.");
+  if (user.status === AccountStatus.DELETED) throw Errors.conflict("Deleted accounts cannot be reinstated or suspended.");
+  if (user.status === input.status) throw Errors.conflict(`This account is already ${input.status.toLowerCase()}.`);
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data: { status: input.status },
+    select: { id: true, email: true, status: true, role: true, updatedAt: true },
+  });
+  if (input.status === AccountStatus.SUSPENDED) await revokeAllSessionsForUser(userId);
+
+  await recordAudit({
+    actorUserId: adminUserId,
+    action: input.status === AccountStatus.SUSPENDED ? "USER_SUSPENDED" : "USER_REINSTATED",
+    targetType: "User",
+    targetId: userId,
+    metadata: { reason: input.reason, previousStatus: user.status },
+    ipAddress,
+  });
+
+  return updated;
 }
 
 function dateWhere(from?: Date, to?: Date): Prisma.DateTimeFilter | undefined {
