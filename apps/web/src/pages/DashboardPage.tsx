@@ -3,6 +3,7 @@ import { useCurrentUser, useLogout } from "@/hooks/useAuth";
 import { useStartNewDraft } from "@/hooks/useStartNewDraft";
 import { useKeeperProfile } from "@/hooks/useIdentities";
 import { Button } from "@/components/ui/button";
+import { Permission, hasPermission } from "@noteschain/shared";
 
 export function DashboardPage() {
   const { data: user } = useCurrentUser();
@@ -56,12 +57,12 @@ export function DashboardPage() {
             <p className="mt-1 text-sm text-muted-foreground">@{keeperProfile.username} -  what readers see.</p>
           </Link>
         )}
-        {user && (user.role === "MODERATOR" || user.role === "ADMIN") && (
-          <Link to="/admin" className="rounded-md border border-border bg-surface p-4 hover:bg-muted">
-            <h2 className="text-lg">Admin</h2>
-            <p className="mt-1 text-sm text-muted-foreground">Moderation, reports, blockchain jobs.</p>
+        {user?.roles.length ? (
+          <Link to={hasPermission(user.roles, Permission.CREATE_CAMPAIGN) || hasPermission(user.roles, Permission.APPROVE_CAMPAIGN) ? "/admin/campaigns" : "/admin"} className="rounded-md border border-border bg-surface p-4 hover:bg-muted">
+            <h2 className="text-lg">Staff access</h2>
+            <p className="mt-1 text-sm text-muted-foreground">Open the tools available to your assigned staff role.</p>
           </Link>
-        )}
+        ) : null}
       </div>
 
       <Button variant="outline" className="mt-8" onClick={() => logout.mutate()}>

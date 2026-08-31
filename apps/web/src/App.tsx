@@ -138,9 +138,9 @@ export function App() {
         <Route
           path="/admin"
           element={
-            <RequirePermission permission={Permission.MODERATE_CONTENT}>
+            <RequireAnyPermission permissions={[Permission.MODERATE_CONTENT, Permission.CREATE_CAMPAIGN, Permission.APPROVE_CAMPAIGN, Permission.MANAGE_PLATFORM, Permission.MANAGE_STAFF_ACCESS]}>
               <AdminHomePage />
-            </RequirePermission>
+            </RequireAnyPermission>
           }
         />
         <Route

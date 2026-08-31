@@ -194,10 +194,11 @@ export interface WalletBalance {
   explorerUrl: string | null;
 }
 
-export function useWalletBalances() {
+export function useWalletBalances(enabled = true) {
   return useQuery({
     queryKey: ["admin", "wallet-balances"],
     queryFn: () => apiFetch<{ wallets: WalletBalance[] }>("/admin/wallets/balances"),
+    enabled,
   });
 }
 
