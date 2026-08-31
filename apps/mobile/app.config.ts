@@ -42,6 +42,10 @@ export default (_ctx: ConfigContext): ExpoConfig => ({
   slug: "noteschain",
   scheme: "noteschain",
   version: "1.0.0",
+  // React Native Firebase v26 (used for FCM registration and App Check)
+  // requires React Native's New Architecture. Keep this explicit rather than
+  // relying on an Expo SDK default that can change between releases.
+  newArchEnabled: true,
   icon: "./assets/icon.png",
   orientation: "portrait",
   userInterfaceStyle: "automatic",
