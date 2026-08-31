@@ -26,6 +26,11 @@ export function PrivacyPolicyPage() {
               tracking anyone across the web.
             </li>
             <li>Server logs, which include IP addresses, kept for security and abuse prevention.</li>
+            <li>
+              If you opt in, an encrypted mobile push token, a device-local installation credential, app version,
+              time zone, consent record, and recent foreground activity. We use these only for requested account
+              alerts and product updates; anonymous opted-out installations are deleted immediately.
+            </li>
           </ul>
         </section>
 
@@ -43,12 +48,23 @@ export function PrivacyPolicyPage() {
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>Cloudflare Turnstile checks that a registration or comment is coming from a person, not a script.</li>
             <li>An email provider sends your account and password-reset emails.</li>
+            <li>Google Firebase delivers opted-in mobile notifications and verifies app integrity for that feature.</li>
             <li>
               The Solana blockchain -  a public, independent record anyone can check. When you publish a note, we
               commit a cryptographic fingerprint of its title, excerpt, and content to it, along with a timestamp.
               That's what lets anyone verify a note existed at a given moment, without taking our word for it.
             </li>
           </ul>
+        </section>
+
+        <section>
+          <h2 className="text-lg text-foreground">Notifications and staff access</h2>
+          <p className="mt-2">
+            Product updates require a separate opt-in and can be turned off in the app at any time. We retain
+            per-installation campaign records for up to 90 days, then retain aggregate measurements only. A small,
+            authorized staff group administers the service; role changes, invitations, and campaign approvals are
+            audited without recording notification tokens or message recipients.
+          </p>
         </section>
 
         <section>

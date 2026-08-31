@@ -1,13 +1,13 @@
 import { Router } from "express";
 import { z } from "zod";
-import { ModerationAction, Role } from "@noteschain/shared";
+import { ModerationAction, Permission } from "@noteschain/shared";
 import { moderationDecisionSchema } from "@noteschain/validation";
 import { asyncHandler, ok, paginated, requireParam } from "../../lib/http.js";
-import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { requireAuth, requirePermission } from "../../middleware/auth.js";
 import { decideSubmission, getSubmissionDetail, listPendingSubmissions } from "./moderation.service.js";
 
 export const moderationRouter = Router();
-moderationRouter.use(requireAuth, requireRole(Role.MODERATOR));
+moderationRouter.use(requireAuth, requirePermission(Permission.MODERATE_CONTENT));
 
 const submissionsQuerySchema = z
   .object({

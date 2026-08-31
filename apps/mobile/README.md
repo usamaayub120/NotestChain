@@ -84,11 +84,12 @@ The API exposes `GET /api/v1/app/version` as:
 }
 ```
 
-The values come from the API/container environment, not from the mobile
-binary: `ANDROID_LATEST_BUILD`, `ANDROID_MINIMUM_BUILD`, and
-`ANDROID_LATEST_VERSION` (documented in the root `.env.example`). Build
-numbers are Android `versionCode` values; `latestVersion` is display copy
-only. `latestBuild` and `minimumBuild` must stay independent:
+The values come from the API database, not from the mobile binary. The
+release workflow maintains `latestBuild` and `latestVersion`; an admin can
+update the minimum supported build in the responsive website at **Admin →
+Settings → Android release policy**. Build numbers are Android `versionCode`
+values; `latestVersion` is display copy only. `latestBuild` and
+`minimumBuild` must stay independent:
 
 - Set `latestBuild` to a newly available Play build and leave
   `minimumBuild` unchanged for an optional update.
@@ -96,8 +97,18 @@ only. `latestBuild` and `minimumBuild` must stay independent:
   required. Builds below it are blocked, while builds from the minimum up to
   (but not including) latest see the optional prompt.
 
-Release order is a safety requirement: run local checks, build the AAB,
-submit it to Play Internal Testing, wait until that exact `versionCode` is
-available to testers, then deploy/restart the API with the new policy. Never
-raise `ANDROID_MINIMUM_BUILD` while Google Play is still processing the AAB,
-or users can be blocked before an update exists.
+The manual GitHub workflow **EAS Android Release Build** now waits for Google
+Play's release API to mark the submitted internal-test `versionCode` as
+available, then automatically advances only `latestBuild` and
+`latestVersion`. It requires `RELEASE_POLICY_WEBHOOK_SECRET` on the API and
+the matching `NOTESCHAIN_RELEASE_POLICY_TOKEN` GitHub repository secret.
+It never changes `minimumBuild`. If Google Play processing outlives the
+workflow, run **Sync Android Play Availability** with the submitted code and
+display version; it verifies availability before making the same safe latest
+policy update.
+
+To make a release optional, leave `minimumBuild` unchanged. To make it
+mandatory, first confirm that the matching AAB is available to the intended
+track, then raise `minimumBuild` in Admin → Settings. Never raise it while
+Google Play is still processing the AAB, or users can be blocked before an
+update exists.

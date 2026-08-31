@@ -15,4 +15,5 @@ export const Errors = {
   notFound: (message = "Not found.") => new ApiError(404, "NOT_FOUND", message),
   conflict: (message: string) => new ApiError(409, "CONFLICT", message),
   badRequest: (message: string, details?: unknown) => new ApiError(400, "BAD_REQUEST", message, details),
+  serviceUnavailable: (message: string) => new ApiError(503, "SERVICE_UNAVAILABLE", message),
 };

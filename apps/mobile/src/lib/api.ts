@@ -2,6 +2,7 @@ import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
 import type { Page } from "@/src/lib/models";
 import { apiRoot } from "@/src/lib/config";
+import { getAppCheckToken } from "@/src/lib/app-check";
 
 const API_ROOT = apiRoot;
 const TOKEN_KEY = "noteschain.mobile.session";
@@ -54,6 +55,8 @@ export type MobileRequestInit = RequestInit & {
   timeoutMs?: number;
   /** Safe reads retry once by default; startup policy checks intentionally do not. */
   retry?: boolean;
+  /** Only consented installation endpoints request an App Check assertion. */
+  appCheck?: boolean;
 };
 type ApiEnvelope<T> = { data: T; meta?: Page<never>["meta"] };
 
@@ -80,6 +83,7 @@ async function request<T>(path: string, init: MobileRequestInit = {}): Promise<A
   if (init.body) headers.set("content-type", "application/json");
   if (init.idempotencyKey) headers.set("Idempotency-Key", init.idempotencyKey);
   if (init.visitor) headers.set("X-NotesChain-Visitor", await visitorToken());
+  if (init.appCheck) headers.set("X-Firebase-AppCheck", await getAppCheckToken());
 
   const attempts = isSafeRead(init.method) && init.retry !== false ? 2 : 1;
   let lastError: MobileApiError | undefined;

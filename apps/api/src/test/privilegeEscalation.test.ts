@@ -76,10 +76,15 @@ describe("privilege escalation — admin routes", () => {
     }
   });
 
-  it("rejects every admin route for a MODERATOR (403 — admin is a strictly higher tier)", async () => {
+  it("limits a MODERATOR to the report queues inside the admin surface", async () => {
     for (const route of ADMIN_ROUTES) {
       const res = await call(moderator.agent, moderator.csrfToken, route);
-      expect(res.status, `${route.method.toUpperCase()} ${route.path}`).toBe(403);
+      const canModerateReports = /^\/api\/v1\/admin\/(reports|comment-reports)(?:\/|$)/.test(route.path);
+      if (canModerateReports) {
+        expect([401, 403], `${route.method.toUpperCase()} ${route.path}`).not.toContain(res.status);
+      } else {
+        expect(res.status, `${route.method.toUpperCase()} ${route.path}`).toBe(403);
+      }
     }
   });
 
@@ -111,7 +116,7 @@ describe("privilege escalation — admin routes", () => {
     }
   });
 
-  it("lets an ADMIN reach every moderation route's real handler too (role rank, not exact match)", async () => {
+  it("lets an ADMIN reach every moderation route too (legacy role compatibility)", async () => {
     for (const route of MODERATOR_ROUTES) {
       const res = await call(admin.agent, admin.csrfToken, route);
       expect([401, 403]).not.toContain(res.status);

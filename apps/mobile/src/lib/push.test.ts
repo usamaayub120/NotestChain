@@ -38,6 +38,10 @@ jest.mock("expo-secure-store", () => ({
     return Promise.resolve();
   }),
 }));
+jest.mock("expo-crypto", () => ({
+  randomUUID: jest.fn(() => "installation-id-1"),
+  getRandomBytesAsync: jest.fn(() => Promise.resolve(new Uint8Array([1, 2, 3]))),
+}));
 jest.mock("@/src/lib/api", () => ({ api: jest.fn(), getToken: jest.fn() }));
 
 import { TEST_ONLY_KEYS, describePushDiagnostic, getPushDiagnostic, syncPushRegistration, unregisterPushToken } from "./push";
@@ -57,6 +61,7 @@ beforeEach(() => {
   mockIsDevice = true;
   Object.defineProperty(Platform, "OS", { get: () => "android", configurable: true });
   mockedGetToken.mockResolvedValue("session-token");
+  mockSecureStoreState.set(TEST_ONLY_KEYS.PRODUCT_OPT_IN_KEY, "true");
   mockedGetPermissions.mockResolvedValue({ status: "granted" });
   mockedGetDeviceToken.mockResolvedValue({ data: "fcm-token-1" });
   // jest.clearAllMocks() clears call history but not a previous test's
@@ -65,6 +70,22 @@ beforeEach(() => {
   // beforeEach rather than relying on clearAllMocks alone.
   mockedApi.mockResolvedValue(undefined);
 });
+
+function expectInstallationRegistration() {
+  expect(mockedApi).toHaveBeenCalledWith(
+    "/push/installations",
+    expect.objectContaining({ method: "POST", appCheck: true, retry: false }),
+  );
+  const [, init] = mockedApi.mock.calls[0] as [string, { body: string }];
+  expect(JSON.parse(init.body)).toEqual(expect.objectContaining({
+    installationId: "installation-id-1",
+    token: "fcm-token-1",
+    platform: "ANDROID",
+    productOptIn: true,
+    activityAlertsOptIn: true,
+    permissionGranted: true,
+  }));
+}
 
 describe("syncPushRegistration", () => {
   it("does nothing when signed out", async () => {
@@ -87,10 +108,10 @@ describe("syncPushRegistration", () => {
     mockedGetPermissions.mockResolvedValue({ status: "undetermined" });
     mockedRequestPermissions.mockResolvedValue({ status: "granted" });
 
-    await syncPushRegistration();
+    await syncPushRegistration({ requestPermission: true });
 
     expect(mockedRequestPermissions).toHaveBeenCalled();
-    expect(mockedApi).toHaveBeenCalledWith("/push/tokens", { method: "POST", body: JSON.stringify({ token: "fcm-token-1", platform: "ANDROID" }) });
+    expectInstallationRegistration();
   });
 
   it("creates the versioned Android alert channel with NotesChain's custom sound", async () => {
@@ -113,19 +134,19 @@ describe("syncPushRegistration", () => {
     expect(mockedApi).not.toHaveBeenCalled();
   });
 
-  it("registers and remembers the token", async () => {
+  it("registers the consented installation", async () => {
     await syncPushRegistration();
 
-    expect(mockedApi).toHaveBeenCalledWith("/push/tokens", { method: "POST", body: JSON.stringify({ token: "fcm-token-1", platform: "ANDROID" }) });
+    expectInstallationRegistration();
     expect(mockedSetItem).toHaveBeenCalledWith(TEST_ONLY_KEYS.LAST_REGISTERED_KEY, "fcm-token-1");
   });
 
-  it("skips the round trip when this exact token is already registered", async () => {
+  it("refreshes an existing installation so changed consent reaches the API", async () => {
     mockSecureStoreState.set(TEST_ONLY_KEYS.LAST_REGISTERED_KEY, "fcm-token-1");
 
     await syncPushRegistration();
 
-    expect(mockedApi).not.toHaveBeenCalled();
+    expectInstallationRegistration();
   });
 
   it("re-registers when the token has rotated", async () => {
@@ -133,7 +154,7 @@ describe("syncPushRegistration", () => {
 
     await syncPushRegistration();
 
-    expect(mockedApi).toHaveBeenCalledWith("/push/tokens", { method: "POST", body: JSON.stringify({ token: "fcm-token-1", platform: "ANDROID" }) });
+    expectInstallationRegistration();
   });
 
   it("never throws - a permission/network failure must not break app startup", async () => {
@@ -152,15 +173,22 @@ describe("unregisterPushToken", () => {
 
   it("unregisters the remembered token and clears it", async () => {
     mockSecureStoreState.set(TEST_ONLY_KEYS.LAST_REGISTERED_KEY, "fcm-token-1");
+    mockSecureStoreState.set(TEST_ONLY_KEYS.INSTALLATION_ID_KEY, "installation-id-1");
+    mockSecureStoreState.set(TEST_ONLY_KEYS.INSTALLATION_CREDENTIAL_KEY, "installation-credential-1");
 
     await unregisterPushToken();
 
-    expect(mockedApi).toHaveBeenCalledWith("/push/tokens", { method: "DELETE", body: JSON.stringify({ token: "fcm-token-1" }) });
+    expect(mockedApi).toHaveBeenCalledWith(
+      "/push/installations/detach",
+      expect.objectContaining({ method: "POST", appCheck: true, retry: false }),
+    );
     expect(mockedDeleteItem).toHaveBeenCalled();
   });
 
   it("never throws - sign-out must not be blocked by this", async () => {
     mockSecureStoreState.set(TEST_ONLY_KEYS.LAST_REGISTERED_KEY, "fcm-token-1");
+    mockSecureStoreState.set(TEST_ONLY_KEYS.INSTALLATION_ID_KEY, "installation-id-1");
+    mockSecureStoreState.set(TEST_ONLY_KEYS.INSTALLATION_CREDENTIAL_KEY, "installation-credential-1");
     mockedApi.mockRejectedValue(new Error("network down"));
 
     await expect(unregisterPushToken()).resolves.toBeUndefined();

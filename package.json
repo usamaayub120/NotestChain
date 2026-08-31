@@ -18,6 +18,7 @@
     "db:deploy": "prisma migrate deploy --schema prisma/schema.prisma",
     "db:seed": "tsx scripts/seed.ts",
     "create:admin": "tsx scripts/create-admin.ts",
+    "bootstrap:owner": "tsx scripts/bootstrap-owner.ts",
     "db:backfill-keepers": "tsx scripts/backfill-keeper-profiles.ts",
     "init:platform": "tsx scripts/init-platform.ts",
     "test": "pnpm -r test",

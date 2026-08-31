@@ -75,6 +75,8 @@ export default (_ctx: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     "expo-router",
+    "@react-native-firebase/app",
+    "@react-native-firebase/app-check",
     "expo-secure-store",
     "expo-sqlite",
     [

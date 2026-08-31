@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { z } from "zod";
-import { AccountStatus, Role } from "@noteschain/shared";
+import { AccountStatus, Permission } from "@noteschain/shared";
 import {
   delistPublicationSchema,
   resolveCommentReportSchema,
@@ -9,7 +9,7 @@ import {
   updateSiteSettingsSchema,
 } from "@noteschain/validation";
 import { asyncHandler, ok, paginated, requireParam } from "../../lib/http.js";
-import { requireAuth, requireRole } from "../../middleware/auth.js";
+import { requireAuth, requirePermission } from "../../middleware/auth.js";
 import {
   delistPublication,
   getViewBreakdown,
@@ -30,7 +30,15 @@ import { getSiteSettings, updateSiteSettings } from "./settings.service.js";
 import { listWalletBalances } from "./walletBalances.service.js";
 
 export const adminRouter = Router();
-adminRouter.use(requireAuth, requireRole(Role.ADMIN));
+adminRouter.use(requireAuth);
+// Moderators are deliberately limited to report queues. Every other admin
+// route continues to require Platform Admin capability.
+adminRouter.use((req, res, next) => {
+  if (/^\/(reports|comment-reports)(?:\/|$)/.test(req.path)) {
+    return requirePermission(Permission.MODERATE_CONTENT)(req, res, next);
+  }
+  return requirePermission(Permission.MANAGE_PLATFORM)(req, res, next);
+});
 
 const paginationQuerySchema = z.object({
   page: z.coerce.number().int().min(1).max(1000).optional().default(1),

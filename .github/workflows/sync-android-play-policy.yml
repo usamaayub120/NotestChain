@@ -1,0 +1,32 @@
+name: Sync Android Play Availability
+
+# Recovery workflow only: use after a release run timed out while Google Play
+# was processing. It verifies availability before changing anything and can
+# never alter the admin-controlled minimum supported build.
+on:
+  workflow_dispatch:
+    inputs:
+      version_code:
+        description: Android versionCode that was submitted to Internal testing
+        required: true
+        type: string
+      version_name:
+        description: Human-readable version to display to users (for example 1.0.1)
+        required: true
+        type: string
+
+jobs:
+  sync-if-available:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify Play availability and advance latest build
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          NOTESCHAIN_RELEASE_POLICY_TOKEN: ${{ secrets.NOTESCHAIN_RELEASE_POLICY_TOKEN }}
+          ANDROID_VERSION_CODE: ${{ inputs.version_code }}
+          ANDROID_VERSION_NAME: ${{ inputs.version_name }}
+          POLL_ONCE: "true"
+        run: node scripts/sync-android-play-policy.mjs

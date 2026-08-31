@@ -71,3 +71,9 @@ export const commentReceivedDataSchema = z.object({
   commentBody: z.string().min(1),
 });
 export type CommentReceivedData = z.infer<typeof commentReceivedDataSchema>;
+
+export const staffInvitationDataSchema = z.object({
+  acceptUrl: httpUrl,
+  expiryDays: z.number().int().positive(),
+});
+export type StaffInvitationData = z.infer<typeof staffInvitationDataSchema>;

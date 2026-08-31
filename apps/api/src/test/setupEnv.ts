@@ -3,6 +3,7 @@
 process.env.NODE_ENV = "test";
 process.env.DATABASE_URL ??= "postgresql://postgres:password@localhost:5432/noteschain_test";
 process.env.SESSION_SECRET ??= "test-only-session-secret-not-used-anywhere-else-00000000";
+process.env.RELEASE_POLICY_WEBHOOK_SECRET ??= "test-only-release-policy-secret-not-used-anywhere-else-00000000";
 process.env.COOKIE_SECURE = "false";
 process.env.LOG_LEVEL = "fatal";
 // The default (10 per 15 minutes) is tuned against real abuse, not against a

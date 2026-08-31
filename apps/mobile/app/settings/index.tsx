@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import { Action, Card, Divider, Eyebrow, Notice, Screen, Subtitle, Title } from "@/src/components/ui";
 import { fontScaleLabels, type FontScalePreset, type ThemeMode, useTheme } from "@/src/lib/theme";
 import { appEnv, webOrigin } from "@/src/lib/config";
-import { describePushDiagnostic, getPushDiagnostic, syncPushRegistration, type PushDiagnostic } from "@/src/lib/push";
+import { describePushDiagnostic, disableProductUpdates, enableProductUpdates, getPushDiagnostic, type PushDiagnostic } from "@/src/lib/push";
 
 const fontScaleOrder: FontScalePreset[] = ["small", "default", "large", "xlarge"];
 
@@ -42,7 +42,8 @@ export default function SettingsScreen() {
 /**
  * What getPushDiagnostic() has to say, in the one place a reader (or we,
  * over their shoulder) can actually see it — registration itself happens
- * silently on cold start with nothing else visible anywhere.
+ * silently after the reader has opted in; permission is always requested
+ * from this explicit, contextual action rather than on a cold launch.
  */
 function NotificationsRow() {
   const { colors } = useTheme();
@@ -54,7 +55,7 @@ function NotificationsRow() {
   const retry = async () => {
     setChecking(true);
     try {
-      await syncPushRegistration();
+      await enableProductUpdates();
       setDiagnostic(await getPushDiagnostic());
     } finally {
       setChecking(false);
@@ -65,20 +66,20 @@ function NotificationsRow() {
 
   return (
     <View style={{ gap: 10 }}>
-      <View style={local.heading}><Eyebrow>Alerts</Eyebrow><Title>Notifications</Title><Subtitle>Comments, moderation decisions, kept notes, and new followers.</Subtitle></View>
+      <View style={local.heading}><Eyebrow>NotesChain updates</Eyebrow><Title>Notifications</Title><Subtitle>Get useful product updates. Activity alerts for your account stay separate and require an active sign-in.</Subtitle></View>
       <View style={[local.preview, { backgroundColor: colors.elevated, borderColor: colors.border }]}>
         <Ionicons name={registered ? "notifications" : "notifications-outline"} size={17} color={registered ? colors.brand : colors.muted} />
         <Text style={{ color: colors.muted, flex: 1 }}>{diagnostic ? describePushDiagnostic(diagnostic) : "Checking…"}</Text>
       </View>
-      {!registered && (
+      {!registered ? (
         <Action
-          title={checking ? "Checking…" : "Try again"}
+          title={checking ? "Checking…" : "Enable updates"}
           tone="secondary"
           disabled={checking}
           icon={<Ionicons name="refresh-outline" size={18} color={colors.ink} />}
           onPress={() => void retry()}
         />
-      )}
+      ) : <Action title={checking ? "Updating…" : "Turn off product updates"} tone="secondary" disabled={checking} onPress={() => void (async () => { setChecking(true); try { await disableProductUpdates(); setDiagnostic(await getPushDiagnostic()); } finally { setChecking(false); } })()} />}
     </View>
   );
 }

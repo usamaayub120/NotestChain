@@ -7,7 +7,7 @@ import * as Notifications from "expo-notifications";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { initialiseOfflineStore } from "@/src/lib/offline";
 import { syncQueuedMutations } from "@/src/lib/sync";
-import { syncPushRegistration } from "@/src/lib/push";
+import { recordCampaignOpen, syncPushRegistration } from "@/src/lib/push";
 import { MobileNavigation } from "@/src/components/mobile-navigation";
 import { HeaderAddButton, HeaderBrand } from "@/src/components/app-header";
 import { AppLockGate } from "@/src/components/app-lock-gate";
@@ -98,7 +98,10 @@ function AppShell() {
     // RenderedPush.deepLink, an expo-router path resolved the same way a
     // noteschain:// deep link is.
     const sub = Notifications.addNotificationResponseReceivedListener((response) => {
-      const deepLink = response.notification.request.content.data?.deepLink;
+      const data = response.notification.request.content.data;
+      const deliveryToken = data?.campaignDelivery;
+      if (typeof deliveryToken === "string") void recordCampaignOpen(deliveryToken);
+      const deepLink = data?.deepLink;
       if (typeof deepLink === "string") router.push(deepLink as never);
     });
     return () => sub.remove();

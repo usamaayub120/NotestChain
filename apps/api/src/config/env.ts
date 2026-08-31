@@ -1,16 +1,14 @@
 import { z } from "zod";
 import { emailEnvShape, isSmtpConfigured } from "@noteschain/email";
+import { pushEnvShape } from "@noteschain/push";
 
 const envSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   APP_VERSION: z.string().default("0.0.0"),
-  // Android release policy is deliberately runtime configuration rather than
-  // an app binary constant: it lets Play availability, optional upgrades,
-  // and forced upgrades move independently. Keep the defaults permissive for
-  // the first remote-versioned Android build.
-  ANDROID_LATEST_BUILD: z.coerce.number().int().positive().default(1),
-  ANDROID_MINIMUM_BUILD: z.coerce.number().int().positive().default(1),
-  ANDROID_LATEST_VERSION: z.string().trim().min(1).default("1.0.0"),
+  // Optional shared secret for the GitHub release workflow. The endpoint is
+  // deliberately disabled when this is absent, so a deployment can safely
+  // land before the owner provisions the matching GitHub repository secret.
+  RELEASE_POLICY_WEBHOOK_SECRET: z.string().min(32).optional(),
   PORT: z.coerce.number().int().positive().default(3001),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 
@@ -81,14 +79,7 @@ const envSchema = z.object({
   TURNSTILE_SECRET_KEY: z.string().optional(),
 
   ...emailEnvShape,
-}).superRefine((value, ctx) => {
-  if (value.ANDROID_MINIMUM_BUILD > value.ANDROID_LATEST_BUILD) {
-    ctx.addIssue({
-      code: z.ZodIssueCode.custom,
-      path: ["ANDROID_MINIMUM_BUILD"],
-      message: "ANDROID_MINIMUM_BUILD must not exceed ANDROID_LATEST_BUILD",
-    });
-  }
+  ...pushEnvShape,
 });
 
 export type Env = z.infer<typeof envSchema>;

@@ -1,4 +1,4 @@
-import type { Role } from "@noteschain/shared";
+import type { Role, StaffRole } from "@noteschain/shared";
 
 declare global {
   namespace Express {
@@ -7,6 +7,7 @@ declare global {
       auth?: {
         userId: string;
         role: Role;
+        roles: StaffRole[];
         sessionId: string;
         csrfToken: string;
         transport: "WEB" | "MOBILE";

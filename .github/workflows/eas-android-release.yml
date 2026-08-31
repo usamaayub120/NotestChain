@@ -6,7 +6,7 @@ name: EAS Android Release Build
 #
 # Runs the Android build on GitHub's Linux runner via `eas build --local`,
 # which needs a Unix host and can't run on the Windows dev machine this repo
-# is normally worked from. Requires three repository secrets:
+# is normally worked from. Requires four repository secrets:
 #   - EXPO_TOKEN: an access token from
 #     https://expo.dev/accounts/<account>/settings/access-tokens, scoped to
 #     this Expo account, with permission to build for the noteschain project.
@@ -25,12 +25,24 @@ name: EAS Android Release Build
 #     file, which this workflow writes to apps/mobile/google-service-account.json
 #     (gitignored) right before submitting, per eas.json's
 #     submit.production.android.serviceAccountKeyPath.
+#   - NOTESCHAIN_RELEASE_POLICY_TOKEN: a random 32+ character value matching
+#     RELEASE_POLICY_WEBHOOK_SECRET on the deployed API. It can advance only
+#     latestBuild/latestVersion after Play confirms availability; it cannot
+#     change minimumBuild or make a release mandatory.
 on:
   workflow_dispatch:
+
+# EAS remote versionCode allocation is global. Do not let two manual releases
+# allocate/build/submit concurrently and accidentally associate a later code
+# with the earlier AAB.
+concurrency:
+  group: android-production-release
+  cancel-in-progress: false
 
 jobs:
   build-and-submit:
     runs-on: ubuntu-latest
+    timeout-minutes: 360
     env:
       EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
     steps:
@@ -113,6 +125,17 @@ jobs:
             --non-interactive \
             --output "${{ runner.temp }}/noteschain-production.aab"
 
+      # With appVersionSource=remote and production.autoIncrement=true, EAS
+      # allocates this versionCode as it starts the build. Read it only after
+      # the build completes; the concurrency guard above prevents ambiguity.
+      - name: Read allocated Android versionCode and display version
+        id: android-version
+        working-directory: apps/mobile
+        run: |
+          version_code="$(npx eas-cli build:version:get --platform android --profile production --json --non-interactive | node ../../scripts/read-eas-android-version-code.mjs)"
+          version_name="$(npx expo config --type public --json | node -e 'const fs = require("fs"); const config = JSON.parse(fs.readFileSync(0, "utf8")); const version = config.expo?.version ?? config.version; if (typeof version !== "string" || !version.trim()) process.exit(1); process.stdout.write(version.trim());')"
+          printf 'version_code=%s\nversion_name=%s\n' "$version_code" "$version_name" >> "$GITHUB_OUTPUT"
+
       - uses: actions/upload-artifact@v4
         with:
           name: noteschain-production-aab
@@ -134,6 +157,20 @@ jobs:
             --profile production \
             --path "${{ runner.temp }}/noteschain-production.aab" \
             --non-interactive
+
+      # Google Play can take time to process an internal-test release. The
+      # public API advances only after its release API reports this exact
+      # versionCode as PUBLISHED for the internal track. A timeout leaves policy unchanged; use the
+      # separate recovery workflow once Play finishes processing.
+      - name: Wait for Play availability and publish optional-update policy
+        env:
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          NOTESCHAIN_RELEASE_POLICY_TOKEN: ${{ secrets.NOTESCHAIN_RELEASE_POLICY_TOKEN }}
+          ANDROID_VERSION_CODE: ${{ steps.android-version.outputs.version_code }}
+          ANDROID_VERSION_NAME: ${{ steps.android-version.outputs.version_name }}
+          POLL_INTERVAL_SECONDS: "300"
+          MAX_WAIT_SECONDS: "14400"
+        run: node scripts/sync-android-play-policy.mjs
 
       - name: Remove Google service account key
         if: always()

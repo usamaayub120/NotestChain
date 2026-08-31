@@ -2,10 +2,14 @@ import * as Device from "expo-device";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import * as SecureStore from "expo-secure-store";
+import * as Crypto from "expo-crypto";
 import { api, getToken } from "@/src/lib/api";
 
 const LAST_REGISTERED_KEY = "noteschain.push.lastRegisteredToken";
 const DIAGNOSTIC_KEY = "noteschain.push.lastAttempt";
+const INSTALLATION_ID_KEY = "noteschain.push.installationId";
+const INSTALLATION_CREDENTIAL_KEY = "noteschain.push.installationCredential";
+const PRODUCT_OPT_IN_KEY = "noteschain.push.productOptIn";
 const NOTIFICATION_CHANNEL_ID = "noteschain-alerts-v1";
 const NOTIFICATION_SOUND = "noteschain_calm_signal.wav";
 
@@ -94,7 +98,7 @@ export function describePushDiagnostic(diagnostic: PushDiagnostic): string {
  * trace of why, which made a real bug (nobody's device ever registered)
  * indistinguishable from "permission not granted yet" from the server side.
  */
-async function getNativeDeviceToken(): Promise<string | null> {
+async function getNativeDeviceToken(requestPermission: boolean): Promise<string | null> {
   if (!Device.isDevice) {
     await recordDiagnostic({ state: "simulator" });
     return null;
@@ -127,7 +131,7 @@ async function getNativeDeviceToken(): Promise<string | null> {
   let granted: boolean;
   try {
     const existing = await Notifications.getPermissionsAsync();
-    granted = existing.status === "granted" ? true : (await Notifications.requestPermissionsAsync()).status === "granted";
+    granted = existing.status === "granted" ? true : requestPermission && (await Notifications.requestPermissionsAsync()).status === "granted";
   } catch (e) {
     await recordDiagnostic({
       state: "failed",
@@ -161,6 +165,22 @@ async function getNativeDeviceToken(): Promise<string | null> {
   }
 }
 
+async function installationIdentity() {
+  let installationId = await SecureStore.getItemAsync(INSTALLATION_ID_KEY);
+  let credential = await SecureStore.getItemAsync(INSTALLATION_CREDENTIAL_KEY);
+  if (!installationId) {
+    installationId = Crypto.randomUUID();
+    await SecureStore.setItemAsync(INSTALLATION_ID_KEY, installationId);
+  }
+  if (!credential) {
+    credential = Array.from(await Crypto.getRandomBytesAsync(32), (part) => part.toString(16).padStart(2, "0")).join("");
+    await SecureStore.setItemAsync(INSTALLATION_CREDENTIAL_KEY, credential);
+  }
+  return { installationId, credential };
+}
+
+export async function productUpdatesEnabled() { return (await SecureStore.getItemAsync(PRODUCT_OPT_IN_KEY)) === "true"; }
+
 /**
  * Registers this device with the API, if the person is signed in, permission
  * is granted (or grantable), and this device supports it at all. Safe to
@@ -171,11 +191,15 @@ async function getNativeDeviceToken(): Promise<string | null> {
  * recorded via recordDiagnostic() rather than swallowed, so Settings can
  * show it — see getPushDiagnostic().
  */
-export async function syncPushRegistration(): Promise<void> {
+export async function syncPushRegistration(options: { requestPermission?: boolean; productOptIn?: boolean } = {}): Promise<void> {
   try {
-    const sessionToken = await getToken();
-    if (!sessionToken) {
+    if (!await getToken()) {
       await recordDiagnostic({ state: "signed_out" });
+      return;
+    }
+    const optedIn = options.productOptIn ?? await productUpdatesEnabled();
+    if (!optedIn && !options.requestPermission) {
+      await recordDiagnostic({ state: "not_attempted" });
       return;
     }
 
@@ -185,17 +209,14 @@ export async function syncPushRegistration(): Promise<void> {
       return;
     }
 
-    const deviceToken = await getNativeDeviceToken();
+    const deviceToken = await getNativeDeviceToken(options.requestPermission === true);
     if (!deviceToken) return; // getNativeDeviceToken already recorded why.
 
-    const last = await SecureStore.getItemAsync(LAST_REGISTERED_KEY);
-    if (last === deviceToken) {
-      await recordDiagnostic({ state: "registered", at: new Date().toISOString() });
-      return; // Already registered this exact token; skip the round trip.
-    }
-
-    await api("/push/tokens", { method: "POST", body: JSON.stringify({ token: deviceToken, platform }) });
+    const { installationId, credential } = await installationIdentity();
+    const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    await api("/push/installations", { method: "POST", appCheck: true, retry: false, body: JSON.stringify({ installationId, credential, token: deviceToken, platform, productOptIn: optedIn || options.productOptIn === true, activityAlertsOptIn: true, permissionGranted: true, timeZone }) });
     await SecureStore.setItemAsync(LAST_REGISTERED_KEY, deviceToken);
+    if (optedIn || options.productOptIn) await SecureStore.setItemAsync(PRODUCT_OPT_IN_KEY, "true");
     await recordDiagnostic({ state: "registered", at: new Date().toISOString() });
   } catch (e) {
     await recordDiagnostic({
@@ -207,17 +228,48 @@ export async function syncPushRegistration(): Promise<void> {
   }
 }
 
+/** Called only from the contextual onboarding/settings action. */
+export async function enableProductUpdates(): Promise<void> { await syncPushRegistration({ requestPermission: true, productOptIn: true }); }
+
+export async function disableProductUpdates(): Promise<void> {
+  const token = await SecureStore.getItemAsync(LAST_REGISTERED_KEY);
+  if (!token) { await SecureStore.deleteItemAsync(PRODUCT_OPT_IN_KEY); return; }
+  const platform = currentPlatform();
+  if (!platform) return;
+  const { installationId, credential } = await installationIdentity();
+  try {
+    await api("/push/installations", { method: "POST", appCheck: true, retry: false, body: JSON.stringify({ installationId, credential, token, platform, productOptIn: false, activityAlertsOptIn: false, permissionGranted: false }) });
+  } finally {
+    await SecureStore.deleteItemAsync(PRODUCT_OPT_IN_KEY);
+    await SecureStore.deleteItemAsync(LAST_REGISTERED_KEY);
+    await recordDiagnostic({ state: "not_attempted" });
+  }
+}
+
+export async function recordCampaignOpen(deliveryToken: string): Promise<void> {
+  try {
+    const installationId = await SecureStore.getItemAsync(INSTALLATION_ID_KEY);
+    const credential = await SecureStore.getItemAsync(INSTALLATION_CREDENTIAL_KEY);
+    if (!installationId || !credential) return;
+    await api("/push/campaigns/open", { method: "POST", appCheck: true, retry: false, body: JSON.stringify({ installationId, credential, deliveryToken }) });
+  } catch {
+    // Measurement must never prevent the reader from opening the requested screen.
+  }
+}
+
 /** Called from Sign out, while the session token is still valid enough to authenticate the request. */
 export async function unregisterPushToken(): Promise<void> {
   try {
-    const token = await SecureStore.getItemAsync(LAST_REGISTERED_KEY);
-    if (!token) return;
-    await api("/push/tokens", { method: "DELETE", body: JSON.stringify({ token }) });
-    await SecureStore.deleteItemAsync(LAST_REGISTERED_KEY);
-    await recordDiagnostic({ state: "not_attempted" });
+    const installationId = await SecureStore.getItemAsync(INSTALLATION_ID_KEY);
+    const credential = await SecureStore.getItemAsync(INSTALLATION_CREDENTIAL_KEY);
+    if (!installationId || !credential) return;
+    await api("/push/installations/detach", { method: "POST", appCheck: true, retry: false, body: JSON.stringify({ installationId, credential }) });
   } catch {
     // The token will simply age out server-side (pruned on next failed
     // send) if this doesn't reach the server — never block sign-out on it.
+  } finally {
+    await SecureStore.deleteItemAsync(LAST_REGISTERED_KEY);
+    await recordDiagnostic({ state: "not_attempted" });
   }
 }
 
@@ -225,4 +277,10 @@ export type { Platform_ as PushPlatform };
 
 // Exported for push.test.ts only, to seed/inspect the fake SecureStore
 // directly rather than duplicating these strings in the test file.
-export const TEST_ONLY_KEYS = { LAST_REGISTERED_KEY, DIAGNOSTIC_KEY };
+export const TEST_ONLY_KEYS = {
+  LAST_REGISTERED_KEY,
+  DIAGNOSTIC_KEY,
+  INSTALLATION_ID_KEY,
+  INSTALLATION_CREDENTIAL_KEY,
+  PRODUCT_OPT_IN_KEY,
+};

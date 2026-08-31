@@ -23,6 +23,7 @@ export const EmailKind = {
   ACCOUNT_WELCOME: "ACCOUNT_WELCOME",
   COMMENT_RECEIVED: "COMMENT_RECEIVED",
   WALLET_BALANCE_LOW: "WALLET_BALANCE_LOW",
+  STAFF_INVITATION: "STAFF_INVITATION",
 } as const;
 
 export type EmailKind = (typeof EmailKind)[keyof typeof EmailKind];

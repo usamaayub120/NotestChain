@@ -18,6 +18,9 @@ const baseSettings: SiteSettings = {
   defaultOgImageUrl: null,
   twitterHandle: null,
   indexingEnabled: true,
+  androidLatestBuild: 1,
+  androidMinimumBuild: 1,
+  androidLatestVersion: "1.0.0",
   updatedAt: new Date(),
 };
 

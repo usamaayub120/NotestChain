@@ -32,9 +32,17 @@ export function SeoSettingsPage() {
           defaultOgImageUrl: settings.defaultOgImageUrl ?? "",
           twitterHandle: settings.twitterHandle ?? "",
           indexingEnabled: settings.indexingEnabled,
+          androidLatestBuild: settings.androidLatestBuild,
+          androidMinimumBuild: settings.androidMinimumBuild,
+          androidLatestVersion: settings.androidLatestVersion,
         }
       : undefined,
-    defaultValues: { indexingEnabled: true },
+    defaultValues: {
+      indexingEnabled: true,
+      androidLatestBuild: 1,
+      androidMinimumBuild: 1,
+      androidLatestVersion: "1.0.0",
+    },
   });
 
   async function onSubmit(values: UpdateSiteSettingsInput) {
@@ -63,7 +71,7 @@ export function SeoSettingsPage() {
     <div className="px-4 py-6 md:px-8 lg:px-10 lg:py-10">
       <AdminPageHeader
         title="Settings"
-        description="Search Console verification, GA4, and default sharing metadata. Changes apply right away."
+        description="Site metadata and Android release policy. Changes apply right away."
       />
 
       <Form {...form}>
@@ -158,6 +166,75 @@ export function SeoSettingsPage() {
               </FormItem>
             )}
           />
+
+          <fieldset className="space-y-4 rounded-md border border-border bg-surface p-4">
+            <legend className="px-1 text-sm font-semibold">Android release policy</legend>
+            <p className="text-sm text-muted-foreground">
+              Build numbers are Android versionCodes, not semantic versions. The release workflow advances the latest build after Google Play makes it available; only an administrator can choose when a build becomes mandatory.
+            </p>
+
+            <FormField
+              control={form.control}
+              name="androidLatestBuild"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Latest available Android build</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={2147483647}
+                      step={1}
+                      value={field.value ?? ""}
+                      onChange={(event) => field.onChange(event.target.valueAsNumber)}
+                      readOnly
+                    />
+                  </FormControl>
+                  <FormDescription>Maintained automatically after the release is available on Google Play.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="androidLatestVersion"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Latest display version</FormLabel>
+                  <FormControl>
+                    <Input placeholder="1.0.0" {...field} value={field.value ?? ""} readOnly />
+                  </FormControl>
+                  <FormDescription>Maintained by release automation and shown in the optional-update message.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="androidMinimumBuild"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Minimum supported Android build</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={2147483647}
+                      step={1}
+                      value={field.value ?? ""}
+                      onChange={(event) => field.onChange(event.target.valueAsNumber)}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Raising this blocks every older build. Do this only after the matching build is available to the intended Google Play testers.
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </fieldset>
 
           {form.formState.errors.root && (
             <p role="alert" className="text-sm font-medium text-destructive">

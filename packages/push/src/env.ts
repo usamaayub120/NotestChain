@@ -16,11 +16,13 @@ import { z } from "zod";
 export const pushEnvShape = {
   FIREBASE_SERVICE_ACCOUNT_PATH: z.string().optional(),
   FIREBASE_SERVICE_ACCOUNT_JSON: z.string().optional(),
+  PUSH_TOKEN_ENCRYPTION_KEY_PATH: z.string().optional(),
 };
 
 export type PushEnv = {
   FIREBASE_SERVICE_ACCOUNT_PATH?: string;
   FIREBASE_SERVICE_ACCOUNT_JSON?: string;
+  PUSH_TOKEN_ENCRYPTION_KEY_PATH?: string;
 };
 
 /** True once enough is configured to attempt loading a credential. */

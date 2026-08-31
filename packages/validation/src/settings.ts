@@ -1,5 +1,13 @@
 import { z } from "zod";
 
+const androidBuildNumberSchema = z
+  .number()
+  .int("Must be a whole Android versionCode.")
+  .positive("Must be a positive Android versionCode.")
+  .max(2_147_483_647, "Android versionCode must fit in a signed 32-bit integer.");
+
+const androidVersionNameSchema = z.string().trim().min(1, "Version name is required.").max(64);
+
 // Output type deliberately mirrors the input shape (plain optional strings,
 // no .transform()) — react-hook-form's resolver typing gets fragile once a
 // zod schema's output type diverges from its input type across many fields.
@@ -27,5 +35,27 @@ export const updateSiteSettingsSchema = z.object({
     .optional()
     .or(z.literal("")),
   indexingEnabled: z.boolean(),
+  androidLatestBuild: androidBuildNumberSchema.optional(),
+  androidMinimumBuild: androidBuildNumberSchema.optional(),
+  androidLatestVersion: androidVersionNameSchema.optional(),
+}).superRefine((value, ctx) => {
+  if (
+    value.androidLatestBuild !== undefined &&
+    value.androidMinimumBuild !== undefined &&
+    value.androidMinimumBuild > value.androidLatestBuild
+  ) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ["androidMinimumBuild"],
+      message: "Minimum Android build must not exceed the latest Android build.",
+    });
+  }
 });
 export type UpdateSiteSettingsInput = z.infer<typeof updateSiteSettingsSchema>;
+
+/** Input accepted only from the release automation webhook. */
+export const syncAndroidLatestBuildSchema = z.object({
+  latestBuild: androidBuildNumberSchema,
+  latestVersion: androidVersionNameSchema,
+});
+export type SyncAndroidLatestBuildInput = z.infer<typeof syncAndroidLatestBuildSchema>;

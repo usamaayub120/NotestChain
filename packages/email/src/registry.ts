@@ -10,6 +10,7 @@ import {
   publicationChangesRequestedDataSchema,
   publicationRejectedDataSchema,
   walletBalanceLowDataSchema,
+  staffInvitationDataSchema,
 } from "./schemas.js";
 import { renderAccountWelcome } from "./templates/accountWelcome.js";
 import { renderCommentReceived } from "./templates/commentReceived.js";
@@ -19,6 +20,7 @@ import { renderPublicationChainFinalized } from "./templates/publicationChainFin
 import { renderPublicationChangesRequested } from "./templates/publicationChangesRequested.js";
 import { renderPublicationRejected } from "./templates/publicationRejected.js";
 import { renderWalletBalanceLow } from "./templates/walletBalanceLow.js";
+import { renderStaffInvitation } from "./templates/staffInvitation.js";
 
 interface EmailTemplate<T> {
   schema: z.ZodType<T>;
@@ -51,6 +53,7 @@ export const EMAIL_TEMPLATES = {
   [EmailKind.ACCOUNT_WELCOME]: defineTemplate(accountWelcomeDataSchema, renderAccountWelcome),
   [EmailKind.COMMENT_RECEIVED]: defineTemplate(commentReceivedDataSchema, renderCommentReceived),
   [EmailKind.WALLET_BALANCE_LOW]: defineTemplate(walletBalanceLowDataSchema, renderWalletBalanceLow),
+  [EmailKind.STAFF_INVITATION]: defineTemplate(staffInvitationDataSchema, renderStaffInvitation),
   // `EmailTemplate<any>` here is only a variance escape hatch for `satisfies`
   // checking a map of genuinely different payload shapes against one key —
   // it doesn't leak into callers, who always go through EmailDataFor<K> for

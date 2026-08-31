@@ -1,7 +1,9 @@
 import { Route, Routes } from "react-router-dom";
 import { AppShell } from "@/components/layout/AppShell";
 import { RequireAuth } from "@/components/RequireAuth";
-import { RequireRole } from "@/components/RequireRole";
+import { RequirePermission } from "@/components/RequirePermission";
+import { RequireAnyPermission } from "@/components/RequireAnyPermission";
+import { Permission } from "@noteschain/shared";
 import { HomePage } from "@/pages/HomePage";
 import { LoginPage } from "@/pages/LoginPage";
 import { RegisterPage } from "@/pages/RegisterPage";
@@ -30,6 +32,8 @@ import { ViewsPage } from "@/pages/admin/ViewsPage";
 import { SeoSettingsPage } from "@/pages/admin/SeoSettingsPage";
 import { WalletBalancesPage } from "@/pages/admin/WalletBalancesPage";
 import { UsersPage } from "@/pages/admin/UsersPage";
+import { StaffAccessPage } from "@/pages/admin/StaffAccessPage";
+import { CampaignsPage } from "@/pages/admin/CampaignsPage";
 import { HowItWorksPage } from "@/pages/HowItWorksPage";
 import { VerifyNotePage } from "@/pages/VerifyNotePage";
 import { PrivacyPolicyPage } from "@/pages/PrivacyPolicyPage";
@@ -132,83 +136,85 @@ export function App() {
         <Route
           path="/admin"
           element={
-            <RequireRole role="MODERATOR">
+            <RequirePermission permission={Permission.MODERATE_CONTENT}>
               <AdminHomePage />
-            </RequireRole>
+            </RequirePermission>
           }
         />
         <Route
           path="/admin/submissions"
           element={
-            <RequireRole role="MODERATOR">
+            <RequirePermission permission={Permission.MODERATE_CONTENT}>
               <ModerationQueuePage />
-            </RequireRole>
+            </RequirePermission>
           }
         />
         <Route
           path="/admin/submissions/:id"
           element={
-            <RequireRole role="MODERATOR">
+            <RequirePermission permission={Permission.MODERATE_CONTENT}>
               <ModerationSubmissionDetailPage />
-            </RequireRole>
+            </RequirePermission>
           }
         />
         <Route
           path="/admin/reports"
           element={
-            <RequireRole role="ADMIN">
+            <RequirePermission permission={Permission.MODERATE_CONTENT}>
               <ReportsQueuePage />
-            </RequireRole>
+            </RequirePermission>
           }
         />
         <Route
           path="/admin/audit-log"
           element={
-            <RequireRole role="ADMIN">
+            <RequirePermission permission={Permission.MANAGE_PLATFORM}>
               <AuditLogPage />
-            </RequireRole>
+            </RequirePermission>
           }
         />
         <Route
           path="/admin/blockchain"
           element={
-            <RequireRole role="ADMIN">
+            <RequirePermission permission={Permission.MANAGE_PLATFORM}>
               <BlockchainJobsPage />
-            </RequireRole>
+            </RequirePermission>
           }
         />
         <Route
           path="/admin/wallets"
           element={
-            <RequireRole role="ADMIN">
+            <RequirePermission permission={Permission.MANAGE_PLATFORM}>
               <WalletBalancesPage />
-            </RequireRole>
+            </RequirePermission>
           }
         />
         <Route
           path="/admin/views"
           element={
-            <RequireRole role="ADMIN">
+            <RequirePermission permission={Permission.MANAGE_PLATFORM}>
               <ViewsPage />
-            </RequireRole>
+            </RequirePermission>
           }
         />
         <Route
           path="/admin/users"
           element={
-            <RequireRole role="ADMIN">
+            <RequirePermission permission={Permission.MANAGE_PLATFORM}>
               <UsersPage />
-            </RequireRole>
+            </RequirePermission>
           }
         />
         <Route
           path="/admin/settings"
           element={
-            <RequireRole role="ADMIN">
+            <RequirePermission permission={Permission.MANAGE_PLATFORM}>
               <SeoSettingsPage />
-            </RequireRole>
+            </RequirePermission>
           }
         />
+        <Route path="/admin/access" element={<RequirePermission permission={Permission.MANAGE_STAFF_ACCESS}><StaffAccessPage /></RequirePermission>} />
+        <Route path="/admin/campaigns" element={<RequireAnyPermission permissions={[Permission.CREATE_CAMPAIGN, Permission.APPROVE_CAMPAIGN]}><CampaignsPage /></RequireAnyPermission>} />
 
         <Route path="*" element={<NotFoundPage />} />
       </Routes>

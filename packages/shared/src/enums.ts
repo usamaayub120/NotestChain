@@ -4,6 +4,44 @@
 export const Role = { USER: "USER", MODERATOR: "MODERATOR", ADMIN: "ADMIN" } as const;
 export type Role = (typeof Role)[keyof typeof Role];
 
+/**
+ * Staff access is additive.  `Role` above remains as a compatibility field
+ * while existing accounts are migrated; authorization must use StaffRole /
+ * Permission rather than the old numeric role ladder.
+ */
+export const StaffRole = {
+  MODERATOR: "MODERATOR",
+  CAMPAIGN_CREATOR: "CAMPAIGN_CREATOR",
+  CAMPAIGN_APPROVER: "CAMPAIGN_APPROVER",
+  PLATFORM_ADMIN: "PLATFORM_ADMIN",
+  ACCESS_MANAGER: "ACCESS_MANAGER",
+  OWNER: "OWNER",
+} as const;
+export type StaffRole = (typeof StaffRole)[keyof typeof StaffRole];
+
+export const Permission = {
+  MODERATE_CONTENT: "MODERATE_CONTENT",
+  MANAGE_PLATFORM: "MANAGE_PLATFORM",
+  CREATE_CAMPAIGN: "CREATE_CAMPAIGN",
+  APPROVE_CAMPAIGN: "APPROVE_CAMPAIGN",
+  MANAGE_STAFF_ACCESS: "MANAGE_STAFF_ACCESS",
+  MANAGE_ACCESS_MANAGERS: "MANAGE_ACCESS_MANAGERS",
+} as const;
+export type Permission = (typeof Permission)[keyof typeof Permission];
+
+const ROLE_PERMISSIONS: Record<StaffRole, readonly Permission[]> = {
+  [StaffRole.MODERATOR]: [Permission.MODERATE_CONTENT],
+  [StaffRole.CAMPAIGN_CREATOR]: [Permission.CREATE_CAMPAIGN],
+  [StaffRole.CAMPAIGN_APPROVER]: [Permission.APPROVE_CAMPAIGN],
+  [StaffRole.PLATFORM_ADMIN]: [Permission.MANAGE_PLATFORM],
+  [StaffRole.ACCESS_MANAGER]: [Permission.MANAGE_STAFF_ACCESS],
+  [StaffRole.OWNER]: Object.values(Permission),
+};
+
+export function hasPermission(roles: readonly string[] | undefined, permission: Permission): boolean {
+  return (roles ?? []).some((role) => (ROLE_PERMISSIONS as Record<string, readonly Permission[] | undefined>)[role]?.includes(permission));
+}
+
 export const AccountStatus = {
   ACTIVE: "ACTIVE",
   SUSPENDED: "SUSPENDED",

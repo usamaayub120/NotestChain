@@ -15,6 +15,7 @@ export interface PublicUser {
   id: string;
   email: string;
   role: "USER" | "MODERATOR" | "ADMIN";
+  roles: Array<"MODERATOR" | "CAMPAIGN_CREATOR" | "CAMPAIGN_APPROVER" | "PLATFORM_ADMIN" | "ACCESS_MANAGER" | "OWNER">;
   status: string;
   createdAt: string;
   commentDisplayName: string | null;

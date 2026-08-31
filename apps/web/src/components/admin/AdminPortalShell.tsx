@@ -1,22 +1,25 @@
 import type { ReactNode } from "react";
 import { Link, NavLink } from "react-router-dom";
-import { ArrowLeft, ClipboardList, Eye, FileWarning, Landmark, ScrollText, Search, ShieldCheck, Users } from "lucide-react";
+import { ArrowLeft, ClipboardList, Eye, FileWarning, Landmark, ScrollText, Search, ShieldCheck, Users, UserCog, Send } from "lucide-react";
+import { Permission, hasPermission } from "@noteschain/shared";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useAuth";
 
 const items = [
-  { to: "/admin/submissions", label: "Moderation", icon: ClipboardList, role: "MODERATOR" },
-  { to: "/admin/reports", label: "Reports", icon: FileWarning, role: "ADMIN" },
-  { to: "/admin/views", label: "Analytics", icon: Eye, role: "ADMIN" },
-  { to: "/admin/users", label: "Users", icon: Users, role: "ADMIN" },
-  { to: "/admin/settings", label: "Settings", icon: Search, role: "ADMIN" },
-  { to: "/admin/blockchain", label: "Blockchain jobs", icon: Landmark, role: "ADMIN" },
-  { to: "/admin/audit-log", label: "Audit log", icon: ScrollText, role: "ADMIN" },
+  { to: "/admin/submissions", label: "Moderation", icon: ClipboardList, permissions: [Permission.MODERATE_CONTENT] },
+  { to: "/admin/reports", label: "Reports", icon: FileWarning, permissions: [Permission.MODERATE_CONTENT] },
+  { to: "/admin/views", label: "Analytics", icon: Eye, permissions: [Permission.MANAGE_PLATFORM] },
+  { to: "/admin/users", label: "Users", icon: Users, permissions: [Permission.MANAGE_PLATFORM] },
+  { to: "/admin/access", label: "Staff access", icon: UserCog, permissions: [Permission.MANAGE_STAFF_ACCESS] },
+  { to: "/admin/campaigns", label: "Campaigns", icon: Send, permissions: [Permission.CREATE_CAMPAIGN, Permission.APPROVE_CAMPAIGN] },
+  { to: "/admin/settings", label: "Settings", icon: Search, permissions: [Permission.MANAGE_PLATFORM] },
+  { to: "/admin/blockchain", label: "Blockchain jobs", icon: Landmark, permissions: [Permission.MANAGE_PLATFORM] },
+  { to: "/admin/audit-log", label: "Audit log", icon: ScrollText, permissions: [Permission.MANAGE_PLATFORM] },
 ] as const;
 
 export function AdminPortalShell({ children }: { children: ReactNode }) {
   const { data: user } = useCurrentUser();
-  const visible = items.filter((item) => item.role === "MODERATOR" || user?.role === "ADMIN");
+  const visible = items.filter((item) => item.permissions.some((permission) => hasPermission(user?.roles, permission)));
   return (
     <div className="min-h-full bg-background font-sans text-foreground">
       <div className="mx-auto w-full max-w-screen-2xl lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">

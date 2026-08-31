@@ -35,6 +35,14 @@ export const commentRateLimit = rateLimit({
   message: { error: { code: "RATE_LIMITED", message: "Too many comments. Please slow down." } },
 });
 
+export const pushInstallationRateLimit = rateLimit({
+  windowMs: 60_000,
+  max: 12,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: "RATE_LIMITED", message: "Too many notification registration attempts. Please try again later." } },
+});
+
 /**
  * Drafts previously ran on the general 300/min limit, which was fine when an
  * autosave payload was at most a few hundred bytes. A note body is now up to

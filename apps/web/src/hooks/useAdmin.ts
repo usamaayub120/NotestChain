@@ -171,6 +171,9 @@ export interface SiteSettings {
   defaultOgImageUrl: string | null;
   twitterHandle: string | null;
   indexingEnabled: boolean;
+  androidLatestBuild: number;
+  androidMinimumBuild: number;
+  androidLatestVersion: string;
 }
 
 export function useSiteSettings() {
@@ -205,6 +208,28 @@ export function useUpdateSiteSettings() {
     onSuccess: (settings) => queryClient.setQueryData(["admin", "settings"], settings),
   });
 }
+
+export type StaffRole = "MODERATOR" | "CAMPAIGN_CREATOR" | "CAMPAIGN_APPROVER" | "PLATFORM_ADMIN" | "ACCESS_MANAGER" | "OWNER";
+export interface StaffMember { id: string; email: string; status: "ACTIVE" | "SUSPENDED" | "DELETED"; createdAt: string; lastLoginAt: string | null; roles: StaffRole[]; }
+export interface StaffInvitation { id: string; email: string; roles: StaffRole[]; status: "PENDING" | "ACCEPTED" | "REVOKED" | "EXPIRED"; expiresAt: string; createdAt: string; invitedBy: { email: string }; }
+export function useStaffAccess() {
+  return useQuery({ queryKey: ["admin", "access"], queryFn: () => apiFetch<{ staff: StaffMember[]; invitations: StaffInvitation[] }>("/admin/access") });
+}
+export function useCreateStaffInvitation() {
+  const queryClient = useQueryClient();
+  return useMutation({ mutationFn: (input: { email: string; roles: Exclude<StaffRole, "ACCESS_MANAGER" | "OWNER">[] }) => apiFetch("/admin/access/invitations", { method: "POST", body: input }), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "access"] }) });
+}
+export function useUpdateStaffRoles() {
+  const queryClient = useQueryClient();
+  return useMutation({ mutationFn: ({ id, roles }: { id: string; roles: Exclude<StaffRole, "ACCESS_MANAGER" | "OWNER">[] }) => apiFetch(`/admin/access/staff/${id}/roles`, { method: "PATCH", body: { roles } }), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["admin", "access"] }) });
+}
+
+export interface Campaign { id: string; name: string; objective: "ONBOARDING" | "REENGAGEMENT" | "ANNOUNCEMENT"; status: string; activeVersion: { title: string; body: string; deepLink: string; approvedAt: string | null; createdBy: { email: string }; approvedBy: { email: string } | null } | null; _count: { runs: number }; }
+export interface CampaignInput { name: string; objective: "ONBOARDING" | "REENGAGEMENT" | "ANNOUNCEMENT"; title: string; body: string; deepLink: "/" | "/account" | "/onboarding" | "/explore"; audience: { target: "SIGNED_IN" | "ANONYMOUS"; minAgeDays?: number; inactiveDays?: number; platform?: "ANDROID" | "IOS"; hasPublished?: boolean }; schedule: { scheduledAt: string; recurring: boolean; intervalDays?: number; timeZone: string }; }
+export function useCampaigns() { return useQuery({ queryKey: ["campaigns"], queryFn: () => apiFetch<Campaign[]>("/campaigns/") }); }
+export function useCreateCampaign() { const queryClient = useQueryClient(); return useMutation({ mutationFn: (input: CampaignInput) => apiFetch<Campaign>("/campaigns/", { method: "POST", body: input }), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["campaigns"] }) }); }
+export function useCampaignPreview() { return useMutation({ mutationFn: (audience: CampaignInput["audience"]) => apiFetch<{ eligible: number }>("/campaigns/preview", { method: "POST", body: { audience } }) }); }
+export function useCampaignAction() { const queryClient = useQueryClient(); return useMutation({ mutationFn: ({ id, action }: { id: string; action: "submit" | "approve" | "pause" | "cancel" }) => apiFetch(`/campaigns/${id}/${action}`, { method: "POST" }), onSuccess: () => queryClient.invalidateQueries({ queryKey: ["campaigns"] }) }); }
 
 export interface AdminUser {
   id: string;

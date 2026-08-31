@@ -10,6 +10,7 @@ jest.mock("expo-crypto", () => ({
   getRandomBytesAsync: jest.fn(),
 }));
 jest.mock("@/src/lib/config", () => ({ apiRoot: "https://noteschain.org/api/v1" }));
+jest.mock("@/src/lib/app-check", () => ({ getAppCheckToken: jest.fn().mockResolvedValue("test-app-check-token") }));
 
 import { api, apiPage, setToken, setUnauthorizedHandler } from "./api";
 

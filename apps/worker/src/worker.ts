@@ -8,6 +8,8 @@ import { claimAndProcessPushJobs } from "./push/pushProcessor.js";
 import { claimAndProcessOutbox } from "./publishing/outboxProcessor.js";
 import { runReconciliation } from "./reconciliation/reconcile.js";
 import { checkWalletBalances } from "./monitoring/checkWalletBalances.js";
+import { processCampaignDelivery } from "./campaigns/campaignProcessor.js";
+import { pruneCampaignData } from "./campaigns/campaignRetention.js";
 
 logger.info({ cluster: env.SOLANA_CLUSTER, programId: env.SOLANA_PROGRAM_ID }, "NotesChain worker starting");
 
@@ -23,12 +25,19 @@ if (!isFirebaseConfigured(env)) {
 let stopping = false;
 let lastReconciledAt = 0;
 let lastBalanceCheckAt = 0;
+let lastCampaignRetentionAt = 0;
 
 async function tick(): Promise<void> {
   await beatHeartbeat({ cluster: env.SOLANA_CLUSTER });
   await claimAndProcessOutbox();
   await claimAndProcessEmailJobs();
   await claimAndProcessPushJobs();
+  await processCampaignDelivery();
+
+  if (Date.now() - lastCampaignRetentionAt >= 86_400_000) {
+    lastCampaignRetentionAt = Date.now();
+    await pruneCampaignData();
+  }
 
   if (Date.now() - lastReconciledAt >= env.WORKER_RECONCILE_INTERVAL_MS) {
     lastReconciledAt = Date.now();

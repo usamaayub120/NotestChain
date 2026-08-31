@@ -1,7 +1,7 @@
 import { randomBytes } from "node:crypto";
 import argon2 from "argon2";
 import type { Prisma } from "@prisma/client";
-import { AccountStatus, Role } from "@noteschain/shared";
+import { AccountStatus, Role, StaffRole } from "@noteschain/shared";
 import { EmailKind, buildEmailJobData } from "@noteschain/email";
 import { prisma } from "../../lib/prisma.js";
 import { ARGON2_OPTIONS } from "../../config/security.js";
@@ -225,6 +225,7 @@ export function toPublicUser(
     status: string;
     createdAt: Date;
     commentDisplayName?: string | null;
+    roles?: string[];
   },
   primaryIdentity: Parameters<typeof summarizePrimaryIdentity>[0] = null,
 ) {
@@ -232,6 +233,7 @@ export function toPublicUser(
     id: user.id,
     email: user.email,
     role: user.role,
+    roles: user.roles ?? (user.role === Role.ADMIN ? [StaffRole.PLATFORM_ADMIN] : user.role === Role.MODERATOR ? [StaffRole.MODERATOR] : []),
     status: user.status,
     createdAt: user.createdAt,
     commentDisplayName: user.commentDisplayName ?? null,
@@ -243,5 +245,9 @@ export function toPublicUser(
 
 /** Convenience for call sites that only have a userId, not an already-loaded identity. */
 export async function toPublicUserWithProfile(user: Parameters<typeof toPublicUser>[0]) {
-  return toPublicUser(user, await getKeeperProfile(user.id));
+  const [profile, staffRoles] = await Promise.all([
+    getKeeperProfile(user.id),
+    prisma.staffRoleAssignment.findMany({ where: { userId: user.id }, select: { role: true } }),
+  ]);
+  return toPublicUser({ ...user, roles: staffRoles.map((assignment) => assignment.role) }, profile);
 }

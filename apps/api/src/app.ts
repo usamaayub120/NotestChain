@@ -26,8 +26,11 @@ import { commentsRouter } from "./modules/comments/comments.router.js";
 import { followsRouter } from "./modules/follows/follows.router.js";
 import { pushRouter } from "./modules/push/push.router.js";
 import { adminRouter } from "./modules/admin/admin.router.js";
+import { staffAccessRouter } from "./modules/admin/staffAccess.router.js";
+import { campaignRouter } from "./modules/campaigns/campaign.router.js";
 import { seoRouter } from "./modules/seo/seo.router.js";
 import { appVersionRouter } from "./modules/app-version/app-version.router.js";
+import { releasePolicyRouter } from "./modules/release-policy/release-policy.router.js";
 
 export function createApp() {
   const app = express();
@@ -92,6 +95,7 @@ export function createApp() {
   app.get("/health", (_req, res) => res.status(200).json({ status: "ok" }));
   app.use("/api/v1", healthRouter);
   app.use("/api/v1/app", appVersionRouter);
+  app.use("/api/v1/internal/release-policy", releasePolicyRouter);
   app.use("/api/v1/auth", authRouter);
   app.use("/api/v1/identities", identitiesRouter);
   // A route-scoped body limit rather than raising the global one: a 20,000
@@ -109,6 +113,8 @@ export function createApp() {
   app.use("/api/v1/comments", commentsRouter);
   app.use("/api/v1/follows", followsRouter);
   app.use("/api/v1/push", pushRouter);
+  app.use("/api/v1/campaigns", campaignRouter);
+  app.use("/api/v1/admin", staffAccessRouter);
   app.use("/api/v1/admin", adminRouter);
 
   app.use(notFoundHandler);
