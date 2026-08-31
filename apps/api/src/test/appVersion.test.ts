@@ -11,6 +11,7 @@ describe("mobile app version policy", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers["cache-control"]).toContain("no-store");
+    expect(response.headers.etag).toBeUndefined();
     expect(response.body).toEqual({
       data: {
         android: {

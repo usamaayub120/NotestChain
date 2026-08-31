@@ -33,6 +33,11 @@ export function createApp() {
   const app = express();
 
   app.disable("x-powered-by");
+  // React Native's HTTP stack can expose a body-less 304 response instead of
+  // transparently serving its cached JSON body. API consumers need a usable
+  // response every time, so disable Express's automatic ETag/304 handling.
+  // Static web assets keep their own immutable cache policy in Nginx.
+  app.set("etag", false);
   app.set("trust proxy", 1); // behind Nginx — needed for correct req.ip / secure cookies
 
   app.use(
