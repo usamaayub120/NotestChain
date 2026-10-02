@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { AccessibilityInfo, Animated, View } from "react-native";
 import { useTheme } from "@/src/lib/theme";
 import { describeKeptState, type KeptTone } from "@/src/lib/kept-state";
@@ -31,7 +31,7 @@ export function KeptStamp({
 }) {
   const { colors } = useTheme();
   const state = describeKeptState(status, verification);
-  const opacity = useRef(new Animated.Value(1)).current;
+  const opacity = useMemo(() => new Animated.Value(1), []);
   const pulses = state.tone === "pending" && !state.hidden;
 
   useEffect(() => {

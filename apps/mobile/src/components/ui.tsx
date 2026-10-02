@@ -1,5 +1,5 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo } from "react";
 import { AccessibilityInfo, Animated, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -187,7 +187,7 @@ export function IconButton({ icon, accessibilityLabel, onPress, disabled, tone =
  */
 export function Loading({ label = "Loading…" }: { label?: string }) {
   const { colors } = useTheme();
-  const opacity = useRef(new Animated.Value(1)).current;
+  const opacity = useMemo(() => new Animated.Value(1), []);
 
   useEffect(() => {
     let mounted = true;
@@ -215,7 +215,7 @@ export function Divider() { const { colors } = useTheme(); return <View style={[
 export function Card({ children, style }: PropsWithChildren<{ style?: React.ComponentProps<typeof View>["style"] }>) { const { colors } = useTheme(); return <View style={[styles.card, { borderColor: colors.border, backgroundColor: colors.surface }, style]}>{children}</View>; }
 export function Skeleton({ style }: { style?: React.ComponentProps<typeof View>["style"] }) {
   const { colors } = useTheme();
-  const opacity = useRef(new Animated.Value(0.5)).current;
+  const opacity = useMemo(() => new Animated.Value(0.5), []);
   useEffect(() => {
     let mounted = true;
     let loop: Animated.CompositeAnimation | null = null;

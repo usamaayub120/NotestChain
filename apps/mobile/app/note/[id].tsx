@@ -71,6 +71,16 @@ export default function NoteScreen() {
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
   const [captchaOpen, setCaptchaOpen] = useState(false);
+  // Opens §13's proof sheet in the app. This used to call Linking.openURL
+  // and drop the reader into Solana Explorer, so the signature, PDA and slot
+  // were never shown in the product at all. The explorer link lives inside
+  // the sheet now, for anyone who does want to leave.
+  //
+  // Declared here with the other hooks, not beside the sheet it opens: the
+  // two early returns below run on the first render, so a useState after
+  // them changes the hook count once the note loads and React throws
+  // "Rendered more hooks than during the previous render."
+  const [proofOpen, setProofOpen] = useState(false);
 
   useEffect(() => {
     api<{ publication: { id: string } }[]>("/bookmarks")
@@ -124,12 +134,6 @@ export default function NoteScreen() {
       setError(e instanceof Error ? e.message : "Could not share this note.");
     }
   };
-
-  // Opens §13's proof sheet in the app. This used to call Linking.openURL
-  // and drop the reader into Solana Explorer, so the signature, PDA and slot
-  // were never shown in the product at all. The explorer link lives inside
-  // the sheet now, for anyone who does want to leave.
-  const [proofOpen, setProofOpen] = useState(false);
 
   const postComment = async (captchaToken?: string) => {
     if (!body.trim()) return;
