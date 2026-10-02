@@ -12,11 +12,18 @@ import { CommentSection } from "@/components/publication/CommentSection";
 import { ErrorState } from "@/components/ErrorState";
 import { apiFetch } from "@/lib/api";
 import { PageLoader } from "@/components/Loader";
+import { Translate } from "lucide-react";
 
 export function PublicationReaderPage() {
   const { id } = useParams<{ id: string }>();
   const { data: publication, isLoading, isError, refetch } = usePublication(id);
   const { data: revisionData } = usePublicationRevisions(id);
+
+  // Translation state
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translatedContent, setTranslatedContent] = useState<string>('');
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
@@ -39,6 +46,49 @@ export function PublicationReaderPage() {
     };
   }, [publication]);
 
+  /** Translate the publication content using a translation API */
+  const handleTranslate = async () => {
+    if (!publication || isTranslating) return;
+
+    setIsTranslating(true);
+    setTranslationError(null);
+
+    try {
+      // In a real implementation, you would use a translation API like:
+      // - Google Translate API
+      // - Microsoft Translator Text API
+      // - DeepL API
+      // - LibreTranslate (open source)
+      //
+      // For this implementation, we'll use a placeholder endpoint
+      // In production, this should be routed through your backend to protect API keys
+
+      const response = await fetch('/api/v1/translate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: publication.content,
+          targetLang: 'es', // Example: translating to Spanish
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Translation failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setTranslatedContent(data.translatedText || '');
+      setShowTranslation(true);
+    } catch (err) {
+      setTranslationError(err instanceof Error ? err.message : 'Translation failed');
+      console.error('Translation error:', err);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   if (isLoading) return <PageLoader label="Loading this note" />;
   if (isError || !publication) return <ErrorState message="This publication couldn't be found." onRetry={() => refetch()} />;
 
@@ -58,15 +108,30 @@ export function PublicationReaderPage() {
 
       <KeptLine publication={publication} />
 
-      <NoteContent
-        source={publication.content}
-        // Falls back to PLAINTEXT when absent, which keeps every note
-        // published before markdown shipped rendering exactly as it always
-        // has. Those are immutable and already hashed.
-        format={publication.contentFormat ?? "PLAINTEXT"}
-        shimmer
-        className="mt-6 text-body leading-relaxed"
-      />
+      {showTranslation && translatedContent ? (
+        <NoteContent
+          source={translatedContent}
+          format="PLAINTEXT"
+          shimmer
+          className="mt-6 text-body leading-relaxed"
+        />
+      ) : (
+        <NoteContent
+          source={publication.content}
+          // Falls back to PLAINTEXT when absent, which keeps every note
+          // published before markdown shipped rendering exactly as it always
+          // has. Those are immutable and already hashed.
+          format={publication.contentFormat ?? "PLAINTEXT"}
+          shimmer
+          className="mt-6 text-body leading-relaxed"
+        />
+      )}
+
+      {translationError && (
+        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-600">
+          Translation error: {translationError}
+        </div>
+      )}
 
       {publication.tags.length > 0 && (
         <div className="mt-6 flex flex-wrap gap-2">
@@ -104,6 +169,35 @@ export function PublicationReaderPage() {
       <div className="mt-8 flex items-center gap-4 border-t border-border pt-4">
         <BookmarkButton publicationId={publication.id} />
         <ShareSheet publicationId={publication.id} title={publication.title} />
+        <button
+          type="button"
+          disabled={isTranslating || !publication}
+          onClick={handleTranslate}
+          className={cn(
+            "flex size-11 items-center justify-center rounded-md text-muted-foreground",
+            "transition-colors duration-150 ease-out",
+            "md:hover:bg-muted md:hover:text-foreground",
+            "active:bg-muted",
+            "disabled:pointer-events-none disabled:opacity-50",
+            isTranslating && "bg-muted text-foreground",
+          )}
+        >
+          {isTranslating ? (
+            <span className="sr-only">Translating...</span>
+            <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+            </svg>
+          ) : (
+            <>
+              <Translate size={20} strokeWidth={1.75} aria-hidden />
+              <span className="ml-1">Translate</span>
+            </>
+          )}
+          <span className="sr-only">
+            {isTranslating ? 'Translating...' : 'Translate publication'}
+          </span>
+        </button>
         <ReportPublicationSheet publicationId={publication.id} />
       </div>
 

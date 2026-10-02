@@ -71,6 +71,13 @@ export default function NoteScreen() {
   const [error, setError] = useState<string>();
   const [notice, setNotice] = useState<string>();
   const [captchaOpen, setCaptchaOpen] = useState(false);
+
+  // Translation state
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translatedContent, setTranslatedContent] = useState<string>('');
+  const [showTranslation, setShowTranslation] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
+
   // Opens §13's proof sheet in the app. This used to call Linking.openURL
   // and drop the reader into Solana Explorer, so the signature, PDA and slot
   // were never shown in the product at all. The explorer link lives inside
@@ -174,6 +181,49 @@ export default function NoteScreen() {
     }
   };
 
+  /** Translate the note content using a translation API */
+  const handleTranslate = async () => {
+    if (!note || isTranslating) return;
+
+    setIsTranslating(true);
+    setTranslationError(null);
+
+    try {
+      // In a real implementation, you would use a translation API like:
+      // - Google Translate API
+      // - Microsoft Translator Text API
+      // - DeepL API
+      // - LibreTranslate (open source)
+      //
+      // For this implementation, we'll use a placeholder endpoint
+      // In production, this should be routed through your backend to protect API keys
+
+      const response = await fetch('/api/v1/translate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: note.content,
+          targetLang: 'es', // Example: translating to Spanish
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Translation failed: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setTranslatedContent(data.translatedText || '');
+      setShowTranslation(true);
+    } catch (err) {
+      setTranslationError(err instanceof Error ? err.message : 'Translation failed');
+      console.error('Translation error:', err);
+    } finally {
+      setIsTranslating(false);
+    }
+  };
+
   return (
     <Screen fitContent>
       <Text style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 29 * fontScale, lineHeight: 36 * fontScale }}>
@@ -195,7 +245,11 @@ export default function NoteScreen() {
       )}
       <Subtitle>{note.publishedAt ? formatNoteDate(note.publishedAt) : DRAFT_STATUS_LABELS.CHAIN_PENDING}</Subtitle>
 
-      <NoteContent source={note.content} format={note.contentFormat} fontScale={fontScale} />
+      {showTranslation && translatedContent ? (
+        <NoteContent source={translatedContent} format="PLAINTEXT" fontScale={fontScale} shimmer />
+      ) : (
+        <NoteContent source={note.content} format={note.contentFormat} fontScale={fontScale} shimmer />
+      )}
 
       {note.tags.map((tag) => (
         <Text key={tag} style={{ color: colors.muted, fontSize: 14 * fontScale }}>#{tag}</Text>
@@ -225,6 +279,12 @@ export default function NoteScreen() {
           />
         ) : null}
         <IconButton
+          accessibilityLabel="Translate this note"
+          disabled={isTranslating || !note}
+          icon={<Ionicons name="translate-outline" size={22} color={colors.ink} />}
+          onPress={() => void handleTranslate()}
+        />
+        <IconButton
           accessibilityLabel="Report this note"
           icon={<Ionicons name="flag-outline" size={22} color={colors.ink} />}
           onPress={() => { setReportError(undefined); setReportOpen(true); }}
@@ -234,6 +294,11 @@ export default function NoteScreen() {
       {note.chain && !note.chain.explorerUrl ? <Notice>{chainPendingCopy(note.chain.status)}</Notice> : null}
       {notice && <Notice>{notice}</Notice>}
       {error && <ErrorText>{error}</ErrorText>}
+      {translationError && (
+        <Notice style={{ backgroundColor: '#ffe6e6', borderColor: '#ffcccc', color: '#cc0000' }}>
+          Translation error: {translationError}
+        </Notice>
+      )}
 
       <Divider />
       <Text style={{ color: colors.ink, fontSize: 21 * fontScale, fontWeight: "700" }}>Comments</Text>

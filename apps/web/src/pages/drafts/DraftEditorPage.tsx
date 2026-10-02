@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { ArrowLeft, Mic, Trash2 } from "lucide-react";
 import { LIMITS, charactersOverLimit } from "@noteschain/shared";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -58,6 +58,10 @@ export function DraftEditorPage() {
   const [autosaveState, setAutosaveState] = useState<AutosaveState>("idle");
   const [warningOpen, setWarningOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+// Speech-to-text state
+const [isListening, setIsListening] = useState(false);
+const [speechRecognition, setSpeechRecognition] = useState<SpeechRecognition | null>(null);
 
   // Errors the SERVER reported, as opposed to the live client-side ones.
   const [serverErrors, setServerErrors] = useState<{ title?: string; content?: string; form?: string }>({});
@@ -167,6 +171,53 @@ export function DraftEditorPage() {
     [],
   );
 
+  // Speech recognition initialization and cleanup
+  useEffect(() => {
+    // Initialize speech recognition if available
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (SpeechRecognition) {
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0])
+          .map(result => result.transcript)
+          .join('');
+
+        if (event.results[0].isFinal) {
+          insertAtSelection(contentRef.current, transcript + ' ');
+        } else {
+          // For interim results, we could show a preview, but for simplicity
+          // we'll just use final results to avoid too many updates
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      setSpeechRecognition(recognition);
+    } else {
+      // Speech recognition not available in this browser
+      setSpeechRecognition(null);
+    }
+
+    // Cleanup
+    return () => {
+      if (speechRecognition) {
+        speechRecognition.stop();
+      }
+    };
+  }, []);
+
   // The browser's own guard, for the case no in-app navigation can catch.
   useEffect(() => {
     const warnOnExit = (event: BeforeUnloadEvent) => {
@@ -187,6 +238,58 @@ export function DraftEditorPage() {
       debounceTimer.current = undefined;
       runSave();
     }, AUTOSAVE_DEBOUNCE_MS);
+  }
+
+  /** Start speech-to-text recognition */
+  async function handleStartSpeechToText() {
+    if (!editable) return;
+
+    // Check if speech recognition is available
+    if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+      setServerErrors({ form: 'Speech recognition is not supported in this browser.' });
+      return;
+    }
+
+    // Initialize speech recognition if not already done
+    if (!speechRecognition) {
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.continuous = false;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onresult = (event) => {
+        const transcript = Array.from(event.results)
+          .map(result => result[0])
+          .map(result => result.transcript)
+          .join('');
+
+        if (event.results[0].isFinal) {
+          insertAtSelection(contentRef.current, transcript + ' ');
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      setSpeechRecognition(recognition);
+    }
+
+    // Start listening
+    try {
+      await speechRecognition.start();
+      setIsListening(true);
+    } catch (err) {
+      console.error('Failed to start speech recognition:', err);
+      setServerErrors({ form: 'Failed to start speech recognition.' });
+      setIsListening(false);
+    }
   }
 
   function handleTitleChange(value: string) {
@@ -372,6 +475,37 @@ export function DraftEditorPage() {
           <TabsContent value="write" className="flex flex-1 flex-col">
             <FormatToolbar textareaRef={contentRef}>
               <EmojiPickerSheet textareaRef={contentRef} />
+              <button
+                type="button"
+                disabled={!editable || !speechRecognition}
+                aria-label={isListening ? "Listening... (click to stop)" : "Start voice input"}
+                title={isListening ? "Listening... (click to stop)" : "Start voice input"}
+                onMouseDown={(event) => event.preventDefault()}
+                onClick={() => {
+                  if (!speechRecognition) {
+                    alert("Speech recognition is not available in this browser.");
+                    return;
+                  }
+                  if (isListening) {
+                    speechRecognition.stop();
+                  } else {
+                    speechRecognition.start();
+                    setIsListening(true);
+                  }
+                }}
+                className={cn(
+                  // 44px minimum touch target (DESIGN_SYSTEM.md §14), and the row
+                  // has py-1 so the 2px focus ring at 2px offset is not clipped.
+                  "flex size-11 items-center justify-center rounded-md text-muted-foreground",
+                  "transition-colors duration-150 ease-out",
+                  "md:hover:bg-muted md:hover:text-foreground",
+                  "active:bg-muted",
+                  "disabled:pointer-events-none disabled:opacity-50",
+                  isListening && "bg-muted text-foreground",
+                )}
+              >
+                <Mic size={20} strokeWidth={1.75} aria-hidden />
+              </button>
             </FormatToolbar>
             <Textarea
               ref={contentRef}

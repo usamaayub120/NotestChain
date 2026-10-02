@@ -24,6 +24,7 @@ import { searchRouter } from "./modules/search/search.router.js";
 import { bookmarkCollectionsRouter, bookmarksRouter } from "./modules/bookmarks/bookmarks.router.js";
 import { commentsRouter } from "./modules/comments/comments.router.js";
 import { followsRouter } from "./modules/follows/follows.router.js";
+import { translationsRouter } from "./modules/translations/translations.router.js";
 import { pushRouter } from "./modules/push/push.router.js";
 import { adminRouter } from "./modules/admin/admin.router.js";
 import { staffAccessRouter } from "./modules/admin/staffAccess.router.js";
@@ -112,6 +113,7 @@ export function createApp() {
   app.use("/api/v1/bookmark-collections", bookmarkCollectionsRouter);
   app.use("/api/v1/comments", commentsRouter);
   app.use("/api/v1/follows", followsRouter);
+  app.use("/api/v1/translate", translationsRouter);
   app.use("/api/v1/push", pushRouter);
   app.use("/api/v1/campaigns", campaignRouter);
   app.use("/api/v1/admin", staffAccessRouter);
