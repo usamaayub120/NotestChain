@@ -75,6 +75,11 @@ export default (_ctx: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     "expo-router",
+    "expo-localization",
+    ["expo-speech-recognition", {
+      microphonePermission: "Allow NotesChain to use your microphone to write draft text with your voice.",
+      speechRecognitionPermission: "Allow NotesChain to convert your speech into draft text using your device's speech service.",
+    }],
     "expo-asset",
     // Lets the three brand faces be bundled into the native build rather
     // than fetched at runtime; see src/lib/fonts.ts.

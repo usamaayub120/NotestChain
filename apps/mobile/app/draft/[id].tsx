@@ -2,7 +2,9 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useLocalSearchParams, router, useNavigation } from "expo-router";
 import NetInfo from "@react-native-community/netinfo";
 import { Ionicons } from "@expo/vector-icons";
-import { AppState, Text, View } from "react-native";
+import { AppState, Text, TextInput, View } from "react-native";
+import { insertDictatedText } from "@noteschain/shared";
+import { DictationControl, type DictationHandle } from "@/src/components/dictation-control";
 import * as Haptics from "expo-haptics";
 import { api } from "@/src/lib/api";
 import { LIMITS, charactersOverLimit, characterLength, utf8ByteLength, validateTags } from "@/src/lib/limits";
@@ -56,11 +58,15 @@ export default function DraftEditorScreen() {
   // rather than off the label, so neither can be fooled by what the
   // indicator happens to say.
   const pendingSave = useRef(false);
+  const dictationRef = useRef<DictationHandle>(null);
+  const bodyRef = useRef<TextInput>(null);
+  const bodySelection = useRef({ start: 0, end: 0 });
   const [error, setError] = useState<string>();
 
   const latest = useRef({ title, content });
   const [confirmingPublish, setConfirmingPublish] = useState(false);
   const [publishing, setPublishing] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [recoveryOffer, setRecoveryOffer] = useState<{ title: string; content: string } | null>(null);
   // Publishing is online-only by design (see README). The button used to
   // fire regardless and fail into a generic network string, which is
@@ -144,6 +150,7 @@ export default function DraftEditorScreen() {
   // the words survive even if the request never goes out.
   useEffect(() => {
     const unsubscribe = navigation.addListener("beforeRemove" as never, () => {
+      dictationRef.current?.cancel();
       if (id && pendingSave.current) {
         preserveRecovery(id, latest.current);
         void autosave();
@@ -224,6 +231,7 @@ export default function DraftEditorScreen() {
   };
 
   const submit = async () => {
+    dictationRef.current?.cancel();
     if (!id) return;
     setError(undefined);
     if (!title.trim() || !content.trim()) {
@@ -240,6 +248,7 @@ export default function DraftEditorScreen() {
       setError(blockedReason);
       return;
     }
+    setSubmitting(true);
     try {
       await autosave();
       // updateMetadata used to catch its own error and return normally, so a
@@ -257,6 +266,8 @@ export default function DraftEditorScreen() {
       setSaveState("idle");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not submit this draft.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -334,13 +345,24 @@ export default function DraftEditorScreen() {
 
       <Field editable={canEdit} placeholder="Title" value={title} onChangeText={setTitle} />
       <Field
+        ref={bodyRef}
+        accessibilityLabel="Note body"
+        onSelectionChange={(event) => { bodySelection.current = event.nativeEvent.selection; }}
         editable={canEdit}
         multiline
         placeholder="What's on your mind?"
         value={content}
-        onChangeText={setContent}
+        onChangeText={(value) => { latest.current = { ...latest.current, content: value }; setContent(value); }}
         style={{ minHeight: 260, textAlignVertical: "top" }}
       />
+
+      {canEdit && <DictationControl ref={dictationRef} enabled={canEdit && !publishing && !submitting} onFinal={(phrase) => {
+        const inserted = insertDictatedText(latest.current.content, bodySelection.current, phrase);
+        latest.current = { ...latest.current, content: inserted.value };
+        bodySelection.current = { start: inserted.caret, end: inserted.caret };
+        setContent(inserted.value);
+        requestAnimationFrame(() => { bodyRef.current?.setNativeProps({ selection: bodySelection.current }); });
+      }} />}
 
       {canEdit && (
         <>
@@ -378,7 +400,7 @@ export default function DraftEditorScreen() {
 
           <Action title="Save settings" tone="secondary" icon={<Ionicons name="save-outline" size={18} color={colors.ink} />} onPress={() => void updateMetadata()} />
           {blockedReason && <Notice>{blockedReason}</Notice>}
-          <Action title="Submit for review" disabled={Boolean(blockedReason)} icon={<Ionicons name="send-outline" size={18} color={colors.onBrand} />} onPress={() => void submit()} />
+          <Action title="Submit for review" disabled={submitting || Boolean(blockedReason)} icon={<Ionicons name="send-outline" size={18} color={colors.onBrand} />} onPress={() => void submit()} />
         </>
       )}
 

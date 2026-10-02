@@ -25,8 +25,15 @@ import { createReport } from "./reports.service.js";
 import { hashVisitorToken, recordView } from "./views.service.js";
 import { createComment, listTopLevelComments, setCommentsEnabled } from "../comments/comments.service.js";
 import { listFollowingIdentityIds } from "../follows/follows.service.js";
+import { translationRateLimit } from "../../middleware/rateLimit.js";
+import { publicationTranslateSchema, translatePublication } from "../translations/translations.service.js";
 
 export const publicationsRouter = Router();
+
+publicationsRouter.post("/:id/translation", requireAuth, translationRateLimit, asyncHandler(async (req, res) => {
+  const { targetLang } = publicationTranslateSchema.parse(req.body);
+  return ok(res, await translatePublication(requireParam(req, "id"), targetLang));
+}));
 
 function parseReferrerHost(referer: string | undefined): string | undefined {
   if (!referer) return undefined;

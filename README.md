@@ -191,6 +191,62 @@ pull.) The mounted keypair path must match whatever
 `SOLANA_PUBLISHER_KEYPAIR_PATH` is set to in the VPS's `.env` — see
 `RUNBOOK.md` §3 for generating/rotating that keypair.
 
+### Dictation and translation setup
+
+Draft dictation uses browser/device speech services. Audio is never sent to the
+NotesChain API or recorded to disk by the app; the selected device service may
+process it in its cloud. The first-use disclosure explains this. English, Urdu,
+Arabic, Spanish, French, and German are offered, but device language support and
+offline recognition vary. Ending a session never restarts the microphone automatically.
+
+Note translation uses Azure Translator v3 and requires sign-in. Create a Translator
+resource with **F0 pricing only**; keep its key in the server's secret environment
+as `AZURE_TRANSLATOR_KEY`, with `AZURE_TRANSLATOR_REGION`. Never use `VITE_` or
+`EXPO_PUBLIC_` variables for these values. Do not change to a paid tier when the
+free quota is exhausted. In `/opt/noteschain/docker-compose.yml`, explicitly pass
+both variables from the sibling secret `.env` into the API container; adding them
+only to the host file is insufficient. No credentials are needed to run the rest
+of the application. Missing configuration returns a clear translation error.
+
+Deploy migration `20261003090000_add_publication_translations` and the web/API image
+before shipping the new native client. It adds a cache keyed by publication,
+language, and source digest, without the requesting user's identity. Originals
+and blockchain hashes remain unchanged. Visibility is checked even for cached
+results. Cached translations work without a provider request, including after
+quota exhaustion. Both translation endpoints share a 10-request/minute/account
+limit; provider calls have a 15-second timeout. In-flight coalescing assumes the
+current single API process; review distributed coordination before scaling it.
+
+Mobile speech adds a native module and permission configuration: ship a new
+Android binary, not an OTA-only update. Shared helpers are built by CI and the
+EAS post-install hook. Before release, test physical Android microphone consent,
+denial, all available languages, continuous phrases, stopping/backgrounding,
+cursor insertion while typing, and draft autosave/recovery. Also test live Azure
+F0 translation, original toggle, RTL text, quota failures, and browser dictation
+on a supported browser. Automated tests use provider fixtures; they do not prove
+live credentials or physical microphone support. VPS and Play publication remain
+separate owner-authorized releases.
+
+The Privacy Policy discloses device-provider speech processing and Azure note
+translation. Reassess Play Data Safety before the native release: audio can be
+sent off-device by the selected OS recognition service even though NotesChain
+does not receive or persist it. Determine the declaration from the actual
+device/service behavior and applicable platform guidance; do not reuse the old
+"no audio" declaration without that review. Translation sends note text to
+Microsoft for processing. No store declaration is submitted by these changes.
+
+Local validation (2 October 2026): workspace typechecks, lint, web/API/worker
+builds, Android export, and all application/package tests passed, including 92
+API tests, 111 mobile tests, and 18 web tests. All 17 migrations applied to an
+isolated PostgreSQL database. Browser fixture checks verified six-language
+selection, Urdu title/body and RTL, light/dark presentation, original Markdown
+restoration, first-use dictation disclosure, interim isolation, final-result
+deduplication, cursor insertion, concurrent typing, autosave, and Stop. Lint has
+seven existing Fast Refresh warnings. The repository-wide test command also
+fails in the existing Solana program harness on Anchor's CommonJS `BN` import;
+no Solana program code changed. Live Azure F0 calls and physical Android/browser
+microphone checks remain release prerequisites and have not been verified.
+
 ### This project's actual production deployment
 
 The generic instructions above describe the mechanism; this section

@@ -65,7 +65,7 @@ function AppShell() {
   const versionCheck = useAppVersionCheck();
   const appMayRun = versionCheck.status !== "checking" && versionCheck.status !== "required";
 
-  useEffect(() => setUnauthorizedHandler(() => {
+  useEffect(() => setUnauthorizedHandler((returnNote) => {
     // An expired bearer credential must not leave a protected screen showing
     // a generic network error. Its cached private data is discarded before
     // returning to the mobile sign-in screen.
@@ -73,7 +73,7 @@ function AppShell() {
     // Say why. Being silently teleported from a half-written draft to a
     // sign-in form, with no explanation and no stated way back, reads as the
     // app losing your place rather than as a session ending.
-    router.replace({ pathname: "/account", params: { reason: "expired" } });
+    router.replace({ pathname: "/account", params: { reason: "expired", ...(returnNote ? { returnNote } : {}) } });
   }), []);
 
   useEffect(() => {

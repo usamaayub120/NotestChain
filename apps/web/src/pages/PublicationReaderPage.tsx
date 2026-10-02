@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useEffect, useMemo, useSyncExternalStore } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { NoteContent } from "@/components/note/NoteContent";
 import { brand } from "@noteschain/shared";
 import { usePublication, usePublicationRevisions } from "@/hooks/usePublications";
@@ -12,19 +12,22 @@ import { CommentSection } from "@/components/publication/CommentSection";
 import { ErrorState } from "@/components/ErrorState";
 import { apiFetch } from "@/lib/api";
 import { PageLoader } from "@/components/Loader";
-import { cn } from "@/lib/utils";
-import { Languages } from "lucide-react";
+
+import { TranslationController, noteLanguage, type NoteTranslation } from "@noteschain/shared";
+import { TranslationControls } from "@/components/publication/TranslationControls";
+import { useCurrentUser } from "@/hooks/useAuth";
 
 export function PublicationReaderPage() {
   const { id } = useParams<{ id: string }>();
   const { data: publication, isLoading, isError, refetch } = usePublication(id);
   const { data: revisionData } = usePublicationRevisions(id);
 
-  // Translation state
-  const [isTranslating, setIsTranslating] = useState(false);
-  const [translatedContent, setTranslatedContent] = useState<string>('');
-  const [showTranslation, setShowTranslation] = useState(false);
-  const [translationError, setTranslationError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { data: user } = useCurrentUser();
+  const translationController = useMemo(() => new TranslationController((targetLang, signal) => apiFetch<NoteTranslation>(`/publications/${id}/translation`, { method: "POST", body: { targetLang }, signal })), [id]);
+  const translationState = useSyncExternalStore(translationController.subscribe, translationController.getSnapshot);
+  const translated = translationState.showTranslation ? translationState.translation : undefined;
+  useEffect(() => () => translationController.cancel(), [translationController]);
 
   useEffect(() => {
     if (!id) return;
@@ -47,49 +50,6 @@ export function PublicationReaderPage() {
     };
   }, [publication]);
 
-  /** Translate the publication content using a translation API */
-  const handleTranslate = async () => {
-    if (!publication || isTranslating) return;
-
-    setIsTranslating(true);
-    setTranslationError(null);
-
-    try {
-      // In a real implementation, you would use a translation API like:
-      // - Google Translate API
-      // - Microsoft Translator Text API
-      // - DeepL API
-      // - LibreTranslate (open source)
-      //
-      // For this implementation, we'll use a placeholder endpoint
-      // In production, this should be routed through your backend to protect API keys
-
-      const response = await fetch('/api/v1/translate', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text: publication.content,
-          targetLang: 'es', // Example: translating to Spanish
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Translation failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setTranslatedContent(data.translatedText || '');
-      setShowTranslation(true);
-    } catch (err) {
-      setTranslationError(err instanceof Error ? err.message : 'Translation failed');
-      console.error('Translation error:', err);
-    } finally {
-      setIsTranslating(false);
-    }
-  };
-
   if (isLoading) return <PageLoader label="Loading this note" />;
   if (isError || !publication) return <ErrorState message="This publication couldn't be found." onRetry={() => refetch()} />;
 
@@ -101,7 +61,7 @@ export function PublicationReaderPage() {
         </p>
       )}
 
-      <h1 className="font-display text-3xl">{publication.title}</h1>
+      <h1 dir={translated ? noteLanguage(translated.targetLang).rtl ? "rtl" : "ltr" : "auto"} className="font-display text-3xl">{translated?.translatedTitle ?? publication.title}</h1>
 
       <div className="mt-3">
         <AuthorBadge author={publication.author} timestamp={publication.createdAt} size="reader" />
@@ -109,30 +69,10 @@ export function PublicationReaderPage() {
 
       <KeptLine publication={publication} />
 
-      {showTranslation && translatedContent ? (
-        <NoteContent
-          source={translatedContent}
-          format="PLAINTEXT"
-          shimmer
-          className="mt-6 text-body leading-relaxed"
-        />
-      ) : (
-        <NoteContent
-          source={publication.content}
-          // Falls back to PLAINTEXT when absent, which keeps every note
-          // published before markdown shipped rendering exactly as it always
-          // has. Those are immutable and already hashed.
-          format={publication.contentFormat ?? "PLAINTEXT"}
-          shimmer
-          className="mt-6 text-body leading-relaxed"
-        />
-      )}
-
-      {translationError && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-md text-sm text-red-600">
-          Translation error: {translationError}
-        </div>
-      )}
+      <TranslationControls key={id} state={translationState} authenticated={Boolean(user)} onTranslate={(language) => void translationController.translate(language)} onOriginal={translationController.original} onSignIn={() => navigate(`/login?next=${encodeURIComponent(`/p/${id}`)}`)} />
+      <div dir={translated ? noteLanguage(translated.targetLang).rtl ? "rtl" : "ltr" : "auto"}>
+        <NoteContent source={translated?.translatedText ?? publication.content} format={translated ? "PLAINTEXT" : publication.contentFormat ?? "PLAINTEXT"} className="mt-6 text-body leading-relaxed" />
+      </div>
 
       {publication.tags.length > 0 && (
         <div className="mt-6 flex flex-wrap gap-2">
@@ -170,37 +110,6 @@ export function PublicationReaderPage() {
       <div className="mt-8 flex items-center gap-4 border-t border-border pt-4">
         <BookmarkButton publicationId={publication.id} />
         <ShareSheet publicationId={publication.id} title={publication.title} />
-        <button
-          type="button"
-          disabled={isTranslating || !publication}
-          onClick={handleTranslate}
-          className={cn(
-            "flex size-11 items-center justify-center rounded-md text-muted-foreground",
-            "transition-colors duration-150 ease-out",
-            "md:hover:bg-muted md:hover:text-foreground",
-            "active:bg-muted",
-            "disabled:pointer-events-none disabled:opacity-50",
-            isTranslating && "bg-muted text-foreground",
-          )}
-        >
-          {isTranslating ? (
-            <>
-              <span className="sr-only">Translating...</span>
-              <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-              </svg>
-            </>
-          ) : (
-            <>
-              <Languages size={20} strokeWidth={1.75} aria-hidden />
-              <span className="ml-1">Translate</span>
-            </>
-          )}
-          <span className="sr-only">
-            {isTranslating ? 'Translating...' : 'Translate publication'}
-          </span>
-        </button>
         <ReportPublicationSheet publicationId={publication.id} />
       </div>
 

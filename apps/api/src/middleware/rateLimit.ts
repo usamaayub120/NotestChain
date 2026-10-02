@@ -19,6 +19,13 @@ export const searchRateLimit = rateLimit({
   message: { error: { code: "RATE_LIMITED", message: "Too many search requests. Please slow down." } },
 });
 
+export const translationRateLimit = rateLimit({
+  windowMs: 60_000, max: 10,
+  keyGenerator: (req) => req.auth!.userId,
+  standardHeaders: true, legacyHeaders: false,
+  message: { error: { code: "RATE_LIMITED", message: "Too many translation requests. Please wait a minute and try again." } },
+});
+
 export const viewRateLimit = rateLimit({
   windowMs: 60_000,
   max: 30,

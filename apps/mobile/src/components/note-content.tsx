@@ -48,10 +48,12 @@ export function NoteContent({
   source,
   format,
   fontScale,
+  direction = "auto",
 }: {
   source: string;
   format?: "PLAINTEXT" | "MARKDOWN";
   fontScale: number;
+  direction?: "rtl" | "ltr" | "auto";
 }) {
   const { colors } = useTheme();
   const base = {
@@ -59,6 +61,7 @@ export function NoteContent({
     fontFamily: fonts.body,
     fontSize: 17 * fontScale,
     lineHeight: 28 * fontScale,
+    writingDirection: direction,
   };
 
   if (format !== "MARKDOWN") {

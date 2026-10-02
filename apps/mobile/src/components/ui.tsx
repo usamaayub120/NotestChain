@@ -1,5 +1,5 @@
 import type { PropsWithChildren, ReactNode } from "react";
-import { useEffect, useMemo } from "react";
+import { forwardRef, useEffect, useMemo } from "react";
 import { AccessibilityInfo, Animated, FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { usePathname } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
@@ -125,7 +125,7 @@ export function Subtitle({ children, live }: PropsWithChildren<{ live?: boolean 
 export function Eyebrow({ children }: PropsWithChildren) { const { colors, fontScale } = useTheme(); return <Text style={[styles.eyebrow, { color: colors.brand, fontSize: 12 * fontScale }]}>{children}</Text>; }
 export function ErrorText({ children }: PropsWithChildren) { const { colors, fontScale } = useTheme(); return <Text accessibilityRole="alert" style={[styles.error, { color: colors.danger, fontSize: 14 * fontScale }]}>{children}</Text>; }
 export function Notice({ children }: PropsWithChildren) { const { colors, fontScale } = useTheme(); return <View accessibilityLiveRegion="polite" style={[styles.notice, { backgroundColor: colors.notice, borderColor: colors.noticeBorder }]}><Text style={[styles.noticeText, { color: colors.noticeText, fontSize: 15 * fontScale }]}>{children}</Text></View>; }
-export function Field({ style, ...props }: React.ComponentProps<typeof TextInput>) { const { colors, fontScale } = useTheme(); return <TextInput placeholderTextColor={colors.placeholder} selectionColor={colors.brand} style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.ink, fontSize: 16 * fontScale }, style]} {...props} />; }
+export const Field = forwardRef<TextInput, React.ComponentProps<typeof TextInput>>(function Field({ style, ...props }, ref) { const { colors, fontScale } = useTheme(); return <TextInput ref={ref} placeholderTextColor={colors.placeholder} selectionColor={colors.brand} style={[styles.field, { borderColor: colors.border, backgroundColor: colors.surface, color: colors.ink, fontSize: 16 * fontScale }, style]} {...props} />; });
 export function Action({ title, onPress, disabled, tone = "primary", icon, accessibilityRole = "button", accessibilityState, accessibilityLabel, accessibilityHint }: {
   title: string; onPress: () => void; disabled?: boolean; tone?: "primary" | "secondary" | "danger"; icon?: ReactNode;
   accessibilityRole?: "button" | "radio" | "switch"; accessibilityState?: { checked?: boolean }; accessibilityLabel?: string; accessibilityHint?: string;

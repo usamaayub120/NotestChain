@@ -10,7 +10,7 @@ const VISITOR_KEY = "noteschain.mobile.visitor";
 const REQUEST_TIMEOUT_MS = 10_000;
 const READ_RETRY_DELAY_MS = 400;
 
-let unauthorizedHandler: (() => void) | undefined;
+let unauthorizedHandler: ((returnNote?: string) => void) | undefined;
 
 export class MobileApiError extends Error {
   constructor(
@@ -32,7 +32,7 @@ export async function setToken(token: string | null) {
  * screen made the request. Returning a cleanup function keeps test/runtime
  * remounts from retaining a stale callback.
  */
-export function setUnauthorizedHandler(handler: (() => void) | undefined) {
+export function setUnauthorizedHandler(handler: ((returnNote?: string) => void) | undefined) {
   unauthorizedHandler = handler;
   return () => {
     if (unauthorizedHandler === handler) unauthorizedHandler = undefined;
@@ -49,6 +49,8 @@ async function visitorToken() {
 }
 
 export type MobileRequestInit = RequestInit & {
+  /** Return to this note after re-authentication; never an arbitrary URL. */
+  returnNote?: string;
   idempotencyKey?: string;
   visitor?: boolean;
   /** Override the normal API timeout for a request with a stricter deadline. */
@@ -107,7 +109,7 @@ async function request<T>(path: string, init: MobileRequestInit = {}): Promise<A
         // session to clear and the form needs to display that server message.
         if (response.status === 401 && token && !path.startsWith("/auth/mobile/login")) {
           await setToken(null);
-          unauthorizedHandler?.();
+          unauthorizedHandler?.(init.returnNote);
         }
         const message = response.status === 404 && path.startsWith("/auth/mobile/")
           ? "Mobile sign-in is not available on the server yet. Please try again after the NotesChain update finishes."

@@ -7,7 +7,7 @@ export function PrivacyPolicyPage() {
       <p className="text-sm font-medium text-primary">{brand.name}</p>
       <h1 className="mt-2 font-display text-3xl md:text-4xl">Privacy policy</h1>
       <p className="mt-3 max-w-reading text-body text-muted-foreground">
-        Last updated August 2026. {brand.legalEntity} operates {brand.name}. This page explains what we collect
+        Last updated October 2026. {brand.legalEntity} operates {brand.name}. This page explains what we collect
         when you use it, why, and what happens to your information if you leave.
       </p>
 
@@ -55,6 +55,23 @@ export function PrivacyPolicyPage() {
               That's what lets anyone verify a note existed at a given moment, without taking our word for it.
             </li>
           </ul>
+        </section>
+
+        <section>
+          <h2 className="text-lg text-foreground">Dictation and translation</h2>
+          <p className="mt-2">
+            Dictation is optional. Your browser or device's speech service converts your voice into text and may
+            process audio on its provider's servers. NotesChain does not upload, record, or store this audio;
+            finalized words become ordinary draft content. Microphone and speech permissions are requested only
+            when you choose to dictate, and you can stop at any time.
+          </p>
+          <p className="mt-2">
+            When you request a translation, we send that published note's title and readable text to Microsoft
+            Azure Translator. We cache the translated text with the note and language, without recording who
+            requested it. Translations are machine-generated reading aids; the permanent original and its public
+            proof remain unchanged. Our readers translate published notes, not drafts. The compatibility
+            translation API sends the text supplied by an authenticated client to Microsoft for processing.
+          </p>
         </section>
 
         <section>

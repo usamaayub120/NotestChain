@@ -22,7 +22,7 @@ export default function AccountScreen() {
   // Set by the 401 handler in _layout.tsx when a bearer session expires
   // mid-session, so arriving here reads as a session ending rather than as
   // the app losing the reader's place.
-  const { reason } = useLocalSearchParams<{ reason?: string }>();
+  const { reason, returnNote } = useLocalSearchParams<{ reason?: string; returnNote?: string }>();
   const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState<string>(); const [user, setUser] = useState<{ email: string } | null>(); const [sessionError, setSessionError] = useState<string>(); const [busy, setBusy] = useState(false);
   const loadSession = useCallback(async () => {
     setUser(undefined);
@@ -46,7 +46,7 @@ export default function AccountScreen() {
   useEffect(() => { void loadSession(); }, [loadSession]);
   const login = async () => {
     setBusy(true); setError(undefined);
-    try { const result = await api<{ session: { token: string } }>("/auth/mobile/login", { method: "POST", body: JSON.stringify({ email, password, deviceName: "NotesChain mobile" }) }); await setToken(result.session.token); setUser({ email }); setPassword(""); void syncPushRegistration(); }
+    try { const result = await api<{ session: { token: string } }>("/auth/mobile/login", { method: "POST", body: JSON.stringify({ email, password, deviceName: "NotesChain mobile" }) }); await setToken(result.session.token); setUser({ email }); setPassword(""); void syncPushRegistration(); if (returnNote && /^[A-Za-z0-9-]{1,100}$/.test(returnNote)) router.replace({ pathname: "/note/[id]", params: { id: returnNote } }); }
     catch (err) { setError(err instanceof Error ? err.message : "Could not sign in."); }
     finally { setBusy(false); }
   };

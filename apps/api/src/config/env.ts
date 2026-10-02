@@ -10,6 +10,8 @@ const envSchema = z.object({
   // land before the owner provisions the matching GitHub repository secret.
   RELEASE_POLICY_WEBHOOK_SECRET: z.string().min(32).optional(),
   PORT: z.coerce.number().int().positive().default(3001),
+  AZURE_TRANSLATOR_KEY: z.string().optional().transform((value) => value?.trim() || undefined),
+  AZURE_TRANSLATOR_REGION: z.string().optional().transform((value) => value?.trim() || undefined),
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
 
   SESSION_SECRET: z

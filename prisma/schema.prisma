@@ -499,6 +499,7 @@ model Publication {
   reports         Report[]
   views           PublicationView[]
   comments        Comment[]
+  translations    PublicationTranslation[]
 
   @@index([discoverability, isPlatformVisible, status])
   @@index([publicIdentityId])
@@ -507,6 +508,19 @@ model Publication {
   @@index([privateAuthorUserId])
   @@index([createdAt])
   @@index([searchVector], type: Gin)
+}
+
+model PublicationTranslation {
+  id              String      @id @default(uuid())
+  publicationId   String
+  publication     Publication @relation(fields: [publicationId], references: [id], onDelete: Cascade)
+  targetLang      String
+  sourceDigest    String
+  translatedTitle String
+  translatedText  String
+  createdAt       DateTime    @default(now())
+
+  @@unique([publicationId, targetLang, sourceDigest])
 }
 
 model PublicationChainRecord {

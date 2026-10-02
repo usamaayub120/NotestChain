@@ -6,6 +6,12 @@ explain *what* the program does and *how it was built*; this explains *how
 to run it in an actual environment* (devnet today, mainnet eventually) and
 what to do when a key needs to move.
 
+Dictation and translation do not change Solana authorities or proof content.
+For their Azure F0 secret configuration, additive translation-cache migration,
+web/API-before-native release order, and physical microphone/Data Safety gates,
+follow README's "Dictation and translation setup" and AGENTS.md. Do not publish
+an Android speech update as OTA-only JavaScript or upgrade Azure to a paid tier.
+
 ## 1. Two separate "authorities" — don't confuse them
 
 There are **two independent keys** in this system, and they control

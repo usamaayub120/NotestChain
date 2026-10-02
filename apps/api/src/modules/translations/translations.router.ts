@@ -1,7 +1,6 @@
 import { Router } from "express";
-import { z } from "zod";
 import { asyncHandler, ok } from "../../lib/http.js";
-import { Errors } from "../../lib/apiError.js";
+import { translationRateLimit } from "../../middleware/rateLimit.js";
 import { requireAuth } from "../../middleware/auth.js";
 import { translateText, translateSchema } from "./translations.service.js";
 
@@ -16,6 +15,7 @@ export const translationsRouter = Router();
 translationsRouter.post(
   "/",
   requireAuth,
+  translationRateLimit,
   asyncHandler(async (req, res) => {
     const input = translateSchema.parse(req.body);
     const result = await translateText(input.text, input.targetLang);

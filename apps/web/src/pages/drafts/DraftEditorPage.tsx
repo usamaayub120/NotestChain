@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Mic, Trash2 } from "lucide-react";
+import { ArrowLeft, Trash2 } from "lucide-react";
 import { LIMITS, charactersOverLimit } from "@noteschain/shared";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -29,11 +29,13 @@ import { PublicationWarningDialog } from "@/components/draft/PublicationWarningD
 import { DraftStatusBanner } from "@/components/draft/DraftStatusBanner";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { NoteContent } from "@/components/note/NoteContent";
-import { toggleWrap, insertAtSelection } from "@/lib/textSelection";
+import { toggleWrap } from "@/lib/textSelection";
 import { asZodFlatten, firstFieldMessage } from "@/lib/formErrors";
 import { ApiClientError, errorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { PageLoader } from "@/components/Loader";
+import { DictationControl, type DictationHandle } from "@/components/draft/DictationControl";
+import { insertDictatedText } from "@noteschain/shared";
 
 const AUTOSAVE_DEBOUNCE_MS = 1200;
 
@@ -59,9 +61,7 @@ export function DraftEditorPage() {
   const [warningOpen, setWarningOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
 
-// Speech-to-text state
-const [isListening, setIsListening] = useState(false);
-const speechRecognition = useRef<any | null>(null);
+  const dictationRef = useRef<DictationHandle>(null);
 
   // Errors the SERVER reported, as opposed to the live client-side ones.
   const [serverErrors, setServerErrors] = useState<{ title?: string; content?: string; form?: string }>({});
@@ -171,55 +171,6 @@ const speechRecognition = useRef<any | null>(null);
     [],
   );
 
-  // Speech recognition initialization and cleanup
-  useEffect(() => {
-    // Initialize speech recognition if available
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (SpeechRecognition) {
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-
-      recognition.onresult = (event: Event) => {
-        const speechRecognitionEvent = event as any;
-        const transcript = Array.from(speechRecognitionEvent.results)
-          .map((result: any) => result[0])
-          .map((result: any) => result.transcript)
-          .join('');
-
-        if (speechRecognitionEvent.results[0].isFinal && contentRef.current) {
-          insertAtSelection(contentRef.current, transcript + ' ');
-        } else {
-          // For interim results, we could show a preview, but for simplicity
-          // we'll just use final results to avoid too many updates
-        }
-      };
-
-      recognition.onerror = (event: Event) => {
-        const speechRecognitionError = event as any;
-        console.error('Speech recognition error:', speechRecognitionError.error);
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      speechRecognition.current = recognition;
-    } else {
-      // Speech recognition not available in this browser
-      speechRecognition.current = null;
-    }
-
-    // Cleanup
-    return () => {
-      if (speechRecognition.current) {
-        speechRecognition.current.stop();
-      }
-    };
-  }, []);
-
   // The browser's own guard, for the case no in-app navigation can catch.
   useEffect(() => {
     const warnOnExit = (event: BeforeUnloadEvent) => {
@@ -240,60 +191,6 @@ const speechRecognition = useRef<any | null>(null);
       debounceTimer.current = undefined;
       runSave();
     }, AUTOSAVE_DEBOUNCE_MS);
-  }
-
-  /** Start speech-to-text recognition */
-  async function handleStartSpeechToText() {
-    if (!editable) return;
-
-    // Check if speech recognition is available
-    if (!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)) {
-      setServerErrors({ form: 'Speech recognition is not supported in this browser.' });
-      return;
-    }
-
-    // Initialize speech recognition if not already done
-    if (!speechRecognition.current) {
-      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-      const recognition = new SpeechRecognition();
-      recognition.continuous = false;
-      recognition.interimResults = true;
-      recognition.lang = 'en-US';
-
-      recognition.onresult = (event: Event) => {
-        const speechRecognitionEvent = event as any;
-        const transcript = Array.from(speechRecognitionEvent.results)
-          .map((result: any) => result[0])
-          .map((result: any) => result.transcript)
-          .join('');
-
-        if (speechRecognitionEvent.results[0].isFinal && contentRef.current) {
-          insertAtSelection(contentRef.current, transcript + ' ');
-        }
-      };
-
-      recognition.onerror = (event: Event) => {
-        const speechRecognitionError = event as any;
-        console.error('Speech recognition error:', speechRecognitionError.error);
-        setIsListening(false);
-      };
-
-      recognition.onend = () => {
-        setIsListening(false);
-      };
-
-      speechRecognition.current = recognition;
-    }
-
-    // Start listening
-    try {
-      await speechRecognition.current.start();
-      setIsListening(true);
-    } catch (err) {
-      console.error('Failed to start speech recognition:', err);
-      setServerErrors({ form: 'Failed to start speech recognition.' });
-      setIsListening(false);
-    }
   }
 
   function handleTitleChange(value: string) {
@@ -337,6 +234,7 @@ const speechRecognition = useRef<any | null>(null);
   }
 
   async function handleSubmit() {
+    dictationRef.current?.cancel();
     if (!id) return;
     setSubmitAttempted(true);
 
@@ -479,38 +377,23 @@ const speechRecognition = useRef<any | null>(null);
           <TabsContent value="write" className="flex flex-1 flex-col">
             <FormatToolbar textareaRef={contentRef}>
               <EmojiPickerSheet textareaRef={contentRef} />
-              <button
-                type="button"
-                disabled={!editable}
-                aria-label={isListening ? "Listening... (click to stop)" : "Start voice input"}
-                title={isListening ? "Listening... (click to stop)" : "Start voice input"}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => {
-                  if (!speechRecognition.current) {
-                    alert("Speech recognition is not available in this browser.");
-                    return;
-                  }
-                  if (isListening) {
-                    speechRecognition.current.stop();
-                  } else {
-                    speechRecognition.current.start();
-                    setIsListening(true);
-                  }
-                }}
-                className={cn(
-                  // 44px minimum touch target (DESIGN_SYSTEM.md §14), and the row
-                  // has py-1 so the 2px focus ring at 2px offset is not clipped.
-                  "flex size-11 items-center justify-center rounded-md text-muted-foreground",
-                  "transition-colors duration-150 ease-out",
-                  "md:hover:bg-muted md:hover:text-foreground",
-                  "active:bg-muted",
-                  "disabled:pointer-events-none disabled:opacity-50",
-                  isListening && "bg-muted text-foreground",
-                )}
-              >
-                <Mic size={20} strokeWidth={1.75} aria-hidden />
-              </button>
+
             </FormatToolbar>
+            <DictationControl
+              ref={dictationRef}
+              enabled={editable && !submit.isPending}
+              onFinal={(phrase) => {
+                const el = contentRef.current;
+                if (!el) return;
+                const inserted = insertDictatedText(el.value, { start: el.selectionStart, end: el.selectionEnd }, phrase);
+                handleContentChange(inserted.value);
+                requestAnimationFrame(() => {
+                  if (!el.isConnected) return;
+                  el.focus();
+                  el.setSelectionRange(inserted.caret, inserted.caret);
+                });
+              }}
+            />
             <Textarea
               ref={contentRef}
               value={content}

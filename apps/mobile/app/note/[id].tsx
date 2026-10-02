@@ -1,10 +1,10 @@
-import { useEffect, useLayoutEffect, useState } from "react";
-import { useLocalSearchParams, Link, useNavigation } from "expo-router";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useLocalSearchParams, Link, useNavigation, router, useFocusEffect } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import NetInfo from "@react-native-community/netinfo";
 import { Ionicons } from "@expo/vector-icons";
 import { Text, View } from "react-native";
-import { api, apiPage } from "@/src/lib/api";
+import { api, apiPage, getToken } from "@/src/lib/api";
 import { cacheRead, cacheWrite, enqueue } from "@/src/lib/offline";
 import type { Comment, Identity, Page, Publication } from "@/src/lib/models";
 import { Action, Card, Divider, ErrorText, Field, IconButton, Loading, Notice, Screen, Subtitle, styles } from "@/src/components/ui";
@@ -19,6 +19,8 @@ import { DRAFT_STATUS_LABELS, formatNoteDate, identityKindLabel } from "@/src/li
 import { KeptStamp } from "@/src/components/kept-stamp";
 import { shareNote } from "@/src/lib/share";
 import { fonts } from "@/src/lib/fonts";
+import { TranslationController, noteLanguage, type NoteTranslation } from "@noteschain/shared";
+import { TranslationControls } from "@/src/components/translation-controls";
 
 const mutationId = () => `mutation-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
@@ -72,11 +74,12 @@ export default function NoteScreen() {
   const [notice, setNotice] = useState<string>();
   const [captchaOpen, setCaptchaOpen] = useState(false);
 
-  // Translation state
-  const [isTranslating, setIsTranslating] = useState(false);
-  const [translatedContent, setTranslatedContent] = useState<string>('');
-  const [showTranslation, setShowTranslation] = useState(false);
-  const [translationError, setTranslationError] = useState<string | null>(null);
+  const [authenticated, setAuthenticated] = useState(false);
+  useFocusEffect(useCallback(() => { let mounted = true; void getToken().then((token) => { if (mounted) setAuthenticated(Boolean(token)); }).catch(() => {}); return () => { mounted = false; }; }, []));
+  const translationController = useMemo(() => new TranslationController((targetLang, signal) => api<NoteTranslation>(`/publications/${id}/translation`, { method: "POST", body: JSON.stringify({ targetLang }), signal, timeoutMs: 20000, returnNote: id })), [id]);
+  const translationState = useSyncExternalStore(translationController.subscribe, translationController.getSnapshot);
+  const translated = translationState.showTranslation ? translationState.translation : undefined;
+  useEffect(() => () => translationController.cancel(), [translationController]);
 
   // Opens §13's proof sheet in the app. This used to call Linking.openURL
   // and drop the reader into Solana Explorer, so the signature, PDA and slot
@@ -181,45 +184,10 @@ export default function NoteScreen() {
     }
   };
 
-  /** Translate the note content using a translation API */
-  const handleTranslate = async () => {
-    if (!note || isTranslating) return;
-
-    setIsTranslating(true);
-    setTranslationError(null);
-
-    try {
-      // In a real implementation, you would use a translation API like:
-      // - Google Translate API
-      // - Microsoft Translator Text API
-      // - DeepL API
-      // - LibreTranslate (open source)
-      //
-      // For this implementation, we'll use a placeholder endpoint
-      // In production, this should be routed through your backend to protect API keys
-
-      const data = await api<{ translatedText: string }>("/translate", {
-        method: 'POST',
-        body: JSON.stringify({
-          text: note.content,
-          targetLang: 'es', // Example: translating to Spanish
-        }),
-      });
-
-      setTranslatedContent(data.translatedText || '');
-      setShowTranslation(true);
-    } catch (err) {
-      setTranslationError(err instanceof Error ? err.message : 'Translation failed');
-      console.error('Translation error:', err);
-    } finally {
-      setIsTranslating(false);
-    }
-  };
-
   return (
     <Screen fitContent>
-      <Text style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 29 * fontScale, lineHeight: 36 * fontScale }}>
-        {note.title}
+      <Text style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 29 * fontScale, lineHeight: 36 * fontScale, writingDirection: translated ? noteLanguage(translated.targetLang).rtl ? "rtl" : "ltr" : "auto" }}>
+        {translated?.translatedTitle ?? note.title}
       </Text>
 
       {note.author ? (
@@ -237,11 +205,8 @@ export default function NoteScreen() {
       )}
       <Subtitle>{note.publishedAt ? formatNoteDate(note.publishedAt) : DRAFT_STATUS_LABELS.CHAIN_PENDING}</Subtitle>
 
-      {showTranslation && translatedContent ? (
-        <NoteContent source={translatedContent} format="PLAINTEXT" fontScale={fontScale} />
-      ) : (
-        <NoteContent source={note.content} format={note.contentFormat} fontScale={fontScale} />
-      )}
+      <TranslationControls key={id} state={translationState} authenticated={authenticated} onTranslate={(language) => void translationController.translate(language)} onOriginal={translationController.original} onSignIn={() => router.push({ pathname: "/account", params: { returnNote: id } })} />
+      <NoteContent source={translated?.translatedText ?? note.content} format={translated ? "PLAINTEXT" : note.contentFormat} fontScale={fontScale} direction={translated ? noteLanguage(translated.targetLang).rtl ? "rtl" : "ltr" : "auto"} />
 
       {note.tags.map((tag) => (
         <Text key={tag} style={{ color: colors.muted, fontSize: 14 * fontScale }}>#{tag}</Text>
@@ -271,12 +236,6 @@ export default function NoteScreen() {
           />
         ) : null}
         <IconButton
-          accessibilityLabel="Translate this note"
-          disabled={isTranslating || !note}
-          icon={<Ionicons name="language-outline" size={22} color={colors.ink} />}
-          onPress={() => void handleTranslate()}
-        />
-        <IconButton
           accessibilityLabel="Report this note"
           icon={<Ionicons name="flag-outline" size={22} color={colors.ink} />}
           onPress={() => { setReportError(undefined); setReportOpen(true); }}
@@ -286,11 +245,6 @@ export default function NoteScreen() {
       {note.chain && !note.chain.explorerUrl ? <Notice>{chainPendingCopy(note.chain.status)}</Notice> : null}
       {notice && <Notice>{notice}</Notice>}
       {error && <ErrorText>{error}</ErrorText>}
-      {translationError && (
-        <ErrorText>
-          Translation error: {translationError}
-        </ErrorText>
-      )}
 
       <Divider />
       <Text style={{ color: colors.ink, fontSize: 21 * fontScale, fontWeight: "700" }}>Comments</Text>

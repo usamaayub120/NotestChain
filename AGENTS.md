@@ -249,6 +249,14 @@ itself.
 
 ## Safety and source-of-truth notes
 
+- Dictation uses browser/device speech providers; native speech requires a new
+  binary. Test real microphone behavior before releasing. Translation requires
+  server-only Azure F0 credentials and the additive
+  `20261003090000_add_publication_translations` migration. See README's
+  "Dictation and translation setup" for configuration, cache limits, release
+  order, and the required Play audio-processing disclosure review. Never upgrade
+  Azure to a paid tier automatically or expose its key to either client.
+
 - `README.md` contains the current Docker/VPS operational details; `RUNBOOK.md`
   covers Solana authorities and publisher-key handling. Keep all three docs in
   sync if deployment architecture changes.

@@ -75,6 +75,9 @@ jobs:
       - name: Web unit/component tests
         run: pnpm --filter @noteschain/web test
 
+      - name: Shared language and translation tests
+        run: pnpm --filter @noteschain/shared test
+
   mobile:
     runs-on: ubuntu-latest
     steps:
@@ -92,6 +95,12 @@ jobs:
 
       - name: Lint
         run: pnpm --filter @noteschain/mobile lint
+
+      - name: Build shared language and reader helpers
+        run: pnpm --filter @noteschain/shared build
+
+      - name: Mobile unit/component tests
+        run: pnpm --filter @noteschain/mobile test -- --runInBand
 
       # .expo/ (including the generated typed-route types tsconfig.json
       # references) is gitignored, so this is the only place typed routes
