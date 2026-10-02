@@ -1,5 +1,6 @@
 import { ActivityIndicator, Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import { WebView } from "react-native-webview";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { captchaPageUrl, parseCaptchaMessage } from "@/src/lib/captcha";
 import { webOrigin } from "@/src/lib/config";
 import { useTheme } from "@/src/lib/theme";
@@ -16,9 +17,15 @@ export function CaptchaSheet({ visible, onVerified, onCancel }: {
   onCancel: () => void;
 }) {
   const { colors } = useTheme();
+  // A fullScreen modal gets no inset padding of its own, and the status and
+  // navigation bars are transparent now that the app targets API 36 — so
+  // without this the title sits under the clock and Cancel under the gesture
+  // bar. Every other sheet here is a centred transparent dialog, which is
+  // unaffected.
+  const insets = useSafeAreaInsets();
 
   return <Modal visible={visible} animationType="slide" presentationStyle="fullScreen" onRequestClose={onCancel}>
-    <View style={[styles.screen, { backgroundColor: colors.paper }]}>
+    <View style={[styles.screen, { backgroundColor: colors.paper, paddingTop: insets.top, paddingBottom: insets.bottom }]}>
       <View style={styles.header}>
         <View style={styles.copy}>
           <Text style={[styles.title, { color: colors.ink }]}>Quick verification</Text>
@@ -62,5 +69,5 @@ const styles = StyleSheet.create({
   subtitle: { fontSize: 13, lineHeight: 18 },
   cancel: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
   webView: { flex: 1 },
-  loading: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", gap: 10 },
+  loading: { ...StyleSheet.absoluteFill, alignItems: "center", justifyContent: "center", gap: 10 },
 });

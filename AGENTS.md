@@ -133,6 +133,28 @@ redeployed. Native JavaScript can point at the newly deployed API only after
 the VPS step above; shipping an Android binary is a separate, paid-store
 workflow.
 
+### Target API level expires every August 31
+
+Play refuses new uploads whose target API level is more than one year behind
+the latest Android release, and the bar moves on **31 August each year** --
+API 36 from 31 August 2026, API 37 from 31 August 2027. The app does not
+change; the deadline passes underneath it, so a build that submitted fine in
+August is rejected in October with no code change in between. The rejection
+arrives from the Play API as `Target SDK of artifact is too low: <n>`, where
+`<n>` is the *versionCode*, not the SDK level -- misleading enough to cost an
+afternoon, so check `targetSdkVersion` first and the Play Console notification
+centre second, which states the real reason plainly.
+
+The target level comes from the Expo SDK's own React Native version catalog
+(`react-native/gradle/libs.versions.toml`), not from anything in this repo, so
+meeting a new deadline normally means upgrading the Expo SDK rather than
+overriding `targetSdkVersion` in `app.config.ts`. An override pins one value
+while the toolchain around it -- AGP, Gradle, Kotlin, `compileSdk` -- stays at
+the old SDK's versions, which is how the build breaks.
+
+Google grants a one-off extension (to 1 November for the 2026 deadline),
+requested from Play Console. It is the owner's call, like any Play action.
+
 Before the first Google Play release:
 
 1. The owner completes Play Console account registration, payment, identity,

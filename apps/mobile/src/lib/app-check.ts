@@ -1,8 +1,9 @@
 import { Platform } from "react-native";
 import { getApp } from "@react-native-firebase/app";
-import { FirebaseAppCheckTypes, ReactNativeFirebaseAppCheckProvider, getToken, initializeAppCheck } from "@react-native-firebase/app-check";
+import { ReactNativeFirebaseAppCheckProvider, getToken, initializeAppCheck } from "@react-native-firebase/app-check";
+import type { AppCheck } from "@react-native-firebase/app-check";
 
-let appCheck: FirebaseAppCheckTypes.Module | null = null;
+let appCheck: AppCheck | null = null;
 
 /** App Check is initialized only when a person has chosen notification consent. */
 export async function getAppCheckToken(): Promise<string> {
@@ -10,7 +11,7 @@ export async function getAppCheckToken(): Promise<string> {
   if (!appCheck) {
     const provider = new ReactNativeFirebaseAppCheckProvider();
     provider.configure({ android: { provider: "playIntegrity" }, apple: { provider: "appAttestWithDeviceCheckFallback" } });
-    appCheck = await initializeAppCheck(getApp(), { provider, isTokenAutoRefreshEnabled: false });
+    appCheck = initializeAppCheck(getApp(), { provider, isTokenAutoRefreshEnabled: false });
   }
   return (await getToken(appCheck, false)).token;
 }

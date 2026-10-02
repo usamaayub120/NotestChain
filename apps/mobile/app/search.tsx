@@ -29,7 +29,7 @@ export default function SearchScreen() {
 
   // Runs once per incoming `q`, not on every render, so typing over a
   // deep-linked term doesn't re-trigger the original search.
-  const searchedFor = useRef<string>();
+  const searchedFor = useRef<string | undefined>(undefined);
   useEffect(() => {
     if (!q || searchedFor.current === q) return;
     searchedFor.current = q;

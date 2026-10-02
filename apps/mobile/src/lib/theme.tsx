@@ -1,4 +1,5 @@
 import * as SecureStore from "expo-secure-store";
+import * as SystemUI from "expo-system-ui";
 import { createContext, useContext, useEffect, useMemo, useState, type PropsWithChildren } from "react";
 import { StatusBar, useColorScheme } from "react-native";
 
@@ -80,7 +81,13 @@ export function ThemeProvider({ children }: PropsWithChildren) {
     () => ({ colors, mode, resolvedMode, setMode, fontScalePreset, fontScale, setFontScalePreset }),
     [colors, mode, resolvedMode, fontScalePreset, fontScale],
   );
-  return <ThemeContext.Provider value={value}><StatusBar barStyle={resolvedMode === "dark" ? "light-content" : "dark-content"} backgroundColor={colors.paper} translucent={false} />{children}</ThemeContext.Provider>;
+  // Android draws edge-to-edge from API 35 on, and targeting 36 makes it
+  // non-negotiable: StatusBar's `backgroundColor` and `translucent` are
+  // ignored there, so the bars are transparent and the window background is
+  // what actually shows through behind them. Paint that instead; `barStyle`
+  // still controls the icon colour, which is all it is used for now.
+  useEffect(() => { void SystemUI.setBackgroundColorAsync(colors.paper); }, [colors.paper]);
+  return <ThemeContext.Provider value={value}><StatusBar barStyle={resolvedMode === "dark" ? "light-content" : "dark-content"} />{children}</ThemeContext.Provider>;
 }
 
 export function useTheme() {

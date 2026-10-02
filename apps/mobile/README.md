@@ -1,6 +1,6 @@
 # NotesChain mobile
 
-Expo (SDK 52) / React Native app with its own UI — **not** a WebView wrapper
+Expo (SDK 57) / React Native app with its own UI — **not** a WebView wrapper
 around `apps/web`. The two clients share the same API but are otherwise
 independent codebases; see `ARCHITECTURE.md` for the platform overview.
 

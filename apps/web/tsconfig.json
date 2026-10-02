@@ -8,8 +8,15 @@
     "noEmit": true,
     "types": ["vite/client"],
     "baseUrl": ".",
+    // apps/mobile runs React 19 while this app is on React 18. pnpm hoists a
+    // single @types/react into its virtual store, and .d.ts files inside
+    // packages that carry no @types/react of their own (react-router-dom)
+    // resolve "react" through it -- so whichever app upgrades last silently
+    // retypes the other. Pin this app to its own copy.
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["src/*"],
+      "react": ["./node_modules/@types/react"],
+      "react-dom": ["./node_modules/@types/react-dom"]
     }
   },
   "include": ["src"],

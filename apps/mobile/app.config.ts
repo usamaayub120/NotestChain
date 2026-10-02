@@ -75,6 +75,7 @@ export default (_ctx: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     "expo-router",
+    "expo-asset",
     // Lets the three brand faces be bundled into the native build rather
     // than fetched at runtime; see src/lib/fonts.ts.
     "expo-font",
@@ -91,12 +92,6 @@ export default (_ctx: ConfigContext): ExpoConfig => ({
         defaultChannel: "noteschain-alerts-v1",
       },
     ],
-    // Expo SDK 52's default template still targets API 34; Play Console now
-    // requires 35 for any new release (raised after this SDK's templates
-    // were set, so it has to be overridden explicitly rather than relying
-    // on the generated android/build.gradle's own default).
-    ["expo-build-properties", { android: { kotlinVersion: "1.9.25", targetSdkVersion: 35 } }],
-    "./plugins/withExpoAutolinkingPackageFix",
   ],
   experiments: {
     typedRoutes: true,

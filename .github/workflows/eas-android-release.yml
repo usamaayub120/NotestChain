@@ -4,6 +4,13 @@ name: EAS Android Release Build
 # deliberate, owner-directed release action (see AGENTS.md's "Native release
 # procedure") -- it must never fire automatically on a push or PR.
 #
+# The `submit` input (default true, preserving the original behaviour) gates
+# every Play-facing step. Dispatch with it off to validate that the native
+# build still compiles -- after a dependency, Expo SDK or targetSdk change --
+# without putting an unverified binary in front of testers. The AAB is
+# uploaded as a workflow artifact either way, so it can be installed and
+# checked on a device first.
+#
 # Runs the Android build on GitHub's Linux runner via `eas build --local`,
 # which needs a Unix host and can't run on the Windows dev machine this repo
 # is normally worked from. Requires four repository secrets:
@@ -31,6 +38,11 @@ name: EAS Android Release Build
 #     change minimumBuild or make a release mandatory.
 on:
   workflow_dispatch:
+    inputs:
+      submit:
+        description: "Submit to Play Console's internal testing track after building"
+        type: boolean
+        default: true
 
 # EAS remote versionCode allocation is global. Do not let two manual releases
 # allocate/build/submit concurrently and accidentally associate a later code
@@ -142,6 +154,7 @@ jobs:
           path: ${{ runner.temp }}/noteschain-production.aab
 
       - name: Write Google service account key
+        if: ${{ inputs.submit }}
         working-directory: apps/mobile
         env:
           GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
@@ -150,6 +163,7 @@ jobs:
       # eas.json's submit.production.android.track is "internal" -- this
       # pushes to Play Console's internal testing track, not a public rollout.
       - name: Submit to Play Console (internal testing track)
+        if: ${{ inputs.submit }}
         working-directory: apps/mobile
         run: |
           npx eas-cli submit \
@@ -163,6 +177,7 @@ jobs:
       # versionCode as PUBLISHED for the internal track. A timeout leaves policy unchanged; use the
       # separate recovery workflow once Play finishes processing.
       - name: Wait for Play availability and publish optional-update policy
+        if: ${{ inputs.submit }}
         env:
           GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
           NOTESCHAIN_RELEASE_POLICY_TOKEN: ${{ secrets.NOTESCHAIN_RELEASE_POLICY_TOKEN }}
