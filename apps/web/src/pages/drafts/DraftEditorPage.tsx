@@ -380,6 +380,7 @@ export function DraftEditorPage() {
 
             </FormatToolbar>
             <DictationControl
+              key={id}
               ref={dictationRef}
               enabled={editable && !submit.isPending}
               onFinal={(phrase) => {
