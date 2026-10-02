@@ -80,6 +80,7 @@ export default function NoteScreen() {
   const translationState = useSyncExternalStore(translationController.subscribe, translationController.getSnapshot);
   const translated = translationState.showTranslation ? translationState.translation : undefined;
   useEffect(() => () => translationController.cancel(), [translationController]);
+  useFocusEffect(useCallback(() => () => translationController.original(), [translationController]));
 
   // Opens §13's proof sheet in the app. This used to call Linking.openURL
   // and drop the reader into Solana Explorer, so the signature, PDA and slot

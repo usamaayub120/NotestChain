@@ -1,5 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { useLocalSearchParams, router, useNavigation } from "expo-router";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useFocusEffect, useLocalSearchParams, router, useNavigation } from "expo-router";
 import NetInfo from "@react-native-community/netinfo";
 import { Ionicons } from "@expo/vector-icons";
 import { AppState, Text, TextInput, View } from "react-native";
@@ -62,6 +62,12 @@ export default function DraftEditorScreen() {
   const bodyRef = useRef<TextInput>(null);
   const bodySelection = useRef({ start: 0, end: 0 });
   const [error, setError] = useState<string>();
+
+  // Stack navigation can leave this editor mounted behind another screen.
+  useFocusEffect(useCallback(() => () => {
+    dictationRef.current?.cancel();
+    if (id && pendingSave.current) preserveRecovery(id, latest.current);
+  }, [id]));
 
   const latest = useRef({ title, content });
   const [confirmingPublish, setConfirmingPublish] = useState(false);
@@ -352,13 +358,14 @@ export default function DraftEditorScreen() {
         multiline
         placeholder="What's on your mind?"
         value={content}
-        onChangeText={(value) => { latest.current = { ...latest.current, content: value }; setContent(value); }}
+        onChangeText={(value) => { latest.current = { ...latest.current, content: value }; pendingSave.current = true; setContent(value); }}
         style={{ minHeight: 260, textAlignVertical: "top" }}
       />
 
       {canEdit && <DictationControl ref={dictationRef} enabled={canEdit && !publishing && !submitting} onFinal={(phrase) => {
         const inserted = insertDictatedText(latest.current.content, bodySelection.current, phrase);
         latest.current = { ...latest.current, content: inserted.value };
+        pendingSave.current = true;
         bodySelection.current = { start: inserted.caret, end: inserted.caret };
         setContent(inserted.value);
         requestAnimationFrame(() => { bodyRef.current?.setNativeProps({ selection: bodySelection.current }); });
