@@ -29,7 +29,7 @@ import { PublicationWarningDialog } from "@/components/draft/PublicationWarningD
 import { DraftStatusBanner } from "@/components/draft/DraftStatusBanner";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { NoteContent } from "@/components/note/NoteContent";
-import { toggleWrap } from "@/lib/textSelection";
+import { toggleWrap, insertAtSelection } from "@/lib/textSelection";
 import { asZodFlatten, firstFieldMessage } from "@/lib/formErrors";
 import { ApiClientError, errorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -61,7 +61,7 @@ export function DraftEditorPage() {
 
 // Speech-to-text state
 const [isListening, setIsListening] = useState(false);
-const [speechRecognition, setSpeechRecognition] = useState<SpeechRecognition | null>(null);
+const [speechRecognition, setSpeechRecognition] = useState<any | null>(null);
 
   // Errors the SERVER reported, as opposed to the live client-side ones.
   const [serverErrors, setServerErrors] = useState<{ title?: string; content?: string; form?: string }>({});
@@ -174,20 +174,21 @@ const [speechRecognition, setSpeechRecognition] = useState<SpeechRecognition | n
   // Speech recognition initialization and cleanup
   useEffect(() => {
     // Initialize speech recognition if available
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (SpeechRecognition) {
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
 
-      recognition.onresult = (event) => {
-        const transcript = Array.from(event.results)
-          .map(result => result[0])
-          .map(result => result.transcript)
+      recognition.onresult = (event: Event) => {
+        const speechRecognitionEvent = event as any;
+        const transcript = Array.from(speechRecognitionEvent.results)
+          .map((result: any) => result[0])
+          .map((result: any) => result.transcript)
           .join('');
 
-        if (event.results[0].isFinal) {
+        if (speechRecognitionEvent.results[0].isFinal && contentRef.current) {
           insertAtSelection(contentRef.current, transcript + ' ');
         } else {
           // For interim results, we could show a preview, but for simplicity
@@ -195,8 +196,9 @@ const [speechRecognition, setSpeechRecognition] = useState<SpeechRecognition | n
         }
       };
 
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
+      recognition.onerror = (event: Event) => {
+        const speechRecognitionError = event as any;
+        console.error('Speech recognition error:', speechRecognitionError.error);
         setIsListening(false);
       };
 
@@ -245,32 +247,34 @@ const [speechRecognition, setSpeechRecognition] = useState<SpeechRecognition | n
     if (!editable) return;
 
     // Check if speech recognition is available
-    if (!('SpeechRecognition' in window || 'webkitSpeechRecognition' in window)) {
+    if (!((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition)) {
       setServerErrors({ form: 'Speech recognition is not supported in this browser.' });
       return;
     }
 
     // Initialize speech recognition if not already done
     if (!speechRecognition) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
       recognition.interimResults = true;
       recognition.lang = 'en-US';
 
-      recognition.onresult = (event) => {
-        const transcript = Array.from(event.results)
-          .map(result => result[0])
-          .map(result => result.transcript)
+      recognition.onresult = (event: Event) => {
+        const speechRecognitionEvent = event as any;
+        const transcript = Array.from(speechRecognitionEvent.results)
+          .map((result: any) => result[0])
+          .map((result: any) => result.transcript)
           .join('');
 
-        if (event.results[0].isFinal) {
+        if (speechRecognitionEvent.results[0].isFinal && contentRef.current) {
           insertAtSelection(contentRef.current, transcript + ' ');
         }
       };
 
-      recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
+      recognition.onerror = (event: Event) => {
+        const speechRecognitionError = event as any;
+        console.error('Speech recognition error:', speechRecognitionError.error);
         setIsListening(false);
       };
 

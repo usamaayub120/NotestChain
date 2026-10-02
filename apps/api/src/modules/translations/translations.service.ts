@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { asyncHandler } from "../../lib/http.js";
 import { Errors } from "../../lib/apiError.js";
 
 /**
@@ -12,8 +11,10 @@ import { Errors } from "../../lib/apiError.js";
  *
  * For this implementation, we'll return a mock translation
  */
-export const translateText = asyncHandler(
-  async (text: string, targetLang: string): Promise<{ translatedText: string }> => {
+export const translateText = async (
+  text: string,
+  targetLang: string
+): Promise<{ translatedText: string }> => {
     // Validate input
     if (!text || typeof text !== 'string') {
       throw Errors.badRequest('Text is required and must be a string');
@@ -35,21 +36,21 @@ export const translateText = asyncHandler(
         hello: "hola",
         world: "mundo",
         welcome: "bienvenido",
-        thank you: "gracias",
+        "thank you": "gracias",
         goodbye: "adiós"
       },
       fr: {  // French
         hello: "bonjour",
         world: "monde",
         welcome: "bienvenue",
-        thank you: "merci",
+        "thank you": "merci",
         goodbye: "au revoir"
       },
       de: {  // German
         hello: "hallo",
         world: "welt",
         welcome: "willkommen",
-        thank you: "danke",
+        "thank you": "danke",
         goodbye: "auf Wiedersehen"
       }
     };
@@ -66,7 +67,6 @@ export const translateText = asyncHandler(
       translatedText: `[Translated to ${targetLang.toUpperCase()}]: ${text}`
     };
   }
-);
 
 // Validation schema for the translate endpoint
 export const translateSchema = z.object({

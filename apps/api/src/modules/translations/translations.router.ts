@@ -19,6 +19,6 @@ translationsRouter.post(
   asyncHandler(async (req, res) => {
     const input = translateSchema.parse(req.body);
     const result = await translateText(input.text, input.targetLang);
-    return ok(res, result);
+    return ok(res, result, 200);
   })
 );

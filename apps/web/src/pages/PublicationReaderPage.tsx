@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { NoteContent } from "@/components/note/NoteContent";
 import { brand } from "@noteschain/shared";
@@ -12,7 +12,8 @@ import { CommentSection } from "@/components/publication/CommentSection";
 import { ErrorState } from "@/components/ErrorState";
 import { apiFetch } from "@/lib/api";
 import { PageLoader } from "@/components/Loader";
-import { Translate } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Languages } from "lucide-react";
 
 export function PublicationReaderPage() {
   const { id } = useParams<{ id: string }>();
@@ -183,14 +184,16 @@ export function PublicationReaderPage() {
           )}
         >
           {isTranslating ? (
-            <span className="sr-only">Translating...</span>
-            <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
-            </svg>
+            <>
+              <span className="sr-only">Translating...</span>
+              <svg className="animate-spin -ml-1 mr-3 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"></path>
+              </svg>
+            </>
           ) : (
             <>
-              <Translate size={20} strokeWidth={1.75} aria-hidden />
+              <Languages size={20} strokeWidth={1.75} aria-hidden />
               <span className="ml-1">Translate</span>
             </>
           )}
