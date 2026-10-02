@@ -10,6 +10,12 @@ import { fonts } from "@/src/lib/fonts";
 
 export function PublicationCard({ publication }: { publication: Publication }) {
   const { colors, fontScale } = useTheme();
+  // Ink, not canopy. canopy is a surface colour -- the dark-green slab --
+  // and reading it as text only ever worked because the light palette's
+  // happened to be dark. Aligning the dark palette to the web put a
+  // near-black green on a near-black background. apps/web sets this byline
+  // in text-foreground, so ink is also the parity answer, and it leaves the
+  // kept green to mean verification and nothing else.
   const byline = publication.author ? publication.author.displayName : "Anonymous";
   const date = publication.publishedAt ? formatRelativeTime(publication.publishedAt) : DRAFT_STATUS_LABELS.CHAIN_PENDING;
   const title = publication.title || "Untitled note";
@@ -19,7 +25,7 @@ export function PublicationCard({ publication }: { publication: Publication }) {
     accessibilityHint="Opens this note"
     style={({ pressed }) => [local.card, { borderColor: colors.border, backgroundColor: colors.surface }, pressed && local.pressed]}
   >
-    <View style={local.meta}><Text style={[local.byline, { color: colors.canopy, fontSize: 13 * fontScale }]}>{byline}</Text><Text style={[local.dot, { color: colors.muted }]}>•</Text><Text style={[local.date, { color: colors.muted, fontSize: 13 * fontScale }]}>{date}</Text><View style={{ flex: 1, alignItems: "flex-end" }}><KeptStamp status={publication.chain?.status} /></View></View>
+    <View style={local.meta}><Text style={[local.byline, { color: colors.ink, fontSize: 13 * fontScale }]}>{byline}</Text><Text style={[local.dot, { color: colors.muted }]}>•</Text><Text style={[local.date, { color: colors.muted, fontSize: 13 * fontScale }]}>{date}</Text><View style={{ flex: 1, alignItems: "flex-end" }}><KeptStamp status={publication.chain?.status} /></View></View>
     <Text style={[local.title, { color: colors.ink, fontSize: 22 * fontScale }]}>{title}</Text>
     <Text numberOfLines={3} style={[styles.subtitle, { color: colors.muted, fontSize: 15 * fontScale }]}>{publication.excerpt}</Text>
     <View style={local.footer}><View style={local.tags}>{publication.tags.slice(0, 2).map((tag) => <Text key={tag} style={[local.tag, { color: colors.muted, fontSize: 13 * fontScale }]}>#{tag}</Text>)}</View><View style={local.readNote}><Text style={[local.readNoteLabel, { color: colors.brand, fontSize: 13 * fontScale }]}>Read note</Text><Ionicons name="arrow-forward" size={17} color={colors.brand} importantForAccessibility="no" /></View></View>

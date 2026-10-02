@@ -62,7 +62,13 @@ export function ProofSheet({
   const { colors, fontScale } = useTheme();
   const chain = publication.chain;
   const state = describeKeptState(chain?.status, verificationState);
-  const plain = verificationState ? (STATE_MESSAGES[verificationState] ?? state.line) : state.line;
+  // Both of these fall back to state.line, which is also the heading above.
+  // Without this guard a note whose verification has not run yet -- or whose
+  // state has no message of its own -- renders "Kept on Solana - Verified"
+  // twice, once as the header and again as the sentence explaining it.
+  const message = verificationState ? STATE_MESSAGES[verificationState] : undefined;
+  const heading = state.line || "Proof";
+  const plain = message && message !== heading ? message : null;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose} accessibilityViewIsModal>
@@ -88,12 +94,12 @@ export function ProofSheet({
                 accessibilityRole="header"
                 style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 20 * fontScale, flex: 1 }}
               >
-                {state.line || "Proof"}
+                {heading}
               </Text>
             </View>
 
             {/* Plain language always precedes the technical detail (§13). */}
-            <Subtitle>{plain}</Subtitle>
+            {plain ? <Subtitle>{plain}</Subtitle> : null}
 
             <View style={{ gap: 12, borderTopWidth: 1, borderTopColor: colors.border, paddingTop: 14 }}>
               <ProofValue label="Publication PDA" value={chain?.publicationPda ?? null} />
