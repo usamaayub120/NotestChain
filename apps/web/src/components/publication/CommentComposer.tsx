@@ -6,7 +6,7 @@ import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { useCurrentUser } from "@/hooks/useAuth";
 import { useCreateComment } from "@/hooks/useComments";
 import { useIdentities } from "@/hooks/useIdentities";
-import { ApiClientError } from "@/lib/api";
+import { errorMessage } from "@/lib/api";
 
 export function CommentComposer({
   publicationId,
@@ -49,7 +49,7 @@ export function CommentComposer({
       setBody("");
       onDone?.();
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : "Something went wrong.");
+      setError(errorMessage(err, "Something went wrong."));
     }
   }
 

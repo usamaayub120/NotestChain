@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import type { IdentityMode } from "@noteschain/shared";
-import { apiFetch } from "@/lib/api";
+import { apiFetch, apiFetchPaginated } from "@/lib/api";
 
 export interface PublicationAuthor {
   username: string;
@@ -16,6 +16,7 @@ export interface PublicationChain {
   network: string;
   publicationPda: string | null;
   transactionSignature: string | null;
+  slot: number | null;
   explorerUrl: string | null;
 }
 
@@ -44,11 +45,17 @@ interface Paginated<T> {
   meta: { page: number; pageSize: number; total: number };
 }
 
+/**
+ * Routed through the shared client rather than a second, private `fetch`.
+ * The hand-rolled version bypassed every guarantee lib/api.ts provides: it
+ * never produced an ApiClientError (so no status, code or field details), it
+ * never produced an ApiNetworkError (so ErrorState could not tell a dropped
+ * connection from a server fault), and `res.json()` threw a raw SyntaxError
+ * whenever the failure response wasn't JSON -  which is exactly what happens
+ * when the API is down and the dev proxy answers instead.
+ */
 async function fetchPaginated<T>(path: string): Promise<Paginated<T>> {
-  const res = await fetch(`/api/v1${path}`, { credentials: "include" });
-  const payload = await res.json();
-  if (!res.ok) throw new Error(payload?.error?.message ?? "Request failed");
-  return payload;
+  return apiFetchPaginated<T>(path);
 }
 
 export function useExplorePublications(page = 1, tag?: string) {

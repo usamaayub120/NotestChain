@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import type { PublicationAuthor } from "@/hooks/usePublications";
 import { useProfile } from "@/hooks/useProfile";
+import { identityKindLabel, formatRelativeTime } from "@noteschain/shared";
 import { FollowButton } from "./FollowButton";
 
-const KIND_LABEL = { primary: "Primary profile", pen: "Pen name" } as const;
+// "Primary profile" is database language. DESIGN_SYSTEM.md §11/§12 both
+// say "Keeper profile"; see packages/shared/src/labels.ts.
 
 export function AuthorBadge({
   author,
@@ -88,7 +90,7 @@ function ReaderByline({ author, timestamp }: { author: PublicationAuthor; timest
         <span className="flex flex-col">
           <span className="font-medium text-foreground group-hover:underline">{author.displayName}</span>
           <span className="text-xs text-muted-foreground">
-            @{author.username} · {author.isPrimary ? KIND_LABEL.primary : KIND_LABEL.pen}
+            @{author.username} · {identityKindLabel(author.isPrimary)}
             {timestamp && ` · ${formatRelative(timestamp)}`}
           </span>
         </span>
@@ -100,14 +102,6 @@ function ReaderByline({ author, timestamp }: { author: PublicationAuthor; timest
   );
 }
 
-export function formatRelative(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const minutes = Math.floor(diffMs / 60_000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
-  const hours = Math.floor(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
-}
+/** Re-exported so the shared implementation is the only one that exists;
+ *  several call sites already import `formatRelative` from here. */
+export const formatRelative = formatRelativeTime;

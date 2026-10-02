@@ -87,7 +87,7 @@ export function EmojiPickerSheet({
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search"
           aria-label="Search emoji"
-          className="mt-3 w-full rounded-md border border-border bg-transparent px-3 py-2 text-base outline-none focus-visible:ring-0"
+          className="mt-3 w-full rounded-md border border-border bg-transparent px-3 py-2 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         />
 
         <div className="mt-4 space-y-5">

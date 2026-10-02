@@ -28,6 +28,10 @@ export function ModerationSubmissionDetailPage() {
   const [flaggedPii, setFlaggedPii] = useState(false);
   const [flaggedAbuse, setFlaggedAbuse] = useState(false);
   const [confirmingReject, setConfirmingReject] = useState(false);
+  // Approving is what lets the author publish permanently. It was the one
+  // decision with no confirmation, while Reject -  which the dialog below
+  // correctly describes as reversible -  already had one.
+  const [confirmingApprove, setConfirmingApprove] = useState(false);
 
   if (isLoading) return <PageLoader label="Loading this submission" />;
   if (isError || !data) return <ErrorState onRetry={() => refetch()} />;
@@ -44,6 +48,7 @@ export function ModerationSubmissionDetailPage() {
       {
         onSuccess: () => {
           setConfirmingReject(false);
+          setConfirmingApprove(false);
           navigate("/admin/submissions");
         },
       },
@@ -174,7 +179,7 @@ export function ModerationSubmissionDetailPage() {
             </label>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button onClick={() => decide("approve")} disabled={!reason.trim() || isPending}>
+            <Button onClick={() => setConfirmingApprove(true)} disabled={!reason.trim() || isPending}>
               Approve
             </Button>
             <Button variant="outline" onClick={() => decide("request-changes")} disabled={!reason.trim() || isPending}>
@@ -187,6 +192,17 @@ export function ModerationSubmissionDetailPage() {
           <MutationError error={activeError} />
         </div>
       )}
+
+      <ConfirmActionDialog
+        open={confirmingApprove}
+        onOpenChange={setConfirmingApprove}
+        title="Approve this submission?"
+        description="The author can then publish it to the public record, where it can't be edited or deleted."
+        confirmLabel="Approve"
+        pendingLabel="Approving…"
+        isPending={approve.isPending}
+        onConfirm={() => decide("approve")}
+      />
 
       <ConfirmActionDialog
         open={confirmingReject}

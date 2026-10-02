@@ -1,15 +1,17 @@
 import { useEffect, useState } from "react";
 import { Ionicons } from "@expo/vector-icons";
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link, router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { api, apiPage, getToken } from "@/src/lib/api";
 import { cacheRead, cacheWrite } from "@/src/lib/offline";
 import type { Page, Publication } from "@/src/lib/models";
 import { EmptyNotes, PublicationCard, PublicationCardSkeleton } from "@/src/components/publication";
-import { Action, ErrorText, Eyebrow, Screen, Subtitle, Title, styles } from "@/src/components/ui";
+import { Action, Eyebrow, ListScreen, Subtitle, Title, styles } from "@/src/components/ui";
+import { ErrorState } from "@/src/components/error-state";
 import { useTheme } from "@/src/lib/theme";
 import { hasSeenOnboarding } from "@/src/lib/first-run";
+import { fonts } from "@/src/lib/fonts";
 
 type Tab = "following" | "latest";
 
@@ -18,11 +20,13 @@ function cachedTab(tab: Tab) {
   return Array.isArray(cached) ? cached : cached?.data;
 }
 
-async function fetchTab(tab: Tab) {
-  const path = tab === "following" ? "/publications?feed=following&page=1&pageSize=20" : "/publications?page=1&pageSize=20";
-  const result = await apiPage<Publication>(path);
-  cacheWrite(`home:${tab}`, result);
-  return result.data;
+const PAGE_SIZE = 20;
+
+async function fetchTab(tab: Tab, page: number) {
+  const feed = tab === "following" ? "feed=following&" : "";
+  const result = await apiPage<Publication>(`/publications?${feed}page=${page}&pageSize=${PAGE_SIZE}`);
+  if (page === 1) cacheWrite(`home:${tab}`, result);
+  return result;
 }
 
 export default function HomeScreen() {
@@ -52,27 +56,48 @@ export default function HomeScreen() {
     })();
   }, []);
 
-  const query = useQuery({
+  // Was a single page of 20 with a hard stop: no way to reach the 21st note
+  // on the app's default screen.
+  const query = useInfiniteQuery({
     queryKey: ["home", tab],
     enabled: tab !== null,
-    queryFn: () => fetchTab(tab!),
-    initialData: tab ? () => cachedTab(tab) : undefined,
+    initialPageParam: 1,
+    queryFn: async ({ pageParam }) => {
+      try {
+        return await fetchTab(tab!, pageParam);
+      } catch (error) {
+        if (pageParam !== 1) throw error;
+        const cached = cachedTab(tab!);
+        if (cached) return { data: cached, meta: { page: 1, pageSize: cached.length, total: cached.length } };
+        throw error;
+      }
+    },
+    getNextPageParam: (last) => {
+      const loaded = last.meta.page * last.meta.pageSize;
+      return loaded < last.meta.total ? last.meta.page + 1 : undefined;
+    },
   });
 
-  return (
-    <Screen refreshing={query.isRefetching} onRefresh={() => void query.refetch()}>
+  const notes = query.data?.pages.flatMap((page) => page.data) ?? [];
+
+  const header = (
+    <>
       <View style={{ gap: 10 }}>
         <Title>Thoughts worth keeping.</Title>
         <Subtitle>Read notes with a record you can verify, whenever you need them.</Subtitle>
       </View>
 
-      <Action title="Explore notes" onPress={() => router.push("/explore")} icon={<Ionicons name="compass-outline" size={19} color="#fff" />} />
+      <Action title="Explore notes" onPress={() => router.push("/explore")} icon={<Ionicons name="compass-outline" size={19} color={colors.onBrand} />} />
 
-      <Link href="/verify" asChild><Pressable accessibilityRole="link" accessibilityLabel="Verify a note" accessibilityHint="Check a note against its public record"><Text style={{ color: colors.brand, fontWeight: "700", fontSize: 15 }}>Verify a note →</Text></Pressable></Link>
+      <Link href="/verify" asChild>
+        <Pressable accessibilityRole="link" accessibilityLabel="Verify a note" accessibilityHint="Check a note against its public record" hitSlop={12} style={{ paddingVertical: 10 }}>
+          <Text style={{ color: colors.brand, fontWeight: "700", fontSize: 15 }}>Verify a note →</Text>
+        </Pressable>
+      </Link>
 
       <View style={{ gap: 2, marginTop: 10 }}>
         <Eyebrow>{tab === "following" ? "Following" : "Recent notes"}</Eyebrow>
-        <Text style={{ color: colors.ink, fontFamily: "serif", fontSize: 24, fontWeight: "700" }}>
+        <Text style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 24 }}>
           {tab === "following" ? "Notes from authors you follow" : "Latest notes"}
         </Text>
       </View>
@@ -96,17 +121,39 @@ export default function HomeScreen() {
         </View>
       )}
 
-      {query.isError && <ErrorText>We couldn’t refresh this feed. Pull down or try again when you’re connected.</ErrorText>}
+      {(query.isLoading || tab === null) && [0, 1, 2].map((i) => <PublicationCardSkeleton key={i} />)}
+    </>
+  );
 
-      {query.isLoading || tab === null ? (
-        [0, 1, 2].map((i) => <PublicationCardSkeleton key={i} />)
-      ) : query.data?.length ? (
-        query.data.map((item) => <PublicationCard key={item.id} publication={item} />)
-      ) : tab === "following" ? (
-        <EmptyNotes title="Nothing new yet" detail="Follow a few authors to see their notes here." />
-      ) : (
-        <EmptyNotes title={query.isError ? "Couldn’t load notes" : "No notes published yet"} detail={query.isError ? "Check your connection and pull down to retry." : "Be the first to publish a note worth returning to."} />
-      )}
-    </Screen>
+  return (
+    <ListScreen
+      data={notes}
+      keyExtractor={(item) => item.id}
+      renderItem={(item) => <PublicationCard publication={item} />}
+      header={header}
+      refreshing={query.isRefetching && !query.isFetchingNextPage}
+      onRefresh={() => void query.refetch()}
+      onEndReached={() => {
+        if (query.hasNextPage && !query.isFetchingNextPage) void query.fetchNextPage();
+      }}
+      empty={
+        query.isLoading || tab === null ? null : query.isError ? (
+          // Used to render an ErrorText AND an EmptyNotes saying the same
+          // thing in different words, both at once.
+          <ErrorState title="We couldn't load this feed" onRetry={() => void query.refetch()} />
+        ) : tab === "following" ? (
+          <EmptyNotes title="Nothing new yet" detail="Follow a few authors to see their notes here." />
+        ) : (
+          <EmptyNotes title="No notes published yet" detail="Be the first to publish a note worth returning to." />
+        )
+      }
+      footer={
+        query.isFetchingNextPage ? (
+          <PublicationCardSkeleton />
+        ) : notes.length > 0 && !query.hasNextPage ? (
+          <Subtitle>That's everything for now.</Subtitle>
+        ) : null
+      }
+    />
   );
 }

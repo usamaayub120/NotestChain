@@ -9,6 +9,7 @@ import { Footer } from "./Footer";
 import { AdminPortalShell } from "@/components/admin/AdminPortalShell";
 import { AppUpdateBanner } from "@/components/AppUpdateBanner";
 import { DesktopWorkspaceShell } from "./DesktopWorkspaceShell";
+import { RouteAnnouncer, SkipToContentLink } from "./RouteAnnouncer";
 
 const DESKTOP_NAV_ITEMS = [
   { to: "/", label: "Home" },
@@ -45,7 +46,7 @@ const WORKSPACE_PREFIXES = [
 
 export function AppShell({ children }: { children: ReactNode }) {
   const { data: user } = useCurrentUser();
-  const { start: startNewDraft } = useStartNewDraft();
+  const { start: startNewDraft, isPending: isStartingDraft } = useStartNewDraft();
   const location = useLocation();
   const showFooter = !FOOTER_EXCLUDED_PREFIXES.some((prefix) => location.pathname.startsWith(prefix));
   const inAdmin = location.pathname.startsWith("/admin");
@@ -53,6 +54,8 @@ export function AppShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
+      <SkipToContentLink />
+      <RouteAnnouncer />
       <MobileTopBar />
 
       <header className="hidden border-b border-border md:flex md:h-16 md:items-center md:justify-between md:px-8">
@@ -74,9 +77,11 @@ export function AppShell({ children }: { children: ReactNode }) {
             <button
               type="button"
               onClick={() => startNewDraft()}
-              className="rounded-md bg-primary px-4 py-2 text-primary-foreground"
+              disabled={isStartingDraft}
+              aria-busy={isStartingDraft}
+              className="rounded-md bg-primary px-4 py-2 text-primary-foreground disabled:cursor-not-allowed disabled:opacity-60"
             >
-              Write
+              {isStartingDraft ? "Starting…" : "Write"}
             </button>
           ) : (
             <Link to="/login" className="rounded-md bg-primary px-4 py-2 text-primary-foreground">
@@ -87,8 +92,14 @@ export function AppShell({ children }: { children: ReactNode }) {
       </header>
 
       <div className="flex flex-1 flex-col pb-20 md:pb-0">
-        <main className="flex-1">
-          {inAdmin ? <AdminPortalShell>{children}</AdminPortalShell> : inWorkspace ? <><div className="lg:hidden">{children}</div><DesktopWorkspaceShell>{children}</DesktopWorkspaceShell></> : children}
+        <main id="main-content" className="flex-1">
+          {inAdmin ? (
+            <AdminPortalShell>{children}</AdminPortalShell>
+          ) : inWorkspace ? (
+            <DesktopWorkspaceShell>{children}</DesktopWorkspaceShell>
+          ) : (
+            children
+          )}
         </main>
         {showFooter && <Footer />}
       </div>

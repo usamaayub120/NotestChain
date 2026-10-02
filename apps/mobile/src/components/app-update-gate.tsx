@@ -3,6 +3,7 @@ import { Modal, Text, View } from "react-native";
 import { openAndroidPlayStore, type AndroidVersionConfig, type UpdateStatus } from "@/src/lib/app-version";
 import { Action, ErrorText, Subtitle } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
+import { fonts } from "@/src/lib/fonts";
 
 type Props = {
   status: Extract<UpdateStatus, "optional" | "required">;
@@ -30,7 +31,7 @@ export function AppUpdateGate({ status, config, onLater }: Props) {
   };
 
   const content = <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 22, gap: 14, borderWidth: 1, borderColor: colors.border, maxWidth: 460, width: "100%" }}>
-    <Text accessibilityRole="header" style={{ color: colors.ink, fontFamily: "serif", fontSize: 26 * fontScale, fontWeight: "700" }}>
+    <Text accessibilityRole="header" style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 26 * fontScale }}>
       {required ? "Update required" : "Update available"}
     </Text>
     <Subtitle>

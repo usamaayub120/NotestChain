@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { useDeleteAccount } from "@/hooks/useAuth";
-import { ApiClientError } from "@/lib/api";
+import { errorMessage } from "@/lib/api";
 
 /** Reused on both the authenticated Settings page and the public /delete-account page. */
 export function DeleteAccountSection() {
@@ -21,7 +21,7 @@ export function DeleteAccountSection() {
       navigate("/");
     } catch (err) {
       setConfirmOpen(false);
-      setError(err instanceof ApiClientError ? err.message : "Something went wrong.");
+      setError(errorMessage(err, "Something went wrong."));
     }
   }
 

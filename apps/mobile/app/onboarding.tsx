@@ -1,6 +1,6 @@
-import { useState } from "react";
-import { router } from "expo-router";
-import { Text, View } from "react-native";
+import { useCallback, useState } from "react";
+import { router, useFocusEffect } from "expo-router";
+import { BackHandler, Text, View } from "react-native";
 import { Action, Eyebrow, Screen, Subtitle, Title } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
 import { markOnboardingSeen } from "@/src/lib/first-run";
@@ -30,6 +30,22 @@ export default function OnboardingScreen() {
   const [step, setStep] = useState(0);
   const isLast = step === steps.length - 1;
   const finish = () => { void markOnboardingSeen(); router.replace("/"); };
+
+  // This wizard keeps its position in component state and was reached via
+  // router.replace, so there is nothing on the stack to pop. Without this,
+  // Android's back button on step 2 or 3 closed the app outright instead of
+  // stepping back -  and `gestureEnabled: false` in _layout.tsx only blocks
+  // the iOS swipe, never the hardware button.
+  useFocusEffect(
+    useCallback(() => {
+      const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
+        if (step === 0) return false; // let the system close the app
+        setStep((current) => current - 1);
+        return true;
+      });
+      return () => subscription.remove();
+    }, [step]),
+  );
   return <Screen insetTop clearsTabBar={false}>
     <View style={{ flex: 1, justifyContent: "center", gap: 20 }}>
       <Eyebrow>How publishing works</Eyebrow>

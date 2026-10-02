@@ -3,7 +3,6 @@ import { useLocalSearchParams, Link, useNavigation } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import NetInfo from "@react-native-community/netinfo";
 import { Ionicons } from "@expo/vector-icons";
-import * as Linking from "expo-linking";
 import { Text, View } from "react-native";
 import { api, apiPage } from "@/src/lib/api";
 import { cacheRead, cacheWrite, enqueue } from "@/src/lib/offline";
@@ -11,10 +10,15 @@ import type { Comment, Identity, Page, Publication } from "@/src/lib/models";
 import { Action, Card, Divider, ErrorText, Field, IconButton, Loading, Notice, Screen, Subtitle, styles } from "@/src/components/ui";
 import { CaptchaSheet } from "@/src/components/captcha-sheet";
 import { ReportDialog } from "@/src/components/report-dialog";
+import { ProofSheet } from "@/src/components/proof-sheet";
+import { NoteContent } from "@/src/components/note-content";
 import { BylinePicker } from "@/src/components/byline-picker";
 import { FollowButton } from "@/src/components/follow-button";
 import { useTheme } from "@/src/lib/theme";
+import { DRAFT_STATUS_LABELS, formatNoteDate, identityKindLabel } from "@/src/lib/labels";
+import { KeptStamp } from "@/src/components/kept-stamp";
 import { shareNote } from "@/src/lib/share";
+import { fonts } from "@/src/lib/fonts";
 
 const mutationId = () => `mutation-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
@@ -121,15 +125,11 @@ export default function NoteScreen() {
     }
   };
 
-  const openProof = async () => {
-    const url = note.chain?.explorerUrl;
-    if (!url) return;
-    try {
-      await Linking.openURL(url);
-    } catch {
-      setError("Could not open the public record.");
-    }
-  };
+  // Opens §13's proof sheet in the app. This used to call Linking.openURL
+  // and drop the reader into Solana Explorer, so the signature, PDA and slot
+  // were never shown in the product at all. The explorer link lives inside
+  // the sheet now, for anyone who does want to leave.
+  const [proofOpen, setProofOpen] = useState(false);
 
   const postComment = async (captchaToken?: string) => {
     if (!body.trim()) return;
@@ -172,7 +172,7 @@ export default function NoteScreen() {
 
   return (
     <Screen fitContent>
-      <Text style={{ color: colors.ink, fontFamily: "serif", fontSize: 29 * fontScale, fontWeight: "700", lineHeight: 36 * fontScale }}>
+      <Text style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 29 * fontScale, lineHeight: 36 * fontScale }}>
         {note.title}
       </Text>
 
@@ -181,7 +181,7 @@ export default function NoteScreen() {
           <Link href={`/profile/${note.author.username}`} style={{ flexShrink: 1 }}>
             <Text style={{ color: colors.brand, fontWeight: "700", fontSize: 16 * fontScale }}>{note.author.displayName}</Text>
             <Text style={{ color: colors.muted, fontSize: 13 * fontScale }}>
-              {"\n"}@{note.author.username} · {note.author.isPrimary ? "Primary profile" : "Pen name"}
+              {"\n"}@{note.author.username} · {identityKindLabel(note.author.isPrimary)}
             </Text>
           </Link>
           <FollowButton username={note.author.username} />
@@ -189,11 +189,9 @@ export default function NoteScreen() {
       ) : (
         <Subtitle>Anonymous</Subtitle>
       )}
-      <Subtitle>{note.publishedAt ? new Date(note.publishedAt).toLocaleDateString() : "Pending publication"}</Subtitle>
+      <Subtitle>{note.publishedAt ? formatNoteDate(note.publishedAt) : DRAFT_STATUS_LABELS.CHAIN_PENDING}</Subtitle>
 
-      <Text selectable style={{ color: colors.ink, fontSize: 17 * fontScale, lineHeight: 27 * fontScale }}>
-        {note.content}
-      </Text>
+      <NoteContent source={note.content} format={note.contentFormat} fontScale={fontScale} />
 
       {note.tags.map((tag) => (
         <Text key={tag} style={{ color: colors.muted, fontSize: 14 * fontScale }}>#{tag}</Text>
@@ -212,12 +210,14 @@ export default function NoteScreen() {
           icon={<Ionicons name="share-outline" size={22} color={colors.ink} />}
           onPress={() => void share()}
         />
-        {note.chain?.explorerUrl ? (
+        {note.chain ? (
           <IconButton
-            accessibilityLabel="View the public record"
-            accessibilityHint="Opens Solana Explorer in your browser"
-            icon={<Ionicons name="shield-checkmark-outline" size={22} color={colors.ink} />}
-            onPress={() => void openProof()}
+            accessibilityLabel="See this note's proof"
+            accessibilityHint="Shows the public record for this note"
+            // DESIGN_SYSTEM.md §6: the stamp is the only motif allowed to represent
+            // proof. This was the checkmark-in-a-shield §2 names as the thing to avoid.
+            icon={<KeptStamp status={note.chain?.status} size={22} />}
+            onPress={() => setProofOpen(true)}
           />
         ) : null}
         <IconButton
@@ -247,7 +247,7 @@ export default function NoteScreen() {
           <BylinePicker identities={identities} selectedId={commentIdentityId} onSelect={(identity) => setCommentIdentityId(identity.id)} />
           <Action
             title="Post comment"
-            icon={<Ionicons name="send-outline" size={18} color="#fff" />}
+            icon={<Ionicons name="send-outline" size={18} color={colors.onBrand} />}
             onPress={() => void postComment()}
           />
         </>
@@ -271,6 +271,11 @@ export default function NoteScreen() {
         </Card>
       ))}
 
+      <ProofSheet
+        visible={proofOpen}
+        publication={note}
+        onClose={() => setProofOpen(false)}
+      />
       <ReportDialog
         visible={reportOpen}
         submitting={reporting}

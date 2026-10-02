@@ -2,7 +2,7 @@ import { useState } from "react";
 import { UserCheck, UserRound, UserRoundX, UsersRound } from "lucide-react";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminPagination, type AdminListState } from "@/components/admin/AdminTableControls";
-import { CardSkeletonList } from "@/components/CardSkeleton";
+import { AdminQueryState } from "@/components/admin/AdminQueryState";
 import { EmptyState } from "@/components/EmptyState";
 import { MutationError } from "@/components/admin/MutationError";
 import { Button } from "@/components/ui/button";
@@ -127,8 +127,8 @@ export function UsersPage() {
         </label>
       </div>
 
-      {users.isLoading && <div className="mt-6"><CardSkeletonList /></div>}
-      {!users.isLoading && users.data?.data.length === 0 && <div className="mt-6"><EmptyState title="No matching users" description="Try clearing the search or choosing another account status." /></div>}
+      
+      <AdminQueryState isLoading={users.isLoading} isError={users.isError} error={users.error} fetchStatus={users.fetchStatus} data={users.data} onRetry={() => users.refetch()} isEmpty={users.data?.data.length === 0} empty={<EmptyState title="No matching users" description="Try clearing the search or choosing another account status." />} />
       {users.data && users.data.data.length > 0 && <>
         <div className="mt-6 overflow-x-auto rounded-md border border-border bg-surface">
           <table className="w-full min-w-[75rem] text-sm">

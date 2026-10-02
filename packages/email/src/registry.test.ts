@@ -42,6 +42,10 @@ const FIXTURES: Record<string, Record<string, unknown>> = {
     thresholdSol: 0.05,
     walletsUrl: "https://notes.example/admin/wallets",
   },
+  [EmailKind.STAFF_INVITATION]: {
+    acceptUrl: "https://notes.example/access/invitation?token=test-token",
+    expiryDays: 7,
+  },
 };
 
 describe("every EmailKind has a fixture and a registry entry", () => {

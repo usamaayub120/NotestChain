@@ -12,6 +12,32 @@ export class ApiClientError extends Error {
   }
 }
 
+/**
+ * The request never reached the API. Distinct from ApiClientError, which means
+ * the server answered and said no.
+ *
+ * `fetch` rejects with a bare TypeError for a dropped connection, a DNS
+ * failure, and a blocked request alike, and every call site used to collapse
+ * that into "Something went wrong." Losing your connection is the most common
+ * failure this app has and the only one the reader can actually act on, so it
+ * gets its own type and its own sentence.
+ */
+export class ApiNetworkError extends Error {
+  constructor(public readonly offline: boolean) {
+    super(offline ? "You're offline." : "We couldn't reach NotesChain.");
+  }
+}
+
+/**
+ * The one place that turns a thrown value into something a person can read.
+ * `fallback` names what failed, in the caller's own words.
+ */
+export function errorMessage(error: unknown, fallback: string): string {
+  if (error instanceof ApiNetworkError) return error.message;
+  if (error instanceof ApiClientError) return error.message;
+  return fallback;
+}
+
 function readCookie(name: string): string | undefined {
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
   return match ? decodeURIComponent(match[1]!) : undefined;
@@ -44,13 +70,20 @@ async function request(path: string, options: RequestOptions): Promise<{ data: u
     if (csrf) headers[CSRF_HEADER_NAME] = csrf;
   }
 
-  const response = await fetch(`/api/v1${path}`, {
-    method,
-    headers,
-    credentials: "include",
-    signal: options.signal,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-  });
+  let response: Response;
+  try {
+    response = await fetch(`/api/v1${path}`, {
+      method,
+      headers,
+      credentials: "include",
+      signal: options.signal,
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+    });
+  } catch (err) {
+    // An aborted request is the caller's own doing, not a failure to report.
+    if (err instanceof DOMException && err.name === "AbortError") throw err;
+    throw new ApiNetworkError(!navigator.onLine);
+  }
 
   const isJson = response.headers.get("content-type")?.includes("application/json");
   const payload = isJson ? await response.json() : undefined;

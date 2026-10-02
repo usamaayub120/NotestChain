@@ -82,7 +82,7 @@ export function HomePage() {
             </div>
           </div>
           <div className="hidden border-l border-border pl-8 lg:block">
-            <p className="font-display text-xl text-foreground">A thought can stay private until it is ready.</p>
+            <h2 className="font-display text-xl text-foreground">A thought can stay private until it is ready.</h2>
             <div className="mt-6 grid gap-3">
               {GALLERY_THOUGHTS.slice(0, 2).map((thought) => (
                 <KeptThoughtCard key={thought} text={thought} />
@@ -105,10 +105,10 @@ export function HomePage() {
 
       <RevealSection className="border-y border-border bg-surface-elevated">
         <div className="mx-auto max-w-4xl px-4 py-16 text-center md:px-8 lg:py-24">
-          <p className="font-display text-2xl leading-snug md:text-4xl">
+          <h2 className="font-display text-balance text-2xl leading-snug md:text-4xl">
             Most of what you write today will be gone by next year.
             <br />A few things shouldn't be.
-          </p>
+          </h2>
           <p className="mt-4 text-muted-foreground">That's the whole idea.</p>
         </div>
       </RevealSection>

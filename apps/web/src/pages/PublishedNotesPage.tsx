@@ -2,12 +2,15 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { EmptyState } from "@/components/EmptyState";
 import { CardSkeletonList } from "@/components/CardSkeleton";
+import { ErrorState } from "@/components/ErrorState";
+import { queryFailure } from "@/lib/queryState";
 import { AdminPagination, type AdminListState } from "@/components/admin/AdminTableControls";
 import { useMyPublicationAnalytics } from "@/hooks/usePublicationAnalytics";
 
 export function PublishedNotesPage() {
   const [state, setState] = useState<AdminListState>({ page: 1, pageSize: 25 });
-  const { data, isLoading } = useMyPublicationAnalytics(state.page, state.pageSize);
+  const { data, isLoading, isError, error, refetch, fetchStatus } = useMyPublicationAnalytics(state.page, state.pageSize);
+  const failure = queryFailure({ isLoading, isError, error, fetchStatus, data });
   const onChange = (next: Partial<AdminListState>) => setState((current) => ({ ...current, ...next }));
 
   return (
@@ -15,7 +18,8 @@ export function PublishedNotesPage() {
       <h1 className="text-2xl">Published notes</h1>
       <p className="mt-1 text-sm text-muted-foreground">Unique readers are counted once per browser for each note. Analytics begin from the unique-reader launch.</p>
       {isLoading && <div className="mt-6"><CardSkeletonList /></div>}
-      {!isLoading && data?.data.length === 0 && <EmptyState title="No published notes yet" description="Your published notes and their reader totals will appear here." />}
+      {!isLoading && failure.failed && <div className="mt-6"><ErrorState error={failure.error} onRetry={() => refetch()} /></div>}
+      {!isLoading && !failure.failed && data?.data.length === 0 && <EmptyState title="No published notes yet" description="Your published notes and their reader totals will appear here." />}
       {data && data.data.length > 0 && (
         <>
           <div className="mt-6 overflow-x-auto rounded-md border border-border bg-surface">

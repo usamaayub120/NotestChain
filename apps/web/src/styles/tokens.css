@@ -34,7 +34,7 @@
 
   /* Canopy/glow — the "forest" half of the palette, used only for the
      handful of atmospheric moments (footer, hero ambient light, quote
-     accents) described in DESIGN_SYSTEM.md's library-in-a-forest brief.
+     accents) described in DESIGN_SYSTEM.md §3.2a.
      Never used for interactive elements — ember stays the only accent
      a person can click. */
   --canopy: 31 51 39;
@@ -55,6 +55,35 @@
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
+  /* §5 names this one and it was missing, so every `rounded-full` in the app
+     silently resolved to Tailwind's 9999px instead. */
+  --radius-full: 999px;
+
+  /* §4's type scale and §5's spacing scale, as the custom properties the
+     spec writes them as. The values previously existed only inside
+     tailwind.config.ts, so anything that is not a Tailwind utility -
+     globals.css, an inline style, another client -  had nothing to
+     reference. The config remains the source for the paired line-height and
+     letter-spacing, which a single custom property cannot carry. */
+  --text-xs: 0.8125rem;
+  --text-sm: 0.9375rem;
+  --text-base: 1rem;
+  --text-body: 1.0625rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.75rem;
+  --text-3xl: 2.25rem;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
 
   --shadow-sm: 0 1px 2px rgba(32, 30, 27, 0.06);
   --shadow-md: 0 4px 12px rgba(32, 30, 27, 0.08);

@@ -4,26 +4,18 @@ import { PenSquare, Trash2 } from "lucide-react";
 import { useDeleteDraft, useDrafts } from "@/hooks/useDrafts";
 import { useStartNewDraft } from "@/hooks/useStartNewDraft";
 import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
+import { queryFailure } from "@/lib/queryState";
 import { CardSkeletonList } from "@/components/CardSkeleton";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { Button } from "@/components/ui/button";
-import { markdownToPlainText } from "@noteschain/shared";
+import { DRAFT_STATUS_LABELS, markdownToPlainText } from "@noteschain/shared";
 
-const STATUS_LABELS: Record<string, string> = {
-  DRAFT: "Draft",
-  PENDING_REVIEW: "Awaiting review",
-  CHANGES_REQUESTED: "Changes requested",
-  REJECTED: "Rejected",
-  APPROVED: "Approved -  ready to publish",
-  CHAIN_PENDING: "Publishing…",
-  CHAIN_SUBMITTED: "Publishing…",
-  PUBLISHED: "Published",
-  CHAIN_FAILED: "Publishing failed",
-  ARCHIVED: "Archived",
-};
+
 
 export function DraftsListPage() {
-  const { data: drafts, isLoading } = useDrafts();
+  const { data: drafts, isLoading, isError, error, refetch, fetchStatus } = useDrafts();
+  const failure = queryFailure({ isLoading, isError, error, fetchStatus, data: drafts });
   const { start: startNewDraft, isPending: isStarting } = useStartNewDraft();
   const deleteDraft = useDeleteDraft();
   const [draftPendingDelete, setDraftPendingDelete] = useState<string | null>(null);
@@ -50,7 +42,12 @@ export function DraftsListPage() {
 
       {isLoading && <div className="mt-6"><CardSkeletonList /></div>}
 
-      {!isLoading && (!drafts || drafts.length === 0) && (
+      {/* An errored request used to land here too, telling a writer their
+          drafts list was empty. On this screen of all screens that reads as
+          lost work, not as a failed fetch. */}
+      {!isLoading && failure.failed && <ErrorState error={failure.error} onRetry={() => refetch()} />}
+
+      {!isLoading && !failure.failed && (!drafts || drafts.length === 0) && (
         <EmptyState
           title="Nothing here yet"
           description="Start a draft -  it's autosaved and stays private until you submit it."
@@ -76,7 +73,7 @@ export function DraftsListPage() {
                   {(draft.contentFormat === "MARKDOWN" ? markdownToPlainText(draft.content) : draft.content) ||
                     "No content yet"}
                 </p>
-                <p className="mt-2 text-xs text-muted-foreground">{STATUS_LABELS[draft.status] ?? draft.status}</p>
+                <p className="mt-2 text-xs text-muted-foreground">{DRAFT_STATUS_LABELS[draft.status] ?? draft.status}</p>
               </Link>
               {(draft.status === "DRAFT" || draft.status === "CHANGES_REQUESTED") && (
                 <Button

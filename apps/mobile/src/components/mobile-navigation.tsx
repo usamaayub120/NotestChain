@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MIN_BOTTOM_INSET, TAB_BAR_HEIGHT } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
+import { tabBarShowsOn } from "@/src/lib/tab-routes";
 
 const items = [
   { href: "/" as const, label: "Home", icon: "home-outline" as const, activeIcon: "home" as const },
@@ -25,7 +26,7 @@ export function MobileNavigation() {
     return () => { show.remove(); hide.remove(); };
   }, []);
 
-  if (keyboardOpen || !items.some((item) => item.href === pathname)) return null;
+  if (keyboardOpen || !tabBarShowsOn(pathname)) return null;
   return <View accessibilityRole="tablist" style={[local.bar, { borderColor: colors.border, backgroundColor: colors.paper, paddingBottom: Math.max(insets.bottom, MIN_BOTTOM_INSET), minHeight: TAB_BAR_HEIGHT + Math.max(insets.bottom, MIN_BOTTOM_INSET) }]}>{items.map((item) => {
     const active = pathname === item.href;
     return <Pressable key={item.href} accessibilityRole="tab" accessibilityLabel={item.label} accessibilityState={{ selected: active }} onPress={() => router.replace(item.href)} style={({ pressed }) => [local.item, { backgroundColor: active ? colors.soft : "transparent" }, pressed && local.pressed]}>

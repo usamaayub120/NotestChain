@@ -26,14 +26,20 @@ function renderWithRole(role: "MODERATOR" | "ADMIN") {
 }
 
 describe("RequireRole", () => {
-  it("shows nothing at first while the current user is loading", () => {
-    // The important half of this assertion is that the protected content is
-    // NOT rendered and no redirect fires while the role is still unknown.
-    // Staying blank at first is also deliberate: the loader is delayed so a
-    // fast session check never flashes one.
+  it("shows no content and no redirect while the current user is loading", () => {
+    // The point of this test is that the protected content is NOT rendered
+    // and no redirect fires while the role is still unknown. Showing no
+    // *spinner* yet is also deliberate: the loader is delayed so a fast
+    // session check never flashes one.
+    //
+    // It used to assert the container was entirely empty, which pinned the
+    // implementation to rendering nothing at all -  and that is exactly what
+    // made the home page paint a blank slab with the footer floating in the
+    // middle of it. The loader now holds its box while staying visually
+    // silent, so the assertion is on the behaviour rather than on the markup.
     mockUseCurrentUser.mockReturnValue({ data: undefined, isLoading: true });
     const { container } = renderWithRole("ADMIN");
-    expect(container).toBeEmptyDOMElement();
+    expect(container.textContent).toBe("");
     expect(screen.queryByText("protected content")).not.toBeInTheDocument();
     expect(screen.queryByText("login page")).not.toBeInTheDocument();
   });

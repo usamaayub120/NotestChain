@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useCreateIdentity } from "@/hooks/useIdentities";
-import { ApiClientError } from "@/lib/api";
+import { ApiClientError, errorMessage } from "@/lib/api";
 
 // react-hook-form types against the schema's *input* shape (fields still
 // optional pre-parse); zod fills defaults in on submit, producing the
@@ -36,7 +36,7 @@ export function NewIdentityPage() {
         form.setError("username", { message: err.message });
         return;
       }
-      const message = err instanceof ApiClientError ? err.message : "Something went wrong.";
+      const message = errorMessage(err, "Something went wrong.");
       form.setError("root", { message });
     }
   }

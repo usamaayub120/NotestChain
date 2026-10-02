@@ -7,6 +7,7 @@ import type { Profile, Publication } from "@/src/lib/models";
 import { Card, Divider, ErrorText, Loading, Screen, Subtitle, Title } from "@/src/components/ui";
 import { FollowButton } from "@/src/components/follow-button";
 import { useTheme } from "@/src/lib/theme";
+import { formatJoinedDate, identityKindLabel } from "@/src/lib/labels";
 
 export default function ProfileScreen() {
   const navigation = useNavigation();
@@ -34,14 +35,14 @@ export default function ProfileScreen() {
           <Text style={{ color: colors.ink, fontSize: 28 }}>{profile.displayName.slice(0, 1).toUpperCase()}</Text>
         </View>
         <Title>{profile.displayName}</Title>
-        <Subtitle>@{profile.username} · {profile.isPrimary ? "Primary profile" : "Pen name"}</Subtitle>
+        <Subtitle>@{profile.username} · {identityKindLabel(profile.isPrimary)}</Subtitle>
         {profile.bio ? <Text style={{ color: colors.ink, textAlign: "center" }}>{profile.bio}</Text> : null}
         {(profile.location || profile.pronouns) && (
           <Subtitle>{[profile.location, profile.pronouns].filter(Boolean).join(" · ")}</Subtitle>
         )}
         <Subtitle>
           {profile.publicationCount} kept · {profile.followerCount === null ? "New" : `${profile.followerCount.toLocaleString()} followers`} · joined{" "}
-          {new Date(profile.joinedAt).toLocaleDateString()}
+          {formatJoinedDate(profile.joinedAt)}
         </Subtitle>
         <FollowButton username={profile.username} />
       </View>

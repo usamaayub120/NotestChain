@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { AuthSidePanel } from "@/components/auth/AuthSidePanel";
 import { TurnstileWidget } from "@/components/TurnstileWidget";
 import { useRegister } from "@/hooks/useAuth";
-import { ApiClientError } from "@/lib/api";
+import { ApiClientError, errorMessage } from "@/lib/api";
 
 // registerSchema leaves username/displayName optional so an already-installed
 // mobile binary that doesn't send them still registers (the server generates
@@ -36,7 +36,18 @@ export function RegisterPage() {
     defaultValues: { email: "", password: "", captchaToken: "", username: "", displayName: "" },
   });
 
+  // Named rather than silent. "Create account" used to be plain `disabled`
+  // with nothing explaining why, and if Turnstile failed to load at all it
+  // stayed dead forever with no way to find out. DraftEditorPage already
+  // solved this with aria-disabled plus a reason; this is the same pattern.
+  const blockedReason = !acceptedTerms
+    ? "Accept the terms and privacy policy to create your account."
+    : !hasCaptchaToken
+      ? "Finish the quick check above. If it doesn't appear, reload the page."
+      : null;
+
   async function onSubmit(values: WebRegisterInput) {
+    if (blockedReason) return;
     try {
       await register.mutateAsync(values);
       const next = new URLSearchParams(location.search).get("next");
@@ -46,7 +57,7 @@ export function RegisterPage() {
         form.setError("username", { message: err.message });
         return;
       }
-      const message = err instanceof ApiClientError ? err.message : "Something went wrong.";
+      const message = errorMessage(err, "Something went wrong.");
       form.setError("root", { message });
     }
   }
@@ -159,10 +170,18 @@ export function RegisterPage() {
               </p>
             )}
 
+            {blockedReason && (
+              <p id="register-blocked" role="status" className="text-sm text-muted-foreground">
+                {blockedReason}
+              </p>
+            )}
+
             <Button
               type="submit"
-              className="w-full"
-              disabled={register.isPending || !hasCaptchaToken || !acceptedTerms}
+              className="w-full aria-disabled:cursor-not-allowed aria-disabled:opacity-60"
+              disabled={register.isPending}
+              aria-disabled={Boolean(blockedReason)}
+              aria-describedby={blockedReason ? "register-blocked" : undefined}
             >
               {register.isPending ? "Creating account…" : "Create account"}
             </Button>

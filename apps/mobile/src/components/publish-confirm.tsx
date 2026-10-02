@@ -20,13 +20,14 @@ export function PublishConfirmSheet({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
-  const { colors } = useTheme();
+  const { colors, fontScale } = useTheme();
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel}>
+    // Background content stays swipe-reachable under VoiceOver without this.
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onCancel} accessibilityViewIsModal>
       <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "center", padding: 24 }}>
         <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 20, gap: 14, borderWidth: 1, borderColor: colors.border }}>
-          <Text accessibilityRole="header" style={{ color: colors.ink, fontSize: 20, fontWeight: "700" }}>Publish permanently?</Text>
-          <Text style={{ color: colors.muted, fontSize: 15, lineHeight: 21 }}>
+          <Text accessibilityRole="header" style={{ color: colors.ink, fontSize: 20 * fontScale, fontWeight: "700" }}>Publish permanently?</Text>
+          <Text style={{ color: colors.muted, fontSize: 15 * fontScale, lineHeight: 21 * fontScale }}>
             This note will be written to a public blockchain. It cannot be edited or deleted after this point, and it may remain publicly accessible even if it is later hidden or delisted from the site.
           </Text>
           {error ? <ErrorText>{error}</ErrorText> : null}

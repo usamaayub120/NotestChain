@@ -8,7 +8,7 @@ import { useTheme } from "@/src/lib/theme";
 const idempotencyKey = () => `delete-account-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
 export default function DeleteAccountScreen() {
-  const { colors } = useTheme();
+  const { colors, fontScale } = useTheme();
   const [password, setPassword] = useState("");
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -49,13 +49,17 @@ export default function DeleteAccountScreen() {
         }}
       />
 
-      <Modal visible={confirming} transparent animationType="fade" onRequestClose={() => !busy && setConfirming(false)}>
+      {/* Background content stays swipe-reachable under VoiceOver without the
+          modality flag, and the two lines below were among the sites that
+          hardcoded fontSize with no fontScale -  on the account-deletion
+          confirmation of all screens. */}
+      <Modal visible={confirming} transparent animationType="fade" onRequestClose={() => !busy && setConfirming(false)} accessibilityViewIsModal>
         <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "center", padding: 24 }}>
           <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 20, gap: 14, borderWidth: 1, borderColor: colors.border }}>
-            <Text accessibilityRole="header" style={{ color: colors.ink, fontSize: 20, fontWeight: "700" }}>
+            <Text accessibilityRole="header" style={{ color: colors.ink, fontSize: 20 * fontScale, fontWeight: "700" }}>
               Delete your account?
             </Text>
-            <Text style={{ color: colors.muted, fontSize: 15, lineHeight: 21 }}>
+            <Text style={{ color: colors.muted, fontSize: 15 * fontScale, lineHeight: 21 * fontScale }}>
               Ends every session and disables sign-in immediately. This can't be undone.
             </Text>
             {error ? <ErrorText>{error}</ErrorText> : null}

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { AuthSidePanel } from "@/components/auth/AuthSidePanel";
 import { useResetPassword } from "@/hooks/useAuth";
-import { ApiClientError } from "@/lib/api";
+import { errorMessage } from "@/lib/api";
 
 // The token comes from the URL, not typed by hand -  the form itself only
 // ever collects the new password.
@@ -31,7 +31,7 @@ export function ResetPasswordPage() {
       await resetPassword.mutateAsync({ token, ...values });
       navigate("/login");
     } catch (err) {
-      const message = err instanceof ApiClientError ? err.message : "Something went wrong.";
+      const message = errorMessage(err, "Something went wrong.");
       form.setError("root", { message });
     }
   }

@@ -10,10 +10,23 @@ export type Byline = {
 
 export type Publication = {
   id: string; title: string; content: string; excerpt: string; tags: string[];
+  contentFormat?: "PLAINTEXT" | "MARKDOWN";
   publishedAt: string | null; createdAt: string; commentsEnabled: boolean;
   identityMode: "NAMED" | "PSEUDONYMOUS" | "ANONYMOUS";
   author: Byline | null;
-  chain?: { explorerUrl: string | null; status: string } | null;
+  /**
+   * The API has always returned the PDA, signature, network and slot; this
+   * type declared only two of them, so §13's proof values could not reach
+   * the screen even though they were on the wire.
+   */
+  chain?: {
+    status: string;
+    network: string | null;
+    publicationPda: string | null;
+    transactionSignature: string | null;
+    slot: number | null;
+    explorerUrl: string | null;
+  } | null;
 };
 
 export type Draft = {

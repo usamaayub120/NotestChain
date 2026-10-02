@@ -10,7 +10,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { CardSkeletonList } from "@/components/CardSkeleton";
 import { useSiteSettings, useUpdateSiteSettings } from "@/hooks/useAdmin";
-import { ApiClientError } from "@/lib/api";
+import { errorMessage } from "@/lib/api";
 
 export function SeoSettingsPage() {
   const { data: settings, isLoading } = useSiteSettings();
@@ -51,7 +51,7 @@ export function SeoSettingsPage() {
       await updateSettings.mutateAsync(values);
       setJustSaved(true);
     } catch (err) {
-      const message = err instanceof ApiClientError ? err.message : "Something went wrong.";
+      const message = errorMessage(err, "Something went wrong.");
       form.setError("root", { message });
     }
   }

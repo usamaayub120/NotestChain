@@ -57,7 +57,7 @@ export function TagInput({ value, onChange }: { value: string[]; onChange: (tags
             onKeyDown={handleKeyDown}
             onBlur={commit}
             placeholder={value.length === 0 ? "Add a tag and press Enter" : ""}
-            className="min-w-[100px] flex-1 bg-transparent text-base outline-none"
+            className="min-w-[100px] flex-1 rounded-sm bg-transparent text-base outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
           />
         )}
       </div>

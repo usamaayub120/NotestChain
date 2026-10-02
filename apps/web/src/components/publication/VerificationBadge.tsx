@@ -1,24 +1,53 @@
 import { useEffect, useRef, useState } from "react";
 
-import { cn } from "@/lib/utils";
+import { KeptStamp } from "./KeptStamp";
+import { describeKeptState } from "./keptState";
 
 function isFinalizedStatus(status: string | null | undefined) {
   return status === "FINALIZED" || status === "PUBLISHED";
 }
 
-/** The "Kept Stamp" -  the one motif allowed to represent blockchain proof
- * anywhere in the product. See DESIGN_SYSTEM.md §6. */
+/**
+ * States a live verification call can report, as modelled by
+ * BlockchainProofSheet. Optional: a feed card only knows the chain status,
+ * because verifying every card would mean an RPC round trip per row.
+ */
+export type VerificationState =
+  | "VERIFIED"
+  | "NOT_FINALIZED"
+  | "ACCOUNT_NOT_FOUND"
+  | "HASH_MISMATCH"
+  | "PDA_MISMATCH"
+  | "UNSUPPORTED_VERSION"
+  | "VERSION_MISMATCH"
+  | "RPC_UNAVAILABLE";
+
+/**
+ * The Kept Stamp in context. See DESIGN_SYSTEM.md §6 for the states.
+ *
+ * `verification` is separate from `status` on purpose. The badge used to
+ * receive only `publication.chain?.status` -  a *publishing* status -  and
+ * derived its "mismatch" state from FAILED_RETRYABLE / FAILED_PERMANENT. A
+ * publication that published perfectly well and then failed to verify
+ * (HASH_MISMATCH, the single most important thing this mark can say) rendered
+ * as an ordinary kept stamp, because the badge never saw the verification
+ * result at all.
+ */
 export function VerificationBadge({
   status,
+  verification,
   size = 20,
   className,
 }: {
   status: string | null | undefined;
+  /** Typed as a plain string: the API returns VerificationState values but
+   *  the DTO is not narrowed, and an unknown state must stay renderable. */
+  verification?: string | null;
   size?: number;
   className?: string;
 }) {
   // Only the *transition* into a finalized status (a live verification call
-  // resolving while this badge is mounted) should play the enter animation
+  // resolving while this badge is mounted) should play the enter animation;
   // a badge that's already finalized on first render (e.g. a card fetched
   // from a list) must render statically. See DESIGN_SYSTEM.md §6: "never on
   // every render -  no ambient animation."
@@ -34,40 +63,17 @@ export function VerificationBadge({
     prevStatusRef.current = status;
   }, [status]);
 
-  if (!status || status === "NOT_SUBMITTED" || status === "QUEUED") return null;
-
-  const isFinalized = isFinalizedStatus(status);
-  const isFailed = status === "FAILED_RETRYABLE" || status === "FAILED_PERMANENT";
-  const isConfirming = !isFinalized && !isFailed;
-
-  const color = isFinalized
-    ? "rgb(var(--verified))"
-    : isFailed
-      ? "rgb(var(--destructive))"
-      : "rgb(var(--muted-foreground))";
+  const state = describeKeptState(status, verification);
+  if (state.hidden) return null;
 
   return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      className={cn(
-        "shrink-0",
-        isConfirming && "animate-kept-pulse",
-        isFinalized && justVerified && "animate-kept-in",
-        className
-      )}
-      aria-label={isFinalized ? "Kept on Solana" : isFailed ? "Publishing failed" : "Publishing in progress"}
-      role="img"
-    >
-      <circle cx="12" cy="12" r="10.5" stroke={color} strokeWidth={isFinalized ? 0 : 1.4} fill={isFinalized ? color : "none"} />
-      {isFinalized ? (
-        <path d="M8 12.3 L10.6 15 L16 9" stroke="rgb(var(--verified-foreground))" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" fill="none" />
-      ) : isFailed ? (
-        <path d="M12 7v6" stroke={color} strokeWidth={1.6} strokeLinecap="round" />
-      ) : null}
-      {isFailed && <circle cx="12" cy="16" r="0.9" fill={color} />}
-    </svg>
+    <KeptStamp
+      tone={state.tone}
+      size={size}
+      label={state.shortLabel}
+      pulse={state.tone === "pending"}
+      animateIn={state.tone === "kept" && justVerified}
+      className={className}
+    />
   );
 }

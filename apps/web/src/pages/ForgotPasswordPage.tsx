@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { AuthSidePanel } from "@/components/auth/AuthSidePanel";
 import { useForgotPassword } from "@/hooks/useAuth";
-import { ApiClientError } from "@/lib/api";
+import { errorMessage } from "@/lib/api";
 
 export function ForgotPasswordPage() {
   const forgotPassword = useForgotPassword();
@@ -26,7 +26,7 @@ export function ForgotPasswordPage() {
       // UI is what actually makes the guarantee hold end to end.
       setSubmitted(true);
     } catch (err) {
-      const message = err instanceof ApiClientError ? err.message : "Something went wrong.";
+      const message = errorMessage(err, "Something went wrong.");
       form.setError("root", { message });
     }
   }

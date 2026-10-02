@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Action, ErrorText, Field } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
 import { authenticateWithBiometrics, biometricLabel, isBiometricEnabled, verifyPin } from "@/src/lib/app-lock";
+import { fonts } from "@/src/lib/fonts";
 
 /** Full-screen replacement for the whole app while a PIN is set and not yet unlocked this session. */
 export function AppLockGate({ onUnlock }: { onUnlock: () => void }) {
@@ -43,7 +44,7 @@ export function AppLockGate({ onUnlock }: { onUnlock: () => void }) {
   };
 
   return <View style={{ flex: 1, backgroundColor: colors.paper, alignItems: "center", justifyContent: "center", padding: 32, paddingTop: 32 + insets.top, paddingBottom: 32 + insets.bottom, gap: 16 }}>
-    <Text style={{ color: colors.ink, fontFamily: "serif", fontSize: 26 * fontScale, fontWeight: "700" }}>NotesChain is locked</Text>
+    <Text style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 26 * fontScale }}>NotesChain is locked</Text>
     <Text style={{ color: colors.muted, fontSize: 15 * fontScale, textAlign: "center" }}>Enter your PIN to continue.</Text>
     <Field
       value={pin}

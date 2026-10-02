@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Modal, Text, View } from "react-native";
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, Text, View } from "react-native";
 import { Action, ErrorText, Field, Subtitle } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
 
@@ -36,8 +36,29 @@ export function ReportDialog({
   const cancel = () => { setReason(""); onCancel(); };
 
   return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={cancel}>
-      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "center", padding: 24 }}>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={cancel}
+      // VoiceOver and TalkBack otherwise keep reaching the page behind this
+      // dialog by swipe, because a transparent Modal does not imply modality
+      // to assistive technology on its own.
+      accessibilityViewIsModal
+    >
+      {/* The field autofocuses, so the keyboard opens the moment this mounts.
+          With the dialog centred and the Cancel/Send row beneath the field,
+          the keyboard covered Send and the only way out was the hardware back
+          button. Android Modals do not inherit the activity's adjustResize,
+          so this has to be explicit. */}
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.55)" }}
+      >
+        <ScrollView
+          contentContainerStyle={{ flexGrow: 1, justifyContent: "center", padding: 24 }}
+          keyboardShouldPersistTaps="handled"
+        >
         <View style={{ backgroundColor: colors.surface, borderRadius: 16, padding: 20, gap: 12, borderWidth: 1, borderColor: colors.border }}>
           <Text accessibilityRole="header" style={{ color: colors.ink, fontSize: 20 * fontScale, fontWeight: "700" }}>
             Report this note
@@ -67,7 +88,8 @@ export function ReportDialog({
             />
           </View>
         </View>
-      </View>
+        </ScrollView>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

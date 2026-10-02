@@ -2,14 +2,14 @@ import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useViewsBreakdown } from "@/hooks/useAdmin";
 import { EmptyState } from "@/components/EmptyState";
-import { CardSkeletonList } from "@/components/CardSkeleton";
+import { AdminQueryState } from "@/components/admin/AdminQueryState";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { AdminDateControls, AdminPagination, applyDatePreset, type AdminDatePreset, type AdminListState } from "@/components/admin/AdminTableControls";
 
 export function ViewsPage() {
   const [preset, setPreset] = useState<AdminDatePreset>("30");
   const [state, setState] = useState<AdminListState>({ page: 1, pageSize: 25, ...applyDatePreset("30") });
-  const { data, isLoading } = useViewsBreakdown(state);
+  const { data, isLoading, isError, error, refetch, fetchStatus } = useViewsBreakdown(state);
   const onChange = (next: Partial<AdminListState>) => setState((current) => ({ ...current, ...next }));
   const onPreset = (next: AdminDatePreset) => { setPreset(next); setState((current) => ({ ...current, ...applyDatePreset(next), page: 1 })); };
 
@@ -17,8 +17,8 @@ export function ViewsPage() {
     <div className="px-4 py-6 md:px-8">
       <AdminPageHeader title="Unique readers" description={`Readers are counted once per browser per note. ${data?.total ?? "…"} unique readers in the selected period.`} />
       <div className="mt-5"><AdminDateControls preset={preset} state={state} onPresetChange={onPreset} onChange={onChange} /></div>
-      {isLoading && <div className="mt-6"><CardSkeletonList /></div>}
-      {!isLoading && data?.total === 0 && <EmptyState title="No unique readers yet" description="New unique-reader analytics begin after this feature is deployed." />}
+      
+      <AdminQueryState isLoading={isLoading} isError={isError} error={error} fetchStatus={fetchStatus} data={data} onRetry={() => refetch()} isEmpty={data?.total === 0} empty={<EmptyState title="No unique readers yet" description="New unique-reader analytics begin after this feature is deployed." />} />
       {data && data.total > 0 && <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,1fr)_20rem]">
         <section className="min-w-0">
           <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Most read notes</h2>

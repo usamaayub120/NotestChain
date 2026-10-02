@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { AuthSidePanel } from "@/components/auth/AuthSidePanel";
 import { useLogin } from "@/hooks/useAuth";
-import { ApiClientError } from "@/lib/api";
+import { errorMessage } from "@/lib/api";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -25,7 +25,7 @@ export function LoginPage() {
       const next = new URLSearchParams(location.search).get("next");
       navigate(next?.startsWith("/") ? next : "/dashboard");
     } catch (err) {
-      const message = err instanceof ApiClientError ? err.message : "Something went wrong.";
+      const message = errorMessage(err, "Something went wrong.");
       form.setError("root", { message });
     }
   }

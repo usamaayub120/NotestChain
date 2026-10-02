@@ -2,10 +2,17 @@ import type { Config } from "tailwindcss";
 import tailwindcssAnimate from "tailwindcss-animate";
 
 export default {
-  darkMode: ["class"],
+  darkMode: ["selector", ':root[data-theme="dark"]'],
   content: ["./index.html", "./src/**/*.{ts,tsx}"],
   theme: {
     extend: {
+      spacing: {
+        // Tailwind's default scale jumps 16 -> 20, so `size-18` (the 72px
+        // profile avatar in DESIGN_SYSTEM.md §12) compiled to nothing and the
+        // element was being rescued by an inline style. Naming the step makes
+        // the utility real instead.
+        18: "4.5rem",
+      },
       colors: {
         // rgb(var(--x) / <alpha-value>) — not a bare var(--x) — is what lets
         // Tailwind's opacity modifiers (bg-background/95, bg-destructive/10,
@@ -70,6 +77,7 @@ export default {
         sm: "var(--radius-sm)",
         md: "var(--radius-md)",
         lg: "var(--radius-lg)",
+        full: "var(--radius-full)",
       },
       boxShadow: {
         sm: "var(--shadow-sm)",
@@ -92,6 +100,9 @@ export default {
         xl: ["1.375rem", { lineHeight: "1.3", letterSpacing: "-0.01em" }],
         "2xl": ["1.75rem", { lineHeight: "1.2", letterSpacing: "-0.015em" }],
         "3xl": ["2.25rem", { lineHeight: "1.1", letterSpacing: "-0.02em" }],
+        "4xl": ["2.75rem", { lineHeight: "1.08", letterSpacing: "-0.022em" }],
+        "5xl": ["3.25rem", { lineHeight: "1.05", letterSpacing: "-0.025em" }],
+        "6xl": ["4rem", { lineHeight: "1.02", letterSpacing: "-0.03em" }],
       },
       keyframes: {
         // Ambient hero light — a very slow, small drift, never a full loop

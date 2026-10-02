@@ -1,5 +1,5 @@
 import { NavLink } from "react-router-dom";
-import { Compass, Home as HomeIcon, LogIn, PenSquare, Heart, User } from "lucide-react";
+import { Bookmark, Compass, Home as HomeIcon, Loader2, LogIn, PenSquare, Search, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { PublicUser } from "@/hooks/useAuth";
 import { useStartNewDraft } from "@/hooks/useStartNewDraft";
@@ -21,7 +21,7 @@ const AUTHENTICATED_LEFT: NavItem[] = [
   { to: "/explore", label: "Explore", icon: Compass },
 ];
 const AUTHENTICATED_RIGHT: NavItem[] = [
-  { to: "/bookmarks", label: "Saved", icon: Heart },
+  { to: "/bookmarks", label: "Saved", icon: Bookmark },
   // Was "/settings" (a stub page) mislabeled "Profile" -  this is the one
   // persistent path back to drafts/identities/sign-out for the whole app.
   { to: "/dashboard", label: "Account", icon: User },
@@ -30,7 +30,7 @@ const AUTHENTICATED_RIGHT: NavItem[] = [
 const PUBLIC_ITEMS: NavItem[] = [
   { to: "/", label: "Home", icon: HomeIcon },
   { to: "/explore", label: "Explore", icon: Compass },
-  { to: "/search", label: "Search", icon: Compass },
+  { to: "/search", label: "Search", icon: Search },
   { to: "/login", label: "Sign in", icon: LogIn },
 ];
 
@@ -94,10 +94,18 @@ export function MobileBottomNav({ user }: { user: PublicUser | null | undefined 
       <button
         type="button"
         onClick={() => !isPending && start()}
-        className="absolute left-1/2 top-0 flex -translate-x-1/2 flex-col items-center gap-0.5 py-1.5 text-xs font-medium text-muted-foreground"
+        aria-busy={isPending}
+        // Not `disabled`: the guard above already prevents a double create,
+        // and a disabled control would drop out of the tab order mid-tap.
+        // What it was missing is any sign the tap registered at all.
+        className="absolute left-1/2 top-0 flex -translate-x-1/2 flex-col items-center gap-0.5 py-1.5 text-xs font-medium text-muted-foreground aria-busy:opacity-70"
       >
         <span className="-mt-5 flex h-11 w-11 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
-          <PenSquare size={22} strokeWidth={1.75} aria-hidden="true" />
+          {isPending ? (
+            <Loader2 size={22} strokeWidth={1.75} aria-hidden="true" className="motion-safe:animate-spin" />
+          ) : (
+            <PenSquare size={22} strokeWidth={1.75} aria-hidden="true" />
+          )}
         </span>
         <span>Write</span>
       </button>

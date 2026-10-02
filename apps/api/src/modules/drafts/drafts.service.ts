@@ -1,5 +1,5 @@
 import type { Draft } from "@prisma/client";
-import { DraftStatus, IdentityMode, normalizeContent } from "@noteschain/shared";
+import { DraftStatus, IdentityMode, ModerationAction, normalizeContent } from "@noteschain/shared";
 import type { CreateDraftInput, UpdateDraftInput, DraftInput } from "@noteschain/validation";
 import { draftInputSchema } from "@noteschain/validation";
 import { prisma } from "../../lib/prisma.js";
@@ -18,7 +18,56 @@ const AUTOSAVE_VERSION_THROTTLE_MS = 30_000;
  * the linked Publication's status when one exists, or a fully published
  * draft shows as "Approved — ready to publish" forever.
  */
-export function toDraftDTO(draft: Draft & { publication?: { status: DraftStatus } | null }) {
+/**
+ * The moderator's reason, for the author, when the decision was one the
+ * author is meant to act on.
+ *
+ * APPROVE is deliberately excluded. `ModerationDecision.reason` is required
+ * for all three actions, but only REJECT and REQUEST_CHANGES send it onward —
+ * see buildDecisionEmailJobData/buildDecisionPushJobData in
+ * moderation.service.ts, which pass `reason` for those two and withhold it on
+ * approval. An approve reason is a moderator's own justification, so this
+ * read path mirrors the notification contract exactly rather than widening it.
+ *
+ * `note` is never exposed here under any action; it is the internal field.
+ */
+function toModerationFeedback(
+  decision: { action: ModerationAction; reason: string; createdAt: Date } | undefined,
+) {
+  if (!decision) return null;
+  if (decision.action === ModerationAction.APPROVE) return null;
+  return { action: decision.action, reason: decision.reason, decidedAt: decision.createdAt };
+}
+
+/** What the queries below must include for `toDraftDTO` to find the feedback. */
+export const DRAFT_DTO_INCLUDE = {
+  publication: { select: { status: true } },
+  submissions: {
+    orderBy: { createdAt: "desc" },
+    take: 1,
+    select: {
+      decisions: {
+        orderBy: { createdAt: "desc" },
+        take: 1,
+        select: { action: true, reason: true, createdAt: true },
+      },
+    },
+  },
+} as const;
+
+/**
+ * `submissions` is required, not optional, on purpose. The web client writes
+ * every mutation response straight into its draft cache, so a single endpoint
+ * that forgot the include would blank the moderator's reason the moment the
+ * author typed another character. Making it mandatory turns that into a
+ * compile error instead of a disappearing banner.
+ */
+type DraftWithFeedback = Draft & {
+  publication?: { status: DraftStatus } | null;
+  submissions: { decisions: { action: ModerationAction; reason: string; createdAt: Date }[] }[];
+};
+
+export function toDraftDTO(draft: DraftWithFeedback) {
   return {
     id: draft.id,
     title: draft.title,
@@ -29,6 +78,11 @@ export function toDraftDTO(draft: Draft & { publication?: { status: DraftStatus 
     publicIdentityId: draft.publicIdentityId,
     discoverability: draft.discoverability,
     status: draft.publication?.status ?? draft.status,
+    // Stored since the feature shipped, emailed to the author, and promised to
+    // them in the moderator's own confirmation dialog -  but never returned by
+    // this DTO, so the editor had nothing to show and CHANGES_REQUESTED read
+    // as an ordinary draft with no explanation attached.
+    moderation: toModerationFeedback(draft.submissions[0]?.decisions[0]),
     lastSavedAt: draft.lastSavedAt,
     submittedAt: draft.submittedAt,
     createdAt: draft.createdAt,
@@ -40,7 +94,7 @@ export async function listDraftsForUser(userId: string) {
   return prisma.draft.findMany({
     where: { userId },
     orderBy: { updatedAt: "desc" },
-    include: { publication: { select: { status: true } } },
+    include: DRAFT_DTO_INCLUDE,
   });
 }
 
@@ -55,6 +109,7 @@ export async function createDraft(userId: string, input: CreateDraftInput) {
       publicIdentityId: input.publicIdentityId ?? null,
       discoverability: input.discoverability,
     },
+    include: DRAFT_DTO_INCLUDE,
   });
 }
 
@@ -68,7 +123,7 @@ async function getOwnedDraftOrThrow(userId: string, draftId: string): Promise<Dr
 export async function getDraft(userId: string, draftId: string) {
   const draft = await prisma.draft.findUnique({
     where: { id: draftId },
-    include: { publication: { select: { status: true } } },
+    include: DRAFT_DTO_INCLUDE,
   });
   if (!draft) throw Errors.notFound("Draft not found.");
   if (draft.userId !== userId) throw Errors.forbidden("You do not own this draft.");
@@ -168,6 +223,7 @@ async function applyDraftPatch(
       discoverability: patch.discoverability,
       lastSavedAt: new Date(),
     },
+    include: DRAFT_DTO_INCLUDE,
   });
 
   await maybeCreateVersion(updated, options.throttleVersioning ? AUTOSAVE_VERSION_THROTTLE_MS : null);
@@ -207,6 +263,7 @@ export async function restoreDraftVersion(userId: string, draftId: string, versi
   const updated = await prisma.draft.update({
     where: { id: draftId },
     data: { title: version.title, content: version.content, lastSavedAt: new Date() },
+    include: DRAFT_DTO_INCLUDE,
   });
   await maybeCreateVersion(updated, null);
   return updated;
@@ -253,6 +310,7 @@ export async function submitDraft(userId: string, draftId: string) {
     const updatedDraft = await tx.draft.update({
       where: { id: draftId },
       data: { status: nextStatus, submittedAt: new Date() },
+      include: DRAFT_DTO_INCLUDE,
     });
     const submission = await tx.submission.create({
       data: {
@@ -307,6 +365,10 @@ export async function withdrawDraft(userId: string, draftId: string) {
     await tx.submission.deleteMany({
       where: { draftId, status: DraftStatus.PENDING_REVIEW, decidedAt: null },
     });
-    return tx.draft.update({ where: { id: draftId }, data: { status: nextStatus, submittedAt: null } });
+    return tx.draft.update({
+      where: { id: draftId },
+      data: { status: nextStatus, submittedAt: null },
+      include: DRAFT_DTO_INCLUDE,
+    });
   });
 }

@@ -36,7 +36,7 @@ export default function SettingsScreen() {
     <View style={local.heading}><Eyebrow>Legal</Eyebrow><Title>Your account</Title></View>
     <Action title="Privacy policy" tone="secondary" icon={<Ionicons name="document-text-outline" size={18} color={colors.ink} />} onPress={() => Linking.openURL(`${webOrigin}/privacy`)} />
     <Action title="Terms of service" tone="secondary" icon={<Ionicons name="document-text-outline" size={18} color={colors.ink} />} onPress={() => Linking.openURL(`${webOrigin}/terms`)} />
-    <Action title="Delete account" tone="danger" icon={<Ionicons name="trash-outline" size={18} color="#fff" />} onPress={() => router.push("/settings/delete-account")} /></Screen>;
+    <Action title="Delete account" tone="danger" icon={<Ionicons name="trash-outline" size={18} color={colors.onBrand} />} onPress={() => router.push("/settings/delete-account")} /></Screen>;
 }
 
 /**

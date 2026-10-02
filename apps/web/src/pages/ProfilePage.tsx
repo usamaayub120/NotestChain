@@ -5,13 +5,23 @@ import { FollowButton } from "@/components/publication/FollowButton";
 import { CardSkeletonList } from "@/components/CardSkeleton";
 import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
+import { queryFailure } from "@/lib/queryState";
 import { PageLoader } from "@/components/Loader";
+import { formatJoinedDate, identityKindLabel } from "@noteschain/shared";
 
 export function ProfilePage({ usernameOverride }: { usernameOverride?: string } = {}) {
   const params = useParams<{ username: string }>();
   const username = usernameOverride ?? params.username;
   const { data: profile, isLoading, isError, refetch } = useProfile(username);
-  const { data: publications, isLoading: pubsLoading } = useProfilePublications(username);
+  const {
+    data: publications,
+    isLoading: pubsLoading,
+    isError: pubsError,
+    error: pubsErrorValue,
+    refetch: refetchPublications,
+    fetchStatus: pubsFetchStatus,
+  } = useProfilePublications(username);
+  const pubsFailure = queryFailure({ isLoading: pubsLoading, isError: pubsError, error: pubsErrorValue, fetchStatus: pubsFetchStatus, data: publications });
 
   if (isLoading) return <PageLoader label="Loading profile" />;
   if (isError || !profile) return <ErrorState message="This profile couldn't be found." onRetry={() => refetch()} />;
@@ -19,7 +29,10 @@ export function ProfilePage({ usernameOverride }: { usernameOverride?: string } 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8">
       <div className="flex flex-col items-center text-center">
-        <span className="flex h-18 w-18 items-center justify-center overflow-hidden rounded-full bg-muted text-2xl font-medium" style={{ height: 72, width: 72 }}>
+        {/* h-18/w-18 are not Tailwind classes and never were: they compiled to
+            nothing, and the inline style was quietly doing all the work.
+            size-18 is a real utility on the 4px scale (72px). */}
+        <span className="flex size-18 items-center justify-center overflow-hidden rounded-full bg-muted text-2xl font-medium">
           {profile.avatarUrl ? (
             <img src={profile.avatarUrl} alt="" className="h-full w-full object-cover" />
           ) : (
@@ -28,7 +41,7 @@ export function ProfilePage({ usernameOverride }: { usernameOverride?: string } 
         </span>
         <h1 className="mt-3 font-display text-2xl">{profile.displayName}</h1>
         <p className="text-muted-foreground">
-          @{profile.username} · {profile.isPrimary ? "Primary profile" : "Pen name"}
+          @{profile.username} · {identityKindLabel(profile.isPrimary)}
         </p>
         {profile.bio && <p className="mt-2 max-w-sm text-sm">{profile.bio}</p>}
         {(profile.location || profile.pronouns || profile.gender || profile.birthDate) && (
@@ -46,7 +59,7 @@ export function ProfilePage({ usernameOverride }: { usernameOverride?: string } 
         )}
         <p className="mt-2 text-sm text-muted-foreground">
           {profile.publicationCount} notes · {profile.followerCount === null ? "New" : `${profile.followerCount.toLocaleString()} followers`} · joined{" "}
-          {new Date(profile.joinedAt).toLocaleDateString(undefined, { month: "short", year: "numeric" })}
+          {formatJoinedDate(profile.joinedAt)}
         </p>
         <div className="mt-3">
           <FollowButton username={profile.username} isFollowing={profile.isFollowing} />
@@ -64,7 +77,10 @@ export function ProfilePage({ usernameOverride }: { usernameOverride?: string } 
 
       <div className="mt-8">
         {pubsLoading && <CardSkeletonList />}
-        {!pubsLoading && publications?.data.length === 0 && (
+        {!pubsLoading && pubsFailure.failed && (
+          <ErrorState error={pubsFailure.error} onRetry={() => refetchPublications()} />
+        )}
+        {!pubsLoading && !pubsFailure.failed && publications?.data.length === 0 && (
           <EmptyState title="Nothing published yet" description="Check back later." />
         )}
         <div className="space-y-3">

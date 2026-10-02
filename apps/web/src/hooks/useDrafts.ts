@@ -24,6 +24,16 @@ export interface Draft {
     | "PUBLISHED"
     | "CHAIN_FAILED"
     | "ARCHIVED";
+  /**
+   * The moderator's reason, present only for the decisions the author is
+   * meant to act on. The API withholds it on approval; see
+   * toModerationFeedback in apps/api/src/modules/drafts/drafts.service.ts.
+   */
+  moderation: {
+    action: "REJECT" | "REQUEST_CHANGES";
+    reason: string;
+    decidedAt: string;
+  } | null;
   lastSavedAt: string;
   submittedAt: string | null;
   createdAt: string;

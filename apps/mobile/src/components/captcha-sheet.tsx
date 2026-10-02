@@ -3,6 +3,7 @@ import { WebView } from "react-native-webview";
 import { captchaPageUrl, parseCaptchaMessage } from "@/src/lib/captcha";
 import { webOrigin } from "@/src/lib/config";
 import { useTheme } from "@/src/lib/theme";
+import { fonts } from "@/src/lib/fonts";
 
 /**
  * Keeps Turnstile in the native app rather than handing registration to the
@@ -57,7 +58,7 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   header: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 22, paddingTop: 20, paddingBottom: 14 },
   copy: { flex: 1, gap: 3 },
-  title: { fontFamily: "serif", fontSize: 22, fontWeight: "700" },
+  title: { fontFamily: fonts.display, fontSize: 22 },
   subtitle: { fontSize: 13, lineHeight: 18 },
   cancel: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
   webView: { flex: 1 },

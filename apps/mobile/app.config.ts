@@ -75,6 +75,9 @@ export default (_ctx: ConfigContext): ExpoConfig => ({
   },
   plugins: [
     "expo-router",
+    // Lets the three brand faces be bundled into the native build rather
+    // than fetched at runtime; see src/lib/fonts.ts.
+    "expo-font",
     "@react-native-firebase/app",
     "@react-native-firebase/app-check",
     "expo-secure-store",

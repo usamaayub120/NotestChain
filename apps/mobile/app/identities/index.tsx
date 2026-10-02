@@ -6,6 +6,7 @@ import { cacheRead, cacheWrite } from "@/src/lib/offline";
 import type { Identity } from "@/src/lib/models";
 import { Action, Loading, Screen, Subtitle, Title, styles } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
+import { ErrorState } from "@/src/components/error-state";
 
 export default function IdentitiesScreen() {
   const { colors } = useTheme();
@@ -16,12 +17,20 @@ export default function IdentitiesScreen() {
         const rows = await api<Identity[]>("/identities");
         cacheWrite("identities", rows);
         return rows;
-      } catch {
-        return cacheRead<Identity[]>("identities") ?? [];
+      } catch (error) {
+        // The cache fallback is offline-first and right. Returning [] when
+        // there is no cache is what told a reader their bylines did not
+        // exist, instead of that the request failed.
+        const cached = cacheRead<Identity[]>("identities");
+        if (cached) return cached;
+        throw error;
       }
     },
   });
   if (query.isLoading) return <Loading label="Loading your bylines…" />;
+  if (query.isError) {
+    return <Screen><ErrorState title="We couldn't load your bylines" onRetry={() => void query.refetch()} /></Screen>;
+  }
 
   const keeperProfile = query.data?.find((identity) => identity.isPrimary);
   const penNames = query.data?.filter((identity) => !identity.isPrimary) ?? [];

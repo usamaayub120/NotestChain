@@ -133,6 +133,36 @@ h4 {
   outline-offset: 2px;
 }
 
+/* WCAG 2.2 — 2.4.11 Focus Not Obscured.
+   MobileBottomNav is fixed to the bottom edge below md, and AppUpdateBanner
+   can sit above it. AppShell pads the page container so content clears them,
+   but padding on an ancestor does nothing for a focused control the browser
+   scrolls to the very bottom of the viewport: it lands underneath the bar.
+   scroll-margin reserves that space during the scroll itself. */
+@media (max-width: 767px) {
+  a,
+  button,
+  input,
+  select,
+  textarea,
+  summary,
+  [tabindex] {
+    scroll-margin-bottom: 7rem;
+  }
+}
+
+/* Browser surfaces the design system still owns. Left at their defaults
+   these belong to no design system at all. */
+::selection {
+  background-color: rgb(var(--primary) / 0.22);
+  color: rgb(var(--foreground));
+}
+
+:root {
+  accent-color: rgb(var(--primary));
+  caret-color: rgb(var(--primary));
+}
+
 /* ── Note marks ──────────────────────────────────────────────────────────
    Rendered by MarkdownText. Everything here is token-derived, so one set of
    rules covers light and dark — this codebase has no `dark:` variants by
@@ -173,5 +203,55 @@ mark {
 @media (prefers-reduced-motion: reduce) {
   .mark-shimmer {
     background-image: none;
+  }
+}
+
+/* ── The folded corner ───────────────────────────────────────────────────
+   DESIGN_SYSTEM.md §2 names two ownable ideas: the Kept Stamp, and "cards
+   have one asymmetric signature detail (a folded top-right corner, like a
+   kept page), not uniform rounded rectangles everywhere". §11 draws it at
+   12px, top-right, on the publication card only.
+
+   PublicationCard has carried `className="publication-card relative ..."`
+   since it was written -  the `relative` is there to host exactly this -  but
+   the class was defined nowhere in the codebase. The hook was wired up and
+   the fold was never drawn.
+
+   Painted as an overlay rather than a clip-path so the card keeps its
+   border, its radius and its hover shadow (clip-path would cut all three).
+   The gradient is three bands: page background for the cut, --border for the
+   fold edge, --muted for the flap underside. */
+.publication-card::after {
+  content: "";
+  position: absolute;
+  top: -1px;
+  right: -1px;
+  width: 13px;
+  height: 13px;
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom left,
+    rgb(var(--background)) 0 48%,
+    rgb(var(--border)) 48% 56%,
+    rgb(var(--muted)) 56% 100%
+  );
+}
+
+/* ── §4's desktop type enhancement ───────────────────────────────────────
+   "Desktop (min-width: 768px): --text-body -> 1.125rem/1.7, --text-3xl ->
+   3.25rem." Neither override existed, and grep found zero `md:text-body`
+   anywhere, so the reading column stayed at 17px on a 1440px display.
+
+   Applied as a breakpoint override on the two utilities rather than as a
+   md: variant at every call site, because the spec describes these as the
+   same token resolving differently, not as two different choices. */
+@media (min-width: 768px) {
+  .text-body {
+    font-size: 1.125rem;
+    line-height: 1.7;
+  }
+
+  .text-3xl {
+    font-size: 3.25rem;
   }
 }

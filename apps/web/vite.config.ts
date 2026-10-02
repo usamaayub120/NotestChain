@@ -11,7 +11,7 @@ export default defineConfig({
       // update. registerServiceWorker.ts renders that choice in the app.
       registerType: "prompt",
       injectRegister: false,
-      includeAssets: ["fonts/*.woff2"],
+      includeAssets: ["fonts/*.woff2", "icons/*.png"],
       manifest: {
         name: "NotesChain",
         short_name: "NotesChain",
@@ -20,9 +20,16 @@ export default defineConfig({
         background_color: "#F6F1E8",
         display: "standalone",
         start_url: "/",
-        // TODO(Phase 6): add real 192/512/maskable PNG icons generated from
-        // the Kept Stamp mark (public/favicon.svg is a placeholder for now).
-        icons: [{ src: "/favicon.svg", sizes: "any", type: "image/svg+xml" }],
+        // Generated from the Kept Stamp by scripts/generate-app-icons.mjs.
+        // Chrome needs a 192 and a 512 before it will treat the app as
+        // installable at all, and a `maskable` entry before it will stop
+        // letterboxing the icon inside a white circle on Android.
+        icons: [
+          { src: "/favicon.svg", sizes: "any", type: "image/svg+xml" },
+          { src: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+          { src: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+          { src: "/icons/icon-maskable-512.png", sizes: "512x512", type: "image/png", purpose: "maskable" },
+        ],
       },
       workbox: {
         clientsClaim: true,

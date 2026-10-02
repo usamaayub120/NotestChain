@@ -7,6 +7,7 @@ import type { ProofLookupResult } from "@/src/lib/models";
 import { PublicationCard } from "@/src/components/publication";
 import { Action, Card, Eyebrow, ErrorText, Field, Loading, Notice, Screen, Subtitle, Title, styles } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
+import { fonts } from "@/src/lib/fonts";
 
 export default function VerifyScreen() {
   const { colors } = useTheme();
@@ -54,7 +55,7 @@ export default function VerifyScreen() {
       <Action
         title="Look up"
         disabled={!input.trim()}
-        icon={<Ionicons name="search" size={18} color="#fff" />}
+        icon={<Ionicons name="search" size={18} color={colors.onBrand} />}
         onPress={() => setSubmitted(input.trim())}
       />
       {!submitted && <Notice>You can paste a note link, a transaction signature, or a public record address.</Notice>}
@@ -77,7 +78,7 @@ export default function VerifyScreen() {
             This on-chain record has no matching entry in our records - it isn't a note published through this
             platform's normal review process. Showing only what's directly on-chain.
           </Text>
-          <Text style={{ color: colors.ink, fontFamily: "serif", fontSize: 20, fontWeight: "700", marginTop: 4 }}>
+          <Text style={{ color: colors.ink, fontFamily: fonts.display, fontSize: 20, marginTop: 4 }}>
             {onChainAccount.title}
           </Text>
           <Text style={{ color: colors.ink, fontSize: 15, lineHeight: 21, marginTop: 4 }}>

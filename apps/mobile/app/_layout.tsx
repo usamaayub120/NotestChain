@@ -18,18 +18,27 @@ import { Loading } from "@/src/components/ui";
 import { AppUpdateGate } from "@/src/components/app-update-gate";
 import { useAppVersionCheck } from "@/src/hooks/use-app-version-check";
 import { setUnauthorizedHandler } from "@/src/lib/api";
+import { useFonts } from "expo-font";
+import { APP_FONTS } from "@/src/lib/fonts";
 
 /**
  * Route-level ErrorBoundary export (expo-router convention) — the fallback
  * for any screen that doesn't define its own. Deliberately does not use
  * useTheme()/ui.tsx: if ThemeProvider itself is what failed, this must still
- * render on its own.
+ * render on its own -  which is why the colours below are literals rather
+ * than tokens.
+ *
+ * They still have to be the RIGHT literals. This button was #e1502f, the
+ * value DESIGN_SYSTEM.md §3.1 used to name, which measures 3.76:1 against
+ * the white label and fails AA. Every other surface in both clients had
+ * already moved to #b9422b (5.20:1) without the doc being updated, so this
+ * was the one place the spec's own value still shipped.
  */
 export function ErrorBoundary({ retry }: { error: Error; retry: () => void }) {
   return <View style={{ flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 32, backgroundColor: "#f6f1e8" }}>
     <Text style={{ fontSize: 20, fontWeight: "700", color: "#201e1b" }}>Something went wrong</Text>
     <Text style={{ fontSize: 15, color: "#6f695d", textAlign: "center" }}>NotesChain is still running. Try that again.</Text>
-    <Pressable accessibilityRole="button" onPress={retry} style={{ backgroundColor: "#e1502f", borderRadius: 12, paddingHorizontal: 20, paddingVertical: 14 }}>
+    <Pressable accessibilityRole="button" onPress={retry} style={{ backgroundColor: "#b9422b", borderRadius: 12, paddingHorizontal: 20, paddingVertical: 14 }}>
       <Text style={{ color: "#fff", fontWeight: "700" }}>Try again</Text>
     </Pressable>
   </View>;
@@ -38,6 +47,14 @@ export function ErrorBoundary({ retry }: { error: Error; retry: () => void }) {
 export default function RootLayout() {
   // Initialise synchronously so a first feed request can never race the cache schema.
   initialiseOfflineStore();
+
+  const [fontsLoaded, fontError] = useFonts(APP_FONTS);
+
+  // Render nothing for the frame or two the fonts take rather than drawing
+  // the whole app in the system face and reflowing it. A font that fails to
+  // load must never block the app: `fontError` falls through to the system
+  // face, which is worse-looking and still entirely usable.
+  if (!fontsLoaded && !fontError) return null;
 
   return <SafeAreaProvider><QueryClientProvider client={queryClient}><ThemeProvider><AppShell /></ThemeProvider></QueryClientProvider></SafeAreaProvider>;
 }
@@ -53,7 +70,10 @@ function AppShell() {
     // a generic network error. Its cached private data is discarded before
     // returning to the mobile sign-in screen.
     queryClient.clear();
-    router.replace("/account");
+    // Say why. Being silently teleported from a half-written draft to a
+    // sign-in form, with no explanation and no stated way back, reads as the
+    // app losing your place rather than as a session ending.
+    router.replace({ pathname: "/account", params: { reason: "expired" } });
   }), []);
 
   useEffect(() => {

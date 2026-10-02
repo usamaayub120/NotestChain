@@ -20,9 +20,20 @@ export function DesktopWorkspaceShell({ children }: { children: ReactNode }) {
   const { data: user } = useCurrentUser();
   const staffDestination = hasPermission(user?.roles, Permission.CREATE_CAMPAIGN) || hasPermission(user?.roles, Permission.APPROVE_CAMPAIGN) ? "/admin/campaigns" : "/admin";
 
+  /**
+   * Renders its children at every width, with the sidebar appearing alongside
+   * them from md up. It used to be `hidden lg:grid`, which forced AppShell to
+   * mount a SECOND copy of the page for small screens: two live React trees,
+   * duplicate element ids (`title-error`, `content-counter`), two autosave
+   * timers, and doubled queries on every workspace route.
+   *
+   * md rather than lg closes the 768-1023px gap. The bottom nav disappears at
+   * md, so an iPad in portrait -  exactly 768px -  previously had no route to
+   * Drafts, Published notes, Saved, Bylines or Settings at all.
+   */
   return (
-    <div className="mx-auto hidden w-full max-w-screen-2xl lg:grid lg:grid-cols-[15rem_minmax(0,1fr)]">
-      <aside className="border-r border-border bg-surface-elevated px-4 py-6">
+    <div className="mx-auto w-full max-w-screen-2xl md:grid md:grid-cols-[15rem_minmax(0,1fr)]">
+      <aside className="hidden border-r border-border bg-surface-elevated px-4 py-6 md:block">
         <button
           type="button"
           onClick={() => startNewDraft()}

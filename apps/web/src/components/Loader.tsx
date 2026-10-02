@@ -126,10 +126,15 @@ function useAfterDelay(delayMs: number): boolean {
  */
 export function PageLoader({ label, delayMs = 0 }: { label?: string; delayMs?: number }) {
   const show = useAfterDelay(delayMs);
-  if (!show) return null;
+  // The delay belongs to the spinner, not to the layout. Returning null gave
+  // the page no height at all, so the footer collapsed up into the middle of
+  // an empty viewport -  verified on the live site, where the home page
+  // rendered as a blank slab with the footer floating in it for seconds
+  // before the hero appeared, then shifted everything down when it did.
+  // Holding the box keeps the anti-flicker behaviour and removes both.
   return (
-    <div className="flex min-h-[60dvh] items-center justify-center px-4">
-      <Loader label={label} />
+    <div className="flex min-h-[60dvh] items-center justify-center px-4" aria-busy="true">
+      {show && <Loader label={label} />}
     </div>
   );
 }

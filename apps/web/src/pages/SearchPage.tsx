@@ -8,6 +8,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { ErrorState } from "@/components/ErrorState";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { identityKindLabel } from "@noteschain/shared";
 
 const SORTS = [
   { value: "relevance", label: "Relevance" },
@@ -174,7 +175,7 @@ function PeopleResults({ q }: { q: string }) {
             <span className="min-w-0 flex-1">
               <span className="block truncate font-medium text-foreground">{person.displayName}</span>
               <span className="block text-xs text-muted-foreground">
-                @{person.username} · {person.isPrimary ? "Primary profile" : "Pen name"} · {person.publicationCount} notes
+                @{person.username} · {identityKindLabel(person.isPrimary)} · {person.publicationCount} notes
               </span>
             </span>
           </Link>

@@ -64,6 +64,11 @@ export function toPublicationDTO(pub: PublicationWithRelations, viewerUserId?: s
           network: chain.network,
           publicationPda: chain.publicationPda,
           transactionSignature: chain.transactionSignature,
+          // DESIGN_SYSTEM.md §13 lists slot in the proof sheet's technical
+          // block. It has always been stored; it just never left the server.
+          // Number, not BigInt: JSON can't serialise BigInt, and a Solana
+          // slot is nowhere near 2^53.
+          slot: chain.slot === null ? null : Number(chain.slot),
           explorerUrl: chain.transactionSignature
             ? `${env.PUBLIC_EXPLORER_BASE_URL}/tx/${chain.transactionSignature}?cluster=${chain.network}`
             : null,

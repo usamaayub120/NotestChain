@@ -26,11 +26,12 @@ import { IdentityModeSelector } from "@/components/draft/IdentityModeSelector";
 import { DiscoverabilitySelector } from "@/components/draft/DiscoverabilitySelector";
 import { TagInput } from "@/components/draft/TagInput";
 import { PublicationWarningDialog } from "@/components/draft/PublicationWarningDialog";
+import { DraftStatusBanner } from "@/components/draft/DraftStatusBanner";
 import { ConfirmActionDialog } from "@/components/ConfirmActionDialog";
 import { NoteContent } from "@/components/note/NoteContent";
 import { toggleWrap } from "@/lib/textSelection";
 import { asZodFlatten, firstFieldMessage } from "@/lib/formErrors";
-import { ApiClientError } from "@/lib/api";
+import { ApiClientError, errorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { PageLoader } from "@/components/Loader";
 
@@ -57,7 +58,6 @@ export function DraftEditorPage() {
   const [autosaveState, setAutosaveState] = useState<AutosaveState>("idle");
   const [warningOpen, setWarningOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // Errors the SERVER reported, as opposed to the live client-side ones.
   const [serverErrors, setServerErrors] = useState<{ title?: string; content?: string; form?: string }>({});
@@ -68,6 +68,14 @@ export function DraftEditorPage() {
   const debounceTimer = useRef<ReturnType<typeof setTimeout>>();
   const titleRef = useRef<HTMLInputElement>(null);
   const contentRef = useRef<HTMLTextAreaElement>(null);
+
+  // The words that have been typed but not yet accepted by the server. This
+  // is the whole fix: the editor used to drop the payload the moment it
+  // couldn't send it, so anything written offline, or during a failed save,
+  // existed only in component state and died with the next reload. Holding it
+  // here is what lets "we'll save when you're back" actually be true.
+  const pendingSave = useRef<{ title: string; content: string } | null>(null);
+  const runSaveRef = useRef<() => void>(() => {});
 
   const validation = useDraftValidation({ title, content, identityMode, publicIdentityId });
 
@@ -83,9 +91,62 @@ export function DraftEditorPage() {
     }
   }, [draft]);
 
+  const editable = draft ? ["DRAFT", "CHANGES_REQUESTED"].includes(draft.status) : false;
+  const format = draft?.contentFormat ?? "PLAINTEXT";
+
+  /**
+   * Send whatever is queued. Safe to call repeatedly: with nothing pending it
+   * does nothing, and it never clears the queue on a path that didn't persist.
+   */
+  function runSave() {
+    const pending = pendingSave.current;
+    if (!pending) return;
+
+    if (!navigator.onLine) {
+      // Deliberately leaves `pending` in place. The reconnect listener below
+      // sends it; this is the state the old code reached before discarding
+      // the payload it claimed it would keep.
+      setAutosaveState("offline");
+      return;
+    }
+
+    // Measured off the payload being sent rather than off `validation`, which
+    // belongs to an earlier render and would report the previous keystroke's
+    // length.
+    const willBeOverLength = charactersOverLimit(pending.content, LIMITS.NOTE_BODY_MAX_CHARS) > 0;
+
+    setAutosaveState("saving");
+    autosave.mutate(pending, {
+      // An over-limit draft still saves. What it must not do is report plain
+      // "Saved", which is what let a writer keep going all the way to Submit
+      // believing everything was fine.
+      onSuccess: () => {
+        // A newer keystroke landed while this request was in flight, so it
+        // owns both the queue and the indicator now.
+        if (pendingSave.current !== pending) return;
+        pendingSave.current = null;
+        setAutosaveState(willBeOverLength ? "saved-too-long" : "saved");
+      },
+      // Keeps the payload queued so Retry, a reconnect, or leaving the page
+      // all still have the words to send.
+      onError: () => setAutosaveState("error"),
+    });
+  }
+
+  // Refreshed every render so the listeners below always call the current
+  // closure without having to re-subscribe.
   useEffect(() => {
-    const goOnline = () => setIsOnline(true);
-    const goOffline = () => setIsOnline(false);
+    runSaveRef.current = runSave;
+  });
+
+  useEffect(() => {
+    const goOnline = () => {
+      if (pendingSave.current) runSaveRef.current();
+      else setAutosaveState((state) => (state === "offline" ? "idle" : state));
+    };
+    const goOffline = () => {
+      if (pendingSave.current) setAutosaveState("offline");
+    };
     window.addEventListener("online", goOnline);
     window.addEventListener("offline", goOffline);
     return () => {
@@ -94,38 +155,37 @@ export function DraftEditorPage() {
     };
   }, []);
 
-  const editable = draft ? ["DRAFT", "CHANGES_REQUESTED"].includes(draft.status) : false;
-  const format = draft?.contentFormat ?? "PLAINTEXT";
+  // Leaving the editor used to drop up to a full debounce window of typing:
+  // the timer was never cleared and its payload was never sent. Flushing on
+  // the way out sends it; the mutation lives on the query client, so it
+  // completes even though this component is gone.
+  useEffect(
+    () => () => {
+      if (debounceTimer.current) clearTimeout(debounceTimer.current);
+      runSaveRef.current();
+    },
+    [],
+  );
+
+  // The browser's own guard, for the case no in-app navigation can catch.
+  useEffect(() => {
+    const warnOnExit = (event: BeforeUnloadEvent) => {
+      if (!pendingSave.current) return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warnOnExit);
+    return () => window.removeEventListener("beforeunload", warnOnExit);
+  }, []);
 
   function scheduleAutosave(nextTitle: string, nextContent: string) {
     if (!editable) return;
+    pendingSave.current = { title: nextTitle, content: nextContent };
     setAutosaveState("unsaved");
     if (debounceTimer.current) clearTimeout(debounceTimer.current);
-
-    // Derived from nextContent rather than read off `validation`. The
-    // memoized validation belongs to the render this closure was created in,
-    // which is the one BEFORE setContent applied -  so reading it here reports
-    // the previous keystroke's length and the indicator lags a character
-    // behind. Exactly the kind of "it says it's fine" staleness this whole
-    // change exists to remove.
-    const willBeOverLength = charactersOverLimit(nextContent, LIMITS.NOTE_BODY_MAX_CHARS) > 0;
-
     debounceTimer.current = setTimeout(() => {
-      if (!navigator.onLine) {
-        setAutosaveState("offline");
-        return;
-      }
-      setAutosaveState("saving");
-      autosave.mutate(
-        { title: nextTitle, content: nextContent },
-        {
-          // An over-limit draft still saves. What it must not do is report
-          // plain "Saved", which is what let a writer keep going all the way
-          // to Submit believing everything was fine.
-          onSuccess: () => setAutosaveState(willBeOverLength ? "saved-too-long" : "saved"),
-          onError: () => setAutosaveState("error"),
-        },
-      );
+      debounceTimer.current = undefined;
+      runSave();
     }, AUTOSAVE_DEBOUNCE_MS);
   }
 
@@ -204,7 +264,7 @@ export function DraftEditorPage() {
         if (titleError) titleRef.current?.focus();
         else if (contentError) contentRef.current?.focus();
       } else {
-        setServerErrors({ form: "Could not submit this draft." });
+        setServerErrors({ form: errorMessage(err, "Could not submit this draft.") });
       }
     }
   }
@@ -219,7 +279,7 @@ export function DraftEditorPage() {
     } catch (err) {
       // Keep the dialog open and show why. Previously this rejected into the
       // void: setWarningOpen(false) never ran, so the dialog just sat there.
-      setPublishError(err instanceof ApiClientError ? err.message : "Could not publish this note.");
+      setPublishError(errorMessage(err, "Could not publish this note."));
     }
   }
 
@@ -230,7 +290,7 @@ export function DraftEditorPage() {
       navigate("/drafts");
     } catch (err) {
       setDeleteOpen(false);
-      setServerErrors({ form: err instanceof ApiClientError ? err.message : "Could not delete this draft." });
+      setServerErrors({ form: errorMessage(err, "Could not delete this draft.") });
     }
   }
 
@@ -239,7 +299,7 @@ export function DraftEditorPage() {
     try {
       await withdraw.mutateAsync(id);
     } catch (err) {
-      setServerErrors({ form: err instanceof ApiClientError ? err.message : "Could not withdraw this submission." });
+      setServerErrors({ form: errorMessage(err, "Could not withdraw this submission.") });
     }
   }
 
@@ -266,7 +326,7 @@ export function DraftEditorPage() {
         >
           <ArrowLeft size={20} strokeWidth={1.75} /> Back
         </button>
-        <AutosaveIndicator state={isOnline ? autosaveState : "offline"} />
+        <AutosaveIndicator state={autosaveState} onRetry={runSave} />
         {editable && (
           <button
             type="button"
@@ -279,14 +339,9 @@ export function DraftEditorPage() {
         )}
       </div>
 
-      {!editable && (
-        <div className="mt-3 rounded-md bg-muted px-3 py-2 text-sm">
-          {draft.status === "PENDING_REVIEW" && "Awaiting moderator review -  you can withdraw it below."}
-          {draft.status === "APPROVED" && "Approved! Publish it permanently when you're ready."}
-          {draft.status === "REJECTED" && "This submission was rejected."}
-          {draft.status === "ARCHIVED" && "This draft is archived."}
-        </div>
-      )}
+      {/* Not gated on `!editable`: CHANGES_REQUESTED is editable, and it is
+          the status that most needs explaining. */}
+      <DraftStatusBanner draft={draft} />
 
       <input
         ref={titleRef}
@@ -298,7 +353,7 @@ export function DraftEditorPage() {
         aria-invalid={Boolean(titleError)}
         aria-describedby="title-counter title-error"
         className={cn(
-          "mt-4 w-full border-none bg-transparent font-display text-2xl font-semibold outline-none placeholder:text-muted-foreground disabled:opacity-70",
+          "mt-4 w-full rounded-sm border-none bg-transparent font-display text-2xl font-semibold outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background placeholder:text-muted-foreground disabled:opacity-70",
           titleError && "text-destructive",
         )}
       />
@@ -330,7 +385,7 @@ export function DraftEditorPage() {
               // No maxLength, deliberately. It would silently swallow
               // keystrokes mid-thought, and it counts UTF-16 units rather
               // than characters, so it would be numerically wrong anyway.
-              className="mt-2 min-h-[220px] flex-1 resize-none border-none bg-transparent p-0 text-body outline-none focus-visible:ring-0"
+              className="mt-2 min-h-[220px] flex-1 resize-none rounded-sm border-none bg-transparent p-0 text-body outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-4 focus-visible:ring-offset-background"
             />
           </TabsContent>
 

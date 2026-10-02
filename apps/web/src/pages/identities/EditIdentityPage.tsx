@@ -12,7 +12,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { PageLoader } from "@/components/Loader";
 import { ErrorState } from "@/components/ErrorState";
 import { useChangeKeeperUsername, useIdentities, useUpdateIdentity } from "@/hooks/useIdentities";
-import { ApiClientError } from "@/lib/api";
+import { ApiClientError, errorMessage } from "@/lib/api";
 
 type IdentityFormValues = z.input<typeof updateIdentitySchema>;
 
@@ -60,7 +60,7 @@ function UsernameChangeForm({ currentUsername }: { currentUsername: string }) {
         form.setError("username", { message: err.message });
         return;
       }
-      form.setError("root", { message: err instanceof ApiClientError ? err.message : "Something went wrong." });
+      form.setError("root", { message: errorMessage(err, "Something went wrong.") });
     }
   }
 
@@ -137,7 +137,7 @@ function IdentityFieldsForm({
     try {
       await update.mutateAsync(values);
     } catch (err) {
-      form.setError("root", { message: err instanceof ApiClientError ? err.message : "Something went wrong." });
+      form.setError("root", { message: errorMessage(err, "Something went wrong.") });
     }
   }
 

@@ -5,7 +5,7 @@ import { brand } from "@noteschain/shared";
 import { usePublication, usePublicationRevisions } from "@/hooks/usePublications";
 import { AuthorBadge } from "@/components/publication/AuthorBadge";
 import { BookmarkButton } from "@/components/publication/BookmarkButton";
-import { BlockchainProofSheet } from "@/components/publication/BlockchainProofSheet";
+import { KeptLine } from "@/components/publication/KeptLine";
 import { ReportPublicationSheet } from "@/components/publication/ReportPublicationSheet";
 import { ShareSheet } from "@/components/publication/ShareSheet";
 import { CommentSection } from "@/components/publication/CommentSection";
@@ -56,6 +56,8 @@ export function PublicationReaderPage() {
         <AuthorBadge author={publication.author} timestamp={publication.createdAt} size="reader" />
       </div>
 
+      <KeptLine publication={publication} />
+
       <NoteContent
         source={publication.content}
         // Falls back to PLAINTEXT when absent, which keeps every note
@@ -101,7 +103,6 @@ export function PublicationReaderPage() {
 
       <div className="mt-8 flex items-center gap-4 border-t border-border pt-4">
         <BookmarkButton publicationId={publication.id} />
-        <BlockchainProofSheet publication={publication} />
         <ShareSheet publicationId={publication.id} title={publication.title} />
         <ReportPublicationSheet publicationId={publication.id} />
       </div>

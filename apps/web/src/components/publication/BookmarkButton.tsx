@@ -1,4 +1,4 @@
-import { Heart } from "lucide-react";
+import { Bookmark } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useBookmarks, useAddBookmark, useRemoveBookmark } from "@/hooks/useBookmarks";
 import { useCurrentUser } from "@/hooks/useAuth";
@@ -30,7 +30,7 @@ export function BookmarkButton({ publicationId }: { publicationId: string }) {
       aria-label={isBookmarked ? "Remove bookmark" : "Save for later"}
       className="flex min-h-11 min-w-11 items-center justify-center gap-1.5 rounded-md text-sm text-muted-foreground hover:text-foreground"
     >
-      <Heart size={18} className={cn(isBookmarked && "fill-primary text-primary")} />
+      <Bookmark size={18} strokeWidth={1.75} className={cn(isBookmarked && "fill-primary text-primary")} />
       {isBookmarked ? "Saved" : "Save"}
     </button>
   );

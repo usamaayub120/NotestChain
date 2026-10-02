@@ -4,11 +4,14 @@ import { Pressable, StyleSheet, Text, View } from "react-native";
 import type { Publication } from "@/src/lib/models";
 import { Skeleton, styles } from "@/src/components/ui";
 import { useTheme } from "@/src/lib/theme";
+import { DRAFT_STATUS_LABELS, formatRelativeTime } from "@/src/lib/labels";
+import { KeptStamp } from "@/src/components/kept-stamp";
+import { fonts } from "@/src/lib/fonts";
 
 export function PublicationCard({ publication }: { publication: Publication }) {
   const { colors, fontScale } = useTheme();
   const byline = publication.author ? publication.author.displayName : "Anonymous";
-  const date = publication.publishedAt ? new Date(publication.publishedAt).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "Publishing";
+  const date = publication.publishedAt ? formatRelativeTime(publication.publishedAt) : DRAFT_STATUS_LABELS.CHAIN_PENDING;
   const title = publication.title || "Untitled note";
   return <Link href={`/note/${publication.id}`} asChild><Pressable
     accessibilityRole="link"
@@ -16,7 +19,7 @@ export function PublicationCard({ publication }: { publication: Publication }) {
     accessibilityHint="Opens this note"
     style={({ pressed }) => [local.card, { borderColor: colors.border, backgroundColor: colors.surface }, pressed && local.pressed]}
   >
-    <View style={local.meta}><Text style={[local.byline, { color: colors.canopy, fontSize: 13 * fontScale }]}>{byline}</Text><Text style={[local.dot, { color: colors.muted }]}>•</Text><Text style={[local.date, { color: colors.muted, fontSize: 13 * fontScale }]}>{date}</Text></View>
+    <View style={local.meta}><Text style={[local.byline, { color: colors.canopy, fontSize: 13 * fontScale }]}>{byline}</Text><Text style={[local.dot, { color: colors.muted }]}>•</Text><Text style={[local.date, { color: colors.muted, fontSize: 13 * fontScale }]}>{date}</Text><View style={{ flex: 1, alignItems: "flex-end" }}><KeptStamp status={publication.chain?.status} /></View></View>
     <Text style={[local.title, { color: colors.ink, fontSize: 22 * fontScale }]}>{title}</Text>
     <Text numberOfLines={3} style={[styles.subtitle, { color: colors.muted, fontSize: 15 * fontScale }]}>{publication.excerpt}</Text>
     <View style={local.footer}><View style={local.tags}>{publication.tags.slice(0, 2).map((tag) => <Text key={tag} style={[local.tag, { color: colors.muted, fontSize: 13 * fontScale }]}>#{tag}</Text>)}</View><View style={local.readNote}><Text style={[local.readNoteLabel, { color: colors.brand, fontSize: 13 * fontScale }]}>Read note</Text><Ionicons name="arrow-forward" size={17} color={colors.brand} importantForAccessibility="no" /></View></View>
@@ -41,6 +44,6 @@ export function EmptyNotes({ title, detail }: { title: string; detail: string })
 const local = StyleSheet.create({
   card: { marginBottom: 12, borderWidth: 1, borderRadius: 16, padding: 16, gap: 7, boxShadow: "0 3px 8px rgba(32, 30, 27, 0.05)" },
   pressed: { opacity: 0.78 }, meta: { flexDirection: "row", gap: 6, alignItems: "center" }, byline: { fontWeight: "700", fontSize: 13 }, dot: {}, date: { fontSize: 13 },
-  title: { fontFamily: "serif", fontSize: 22, fontWeight: "700", lineHeight: 27 }, footer: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 2 }, tags: { flexDirection: "row", gap: 6, flex: 1 }, tag: { fontSize: 13 }, readNote: { flexDirection: "row", alignItems: "center", gap: 3 }, readNoteLabel: { fontWeight: "700" },
+  title: { fontFamily: fonts.display, fontSize: 22, lineHeight: 27 }, footer: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginTop: 2 }, tags: { flexDirection: "row", gap: 6, flex: 1 }, tag: { fontSize: 13 }, readNote: { flexDirection: "row", alignItems: "center", gap: 3 }, readNoteLabel: { fontWeight: "700" },
   empty: { alignItems: "center", borderWidth: 1, borderStyle: "dashed", borderRadius: 16, padding: 28, gap: 8 }, emptyTitle: { fontSize: 17, fontWeight: "700" }, emptyDetail: { textAlign: "center" },
 });

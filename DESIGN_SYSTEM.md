@@ -56,9 +56,19 @@ Named palette (source values — implemented as CSS variables, see §3.3):
 | `paper` | `#F6F1E8` | Light mode background — warm, soft, not stark white |
 | `ink` | `#201E1B` | Light mode primary text / dark mode surface-elevated |
 | `dusk` | `#16151A` | Dark mode background — warm-black, not pure #000 |
-| `ember` | `#E1502F` | Primary accent — Write action, active states, the seal |
+| `ember` | `#B9422B` | Primary accent — Write action, active states, the seal |
 | `kept` | `#3F6B4C` | Verification / trust color — restrained moss green |
 | `mist` | `#8B8477` | Neutral mid-tone — secondary text, borders (light mode base) |
+
+**On ember's value.** This table said `#E1502F` until the UI/UX pass of
+October 2026. It never shipped: both clients had quietly settled on
+`#B9422B`, and the one place the documented value survived was a hardcoded
+literal in the mobile error boundary. The reason is contrast — `#E1502F`
+carrying white button text measures **3.76:1**, under AA for normal text,
+while `#B9422B` measures **5.20:1**. The code was right and the doc was
+wrong, so the doc moved. Dark mode keeps its own brighter ember (`#FF6B45`,
+§3.2) because there it carries *dark* text, which is why it can afford to be
+brighter.
 
 ### 3.1 Light theme
 
@@ -67,7 +77,7 @@ Named palette (source values — implemented as CSS variables, see §3.3):
 --foreground: #201E1B;
 --surface: #FFFFFF;
 --surface-elevated: #FBF8F2;
---primary: #E1502F;
+--primary: #B9422B;
 --primary-foreground: #FFFFFF;
 --muted: #EDE7DB;
 --muted-foreground: #6F695D;
@@ -98,6 +108,22 @@ Named palette (source values — implemented as CSS variables, see §3.3):
 --verified-foreground: #12241A;
 ```
 
+### 3.2a Atmospheric tokens (non-interactive)
+
+Two tokens exist in `tokens.css` and are used by `CanopyGlow`, `Footer`,
+`AdminPortalShell` and `AuthSidePanel`, but were documented nowhere — the
+file's own comment cited a "library-in-a-forest brief" that does not appear
+in this document. Recorded here rather than removed, because they are load-
+bearing for the footer and auth panel:
+
+| Name | Light | Dark | Role |
+|---|---|---|---|
+| `canopy` | `#1F3327` | `#142319` | Deep green ground for the footer, auth side panel and admin shell |
+| `glow` | `#F0C48B` | `#F0C48B` | Warm light, used only for the hero's ambient drift and the mark shimmer |
+
+Neither is ever used on an interactive element. Ember remains the only accent
+that signals "you can act on this".
+
 ### 3.3 Implementation
 
 Tokens live in `apps/web/src/styles/tokens.css` as `:root` (light default)
@@ -125,6 +151,17 @@ Three families, one job each:
 
 Both variable fonts are self-hosted (`apps/web/public/fonts/`) to avoid a
 runtime dependency on a font CDN inside a WebView.
+
+**The native app carries the same three families** via `@expo-google-fonts/*`
+(see `apps/mobile/src/lib/fonts.ts`), bundled into the build rather than
+fetched. It can't share the web's files: React Native needs TTF, and
+`public/fonts/` is WOFF2. Until the October 2026 UI pass it carried none of
+them and used `fontFamily: "serif"` as the display face in nine places,
+which resolves to Noto Serif on Android and Times on iOS — so the brand
+rendered in two different typefaces, neither of them the brand's, and both
+of them the high-contrast serif §2 above says this system deliberately
+sidesteps. Import per weight, not from a package index: the index re-exports
+every weight the family ships and Metro bundles all of them.
 
 ### Scale (mobile default, `min-width` enhancements scale up)
 
@@ -196,9 +233,19 @@ product. No chain-link icons, no crypto glyphs, no wallet iconography.
 
 ## 7. Iconography & motion
 
-- Icon set: **Lucide**, 20px default stroke-width 1.75, one size per
-  context (16px inline-with-text, 20px standalone controls, 24px nav).
-- No mixing icon libraries.
+- Icon set: **Lucide** on the web, 20px default stroke-width 1.75, one size
+  per context (16px inline-with-text, 20px standalone controls, 24px nav).
+- **The native app uses Ionicons** (`@expo/vector-icons`), and the rule
+  "no mixing icon libraries" is scoped per client rather than across the
+  product. This was an undocumented divergence until the October 2026 UI
+  pass; it is recorded rather than removed because Lucide's RN package is a
+  dependency the mobile workspace has no other reason to take on, and
+  Ionicons has no stroke-width control, so §7's 1.75 is unachievable there
+  regardless.
+- What the rule still forbids, and what actually went wrong: **one idea
+  rendering as two glyphs inside one client.** "Saved" shipped as a Lucide
+  `Heart` in the web bottom nav, a Lucide `Bookmark` in the web sidebar and
+  a `Heart` again on the bookmark control itself. One destination, one mark.
 - Motion timing: 150–300ms, `ease-out` for entrances, `ease-in` for exits.
   Page transitions: 200ms cross-fade + 8px slide. Bottom sheets: 250ms
   spring-like ease (`cubic-bezier(0.32, 0.72, 0, 1)`, the standard
@@ -246,12 +293,27 @@ Home   Explore   Search   Sign in
 
 Same bar mechanics, 4 items, "Sign in" replaces the profile slot.
 
-### Desktop (≥ 1024px)
+### Desktop (≥ 768px)
 
-Left sidebar (fixed, 240px) with the same 5 items plus secondary links
-(Identities, Settings), full-height, `Write` rendered as a filled button
-at the top of the sidebar rather than a floating circle. Same information
-architecture as mobile — no desktop-only nav items.
+Left sidebar (fixed, 240px) carrying the workspace destinations — Dashboard,
+Drafts, Published notes, Saved, Your bylines, Settings, and Staff tools for
+staff — full-height, with `Write` rendered as a filled button at the top
+rather than a floating circle.
+
+Two corrections from the October 2026 UI pass, both of which this section
+previously described wrongly:
+
+- **The breakpoint is `md` (768px), not `lg` (1024px).** The mobile bottom
+  bar hides itself at `md`, so with the sidebar appearing only at `lg` there
+  was a 256px-wide band — an iPad in portrait is exactly 768px — where a
+  signed-in writer had no route to Drafts, Published notes, Saved, Bylines
+  or Settings at all.
+- **The sidebar is not the mobile bar.** This section used to claim "the
+  same 5 items … no desktop-only nav items", which the code never did and
+  arguably should not: the bottom bar is a reader's bar (Home, Explore,
+  Write, Saved, Account) and the sidebar is a writer's workspace. They share
+  one destination. The real requirement is that nothing is reachable from
+  only one of them, which the `md` fix is what actually delivers.
 
 ## 10. Content width & breakpoints
 

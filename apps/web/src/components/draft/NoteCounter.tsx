@@ -75,9 +75,15 @@ export function NoteCounter({
         aria-valuetext={`${words.toLocaleString()} ${words === 1 ? "word" : "words"}, ${percent}% of the length limit used`}
         className="h-[3px] w-full overflow-hidden rounded-full bg-muted"
       >
+        {/* scaleX rather than width: this bar updates on every keystroke, and
+            animating width forces a layout pass each time. The transform runs
+            on the compositor and reads identically. */}
         <div
-          className={cn("h-full transition-[width] duration-200 ease-out", band === "over" ? "bg-destructive" : "bg-primary")}
-          style={{ width: `${percent}%` }}
+          className={cn(
+            "h-full w-full origin-left transition-transform duration-200 ease-out",
+            band === "over" ? "bg-destructive" : "bg-primary",
+          )}
+          style={{ transform: `scaleX(${percent / 100})` }}
         />
       </div>
 

@@ -116,7 +116,7 @@ export function HeaderAddButton() {
 const local = StyleSheet.create({
   brand: { flexDirection: "row", alignItems: "center", gap: 8 },
   wordmark: { fontWeight: "700", letterSpacing: -0.2 },
-  addButton: { minWidth: 72, minHeight: 40, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 3, borderRadius: 20, paddingHorizontal: 10 },
+  addButton: { minWidth: 72, minHeight: 44, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 3, borderRadius: 20, paddingHorizontal: 10 },
   addLabel: { fontWeight: "700" },
   pressed: { opacity: 0.6 },
   disabled: { opacity: 0.5 },

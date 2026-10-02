@@ -2,10 +2,13 @@ import { Link } from "react-router-dom";
 import { useIdentities, useKeeperProfile, usePenNames } from "@/hooks/useIdentities";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/EmptyState";
+import { ErrorState } from "@/components/ErrorState";
+import { queryFailure } from "@/lib/queryState";
 import { SectionLoader } from "@/components/Loader";
 
 export function IdentitiesPage() {
-  const { isLoading } = useIdentities();
+  const { isLoading, isError, error, refetch, fetchStatus, data: identities } = useIdentities();
+  const failure = queryFailure({ isLoading, isError, error, fetchStatus, data: identities });
   const keeperProfile = useKeeperProfile();
   const penNames = usePenNames();
 
@@ -18,6 +21,7 @@ export function IdentitiesPage() {
       </p>
 
       {isLoading && <SectionLoader label="Loading your bylines" />}
+      {!isLoading && failure.failed && <ErrorState error={failure.error} onRetry={() => refetch()} />}
 
       {keeperProfile && (
         <section className="mt-6">
@@ -46,7 +50,7 @@ export function IdentitiesPage() {
           </Button>
         </div>
 
-        {!isLoading && penNames && penNames.length === 0 && (
+        {!isLoading && !failure.failed && penNames && penNames.length === 0 && (
           <EmptyState
             title="No pen names yet"
             description="Create one to publish or comment under something other than your own name."
