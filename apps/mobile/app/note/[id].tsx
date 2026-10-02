@@ -198,22 +198,14 @@ export default function NoteScreen() {
       // For this implementation, we'll use a placeholder endpoint
       // In production, this should be routed through your backend to protect API keys
 
-      const response = await fetch('/api/v1/translate', {
+      const data = await api<{ translatedText: string }>("/translate", {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({
           text: note.content,
           targetLang: 'es', // Example: translating to Spanish
         }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Translation failed: ${response.status}`);
-      }
-
-      const data = await response.json();
       setTranslatedContent(data.translatedText || '');
       setShowTranslation(true);
     } catch (err) {
@@ -246,9 +238,9 @@ export default function NoteScreen() {
       <Subtitle>{note.publishedAt ? formatNoteDate(note.publishedAt) : DRAFT_STATUS_LABELS.CHAIN_PENDING}</Subtitle>
 
       {showTranslation && translatedContent ? (
-        <NoteContent source={translatedContent} format="PLAINTEXT" fontScale={fontScale} shimmer />
+        <NoteContent source={translatedContent} format="PLAINTEXT" fontScale={fontScale} />
       ) : (
-        <NoteContent source={note.content} format={note.contentFormat} fontScale={fontScale} shimmer />
+        <NoteContent source={note.content} format={note.contentFormat} fontScale={fontScale} />
       )}
 
       {note.tags.map((tag) => (
@@ -281,7 +273,7 @@ export default function NoteScreen() {
         <IconButton
           accessibilityLabel="Translate this note"
           disabled={isTranslating || !note}
-          icon={<Ionicons name="translate-outline" size={22} color={colors.ink} />}
+          icon={<Ionicons name="language-outline" size={22} color={colors.ink} />}
           onPress={() => void handleTranslate()}
         />
         <IconButton
@@ -295,9 +287,9 @@ export default function NoteScreen() {
       {notice && <Notice>{notice}</Notice>}
       {error && <ErrorText>{error}</ErrorText>}
       {translationError && (
-        <Notice style={{ backgroundColor: '#ffe6e6', borderColor: '#ffcccc', color: '#cc0000' }}>
+        <ErrorText>
           Translation error: {translationError}
-        </Notice>
+        </ErrorText>
       )}
 
       <Divider />

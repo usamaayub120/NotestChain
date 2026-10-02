@@ -4,8 +4,6 @@ import NetInfo from "@react-native-community/netinfo";
 import { Ionicons } from "@expo/vector-icons";
 import { AppState, Text, View } from "react-native";
 import * as Haptics from "expo-haptics";
-import { Audio } from "expo-av";
-import * as Permissions from "expo-permissions";
 import { api } from "@/src/lib/api";
 import { LIMITS, charactersOverLimit, characterLength, utf8ByteLength, validateTags } from "@/src/lib/limits";
 import { cacheRead, cacheWrite, clearRecoveries, enqueue, preserveRecovery, recoveriesFor } from "@/src/lib/offline";
@@ -60,9 +58,6 @@ export default function DraftEditorScreen() {
   const pendingSave = useRef(false);
   const [error, setError] = useState<string>();
 
-// Speech-to-text state
-const [isRecording, setIsRecording] = useState(false);
-const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const latest = useRef({ title, content });
   const [confirmingPublish, setConfirmingPublish] = useState(false);
   const [publishing, setPublishing] = useState(false);
@@ -223,58 +218,6 @@ const [recording, setRecording] = useState<Audio.Recording | null>(null);
     }
   };
 
-  /** Speech-to-text functionality */
-  const startSpeechToText = async () => {
-    if (!id || !draft || !editable(draft.status)) return;
-
-    try {
-      // Request audio recording permission
-      const { status } = await Permissions.askAsync(Permissions.AUDIO_RECORDING);
-      if (status !== 'granted') {
-        setError('Audio recording permission is required for voice input.');
-        return;
-      }
-
-      setIsRecording(true);
-      setError(undefined);
-
-      // Create a new audio recording
-      const recording = new Audio.Recording();
-      await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-      await recording.startAsync();
-      setRecording(recording);
-
-      // Note: In a real implementation, we would:
-      // 1. Record audio for a set duration or until user stops
-      // 2. Convert the audio to the format required by a speech-to-text API
-      // 3. Send the audio to a speech-to-text service (like Google Cloud Speech-to-Text)
-      // 4. Get the transcribed text and insert it into the content
-      //
-      // For this implementation, we'll simulate the process with a timeout
-      // In practice, you would replace this with actual API calls
-
-      // Simulate recording for 5 seconds (in practice, you'd let user control this)
-      setTimeout(async () => {
-        if (recording) {
-          await recording.stopAndUnloadAsync();
-
-          // In a real app, you would send the recording to a speech-to-text API here
-          // For demonstration, we'll insert a placeholder message
-          const transcribedText = "[Voice input transcribed text would appear here]";
-
-          // Insert the transcribed text at the end of the current content
-          setContent(prev => prev + transcribedText + ' ');
-
-          setIsRecording(false);
-          setRecording(null);
-        }
-      }, 5000);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to start voice input');
-      setIsRecording(false);
-    }
-  };
-
   const selectByline = (identity: Identity) => {
     setIdentityMode(identity.isPrimary ? "NAMED" : "PSEUDONYMOUS");
     setIdentityId(identity.id);
@@ -390,16 +333,6 @@ const [recording, setRecording] = useState<Audio.Recording | null>(null);
       {draft.status === "REJECTED" && <Notice>This submission was rejected. Read any moderation feedback on the website.</Notice>}
 
       <Field editable={canEdit} placeholder="Title" value={title} onChangeText={setTitle} />
-      {canEdit && (
-        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', marginVertical: 8 }}>
-          <Button
-            title={isRecording ? 'Listening...' : 'Voice Input'}
-            type={isRecording ? 'outline' : 'primary'}
-            disabled={!canEdit}
-            onPress={startSpeechToText}
-          />
-        </View>
-      )}
       <Field
         editable={canEdit}
         multiline

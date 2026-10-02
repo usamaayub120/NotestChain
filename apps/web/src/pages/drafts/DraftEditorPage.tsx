@@ -61,7 +61,7 @@ export function DraftEditorPage() {
 
 // Speech-to-text state
 const [isListening, setIsListening] = useState(false);
-const [speechRecognition, setSpeechRecognition] = useState<any | null>(null);
+const speechRecognition = useRef<any | null>(null);
 
   // Errors the SERVER reported, as opposed to the live client-side ones.
   const [serverErrors, setServerErrors] = useState<{ title?: string; content?: string; form?: string }>({});
@@ -206,16 +206,16 @@ const [speechRecognition, setSpeechRecognition] = useState<any | null>(null);
         setIsListening(false);
       };
 
-      setSpeechRecognition(recognition);
+      speechRecognition.current = recognition;
     } else {
       // Speech recognition not available in this browser
-      setSpeechRecognition(null);
+      speechRecognition.current = null;
     }
 
     // Cleanup
     return () => {
-      if (speechRecognition) {
-        speechRecognition.stop();
+      if (speechRecognition.current) {
+        speechRecognition.current.stop();
       }
     };
   }, []);
@@ -253,7 +253,7 @@ const [speechRecognition, setSpeechRecognition] = useState<any | null>(null);
     }
 
     // Initialize speech recognition if not already done
-    if (!speechRecognition) {
+    if (!speechRecognition.current) {
       const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
       const recognition = new SpeechRecognition();
       recognition.continuous = false;
@@ -282,12 +282,12 @@ const [speechRecognition, setSpeechRecognition] = useState<any | null>(null);
         setIsListening(false);
       };
 
-      setSpeechRecognition(recognition);
+      speechRecognition.current = recognition;
     }
 
     // Start listening
     try {
-      await speechRecognition.start();
+      await speechRecognition.current.start();
       setIsListening(true);
     } catch (err) {
       console.error('Failed to start speech recognition:', err);
@@ -481,19 +481,19 @@ const [speechRecognition, setSpeechRecognition] = useState<any | null>(null);
               <EmojiPickerSheet textareaRef={contentRef} />
               <button
                 type="button"
-                disabled={!editable || !speechRecognition}
+                disabled={!editable}
                 aria-label={isListening ? "Listening... (click to stop)" : "Start voice input"}
                 title={isListening ? "Listening... (click to stop)" : "Start voice input"}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
-                  if (!speechRecognition) {
+                  if (!speechRecognition.current) {
                     alert("Speech recognition is not available in this browser.");
                     return;
                   }
                   if (isListening) {
-                    speechRecognition.stop();
+                    speechRecognition.current.stop();
                   } else {
-                    speechRecognition.start();
+                    speechRecognition.current.start();
                     setIsListening(true);
                   }
                 }}
